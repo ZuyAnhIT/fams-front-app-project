@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
-import { sendPhoneOTP, verifyPhoneOTP } from '../api';
+import { sendPhoneOTP, verifyPhoneOTP, getMyProfile } from '../api';
 import { useAuthStore } from '../store';
 import type { SendOTPRequest, VerifyOTPRequest } from '../types';
 import { parseAuthError } from '../utils';
@@ -50,7 +50,8 @@ export function useVerifyOTP(): UseVerifyOTPResult {
         return;
       }
       await setTokens(data.access_token, data.refresh_token);
-      setUser(data.user);
+      const user = data.user ?? (await getMyProfile());
+      setUser(user);
       router.replace('/(tabs)/home');
     },
   });

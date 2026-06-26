@@ -1,0 +1,92 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import { getMyProfile, updateMyProfile } from '../api';
+import { useAuthStore } from '../store';
+import type { UpdateProfileRequest, UserProfile } from '../types';
+import { parseAuthError } from '../utils';
+
+// ─── Query Keys ───────────────────────────────────────────────────────────────
+
+export const profileKeys = {
+  me: () => ['auth', 'me'] as const,
+};
+
+// ─── useProfile ───────────────────────────────────────────────────────────────
+
+export interface UseProfileResult {
+  profile: UserProfile | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch: () => void;
+}
+
+/**
+ * Fetches the authenticated user's full profile from GET /auth/me.
+ *
+ * Also keeps the Zustand authStore in sync when fresh data arrives,
+ * so other parts of the app reading `useAuthStore().user` stay current.
+ */
+export function useProfile(): UseProfileResult {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const setUser = useAuthStore((s) => s.setUser);
+  const currentUser = useAuthStore((s) => s.user);
+
+  const query = useQuery({
+    queryKey: profileKeys.me(),
+    queryFn: async () => {
+      const profile = await getMyProfile(currentUser);
+      setUser(profile);
+      return profile;
+    },
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    profile: query.data,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  };
+}
+
+// ─── useUpdateProfile ─────────────────────────────────────────────────────────
+
+export interface UseUpdateProfileResult {
+  update: (body: UpdateProfileRequest) => void;
+  isPending: boolean;
+  isSuccess: boolean;
+  error: string | null;
+  reset: () => void;
+}
+
+/**
+ * Sends a PATCH /auth/me request to update profile fields.
+ *
+ * On success:
+ * - Updates the TanStack Query cache for profileKeys.me()
+ * - Syncs the updated profile into Zustand authStore
+ */
+export function useUpdateProfile(): UseUpdateProfileResult {
+  const setUser = useAuthStore((s) => s.setUser);
+  const currentUser = useAuthStore((s) => s.user);
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (body: UpdateProfileRequest) => updateMyProfile(body, currentUser),
+    onSuccess: (updatedProfile) => {
+      setUser(updatedProfile);
+      queryClient.setQueryData(profileKeys.me(), updatedProfile);
+    },
+  });
+
+  return {
+    update: mutation.mutate,
+    isPending: mutation.isPending,
+    isSuccess: mutation.isSuccess,
+    error: mutation.isError ? parseAuthError(mutation.error) : null,
+    reset: mutation.reset,
+  };
+}

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,153 +11,158 @@ import {
   View,
 } from 'react-native';
 
-import { use2FADisable, use2FASetup } from '../hooks/use-2fa';
-import { OTPInput } from './OTPInput';
+import {
+  KeyboardAwareModalSheet,
+  logModalInputFocus,
+} from '@/components/ui/keyboard-aware-sheet';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { useToast } from '@/components/ui/toast';
+
+import { use2FAConfirmSetup, use2FADisable, use2FASetup } from '../hooks/use-2fa';
+import { useAuthTheme } from '../theme';
+import { OTPInput } from './OTPInput';
 
 interface TwoFASetupModalProps {
   visible: boolean;
-  /** Whether 2FA is currently enabled for this user */
   isEnabled: boolean;
   onClose: () => void;
-  /** Called after successful enable or disable */
   onSuccess: () => void;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
-/**
- * Two-step modal for enabling / disabling TOTP 2FA.
- *
- * Enable flow:
- *   Step 1 → Fetch QR code + secret from API → display to user
- *   Step 2 → User enters first TOTP code to confirm setup
- *
- * Disable flow:
- *   User enters current TOTP code to confirm removal
- */
 export function TwoFASetupModal({
   visible,
   isEnabled,
   onClose,
   onSuccess,
 }: TwoFASetupModalProps) {
+  const theme = useAuthTheme();
+  const { showToast } = useToast();
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'init' | 'scan' | 'confirm'>('init');
-  const [showBackupCodes, setShowBackupCodes] = useState(false);
 
   const setup2FAMutation = use2FASetup();
+  const { confirm, isPending: confirming, error: confirmError, reset: resetConfirm } =
+    use2FAConfirmSetup();
   const { disable, isPending: disabling, isSuccess: disableSuccess, error: disableError } =
     use2FADisable();
 
   const setupData = setup2FAMutation.data;
   const setupError = setup2FAMutation.error;
+  const error = setupError ?? confirmError ?? disableError;
 
-  // Reset when modal closes
   const handleClose = () => {
     setCode('');
     setStep('init');
-    setShowBackupCodes(false);
     setup2FAMutation.reset();
+    resetConfirm();
     onClose();
   };
 
   const handleStartSetup = () => {
-    // When TVariables is void, TanStack Query v5 takes options as the sole arg
-    setup2FAMutation.mutate({ onSuccess: () => setStep('scan') } as never);
+    setup2FAMutation.mutate(undefined, {
+      onSuccess: () => setStep('scan'),
+      onError: () => showToast('Không thể khởi tạo 2FA', 'error'),
+    });
   };
 
   const handleConfirmSetup = () => {
-    // use2FAVerify is handled by the 2fa-verify screen;
-    // here we call the same endpoint to confirm setup (no temp_token)
-    if (code.length === 6) {
-      // Parent should call verify2FA via use2FAVerify hook
-      onSuccess();
-    }
+    if (!setupData?.setup_token || code.length !== 6) return;
+    confirm(
+      { setup_token: setupData.setup_token, code },
+      {
+        onSuccess: () => {
+          showToast('Đã bật xác thực 2 lớp', 'success');
+          onSuccess();
+          handleClose();
+        },
+      },
+    );
   };
 
   const handleDisable = () => {
-    if (code.length !== 6) return;
-    disable({ code }, { onSuccess: () => { onSuccess(); handleClose(); } });
+    disable(undefined, {
+      onSuccess: () => {
+        showToast('Đã tắt xác thực 2 lớp', 'success');
+        onSuccess();
+        handleClose();
+      },
+    });
   };
 
-  const error = setupError ?? disableError;
-
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={handleClose}
-    >
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
+        <KeyboardAwareModalSheet debugName="TwoFASetupModal">
+          <View style={[styles.sheet, { backgroundColor: theme.card }]}>
+          <View style={[styles.header, { borderBottomColor: theme.borderLight }]}>
+            <Text style={[styles.title, { color: theme.text }]}>
               {isEnabled ? 'Tắt xác thực 2 lớp' : 'Bật xác thực 2 lớp'}
             </Text>
             <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.closeText}>✕</Text>
+              <Text style={[styles.closeText, { color: theme.textSecondary }]}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* ── DISABLE FLOW ── */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          >
             {isEnabled && (
               <View style={styles.body}>
-                <Text style={styles.description}>
-                  Nhập mã 6 chữ số từ ứng dụng xác thực để tắt 2FA.
+                <Text style={[styles.description, { color: theme.textSecondary }]}>
+                  Xác nhận tắt xác thực 2 lớp (TOTP) cho tài khoản của bạn.
                 </Text>
-                <OTPInput
-                  value={code}
-                  onChange={setCode}
-                  hasError={!!error}
-                  autoFocus
-                />
-                {error && <Text style={styles.errorText}>{error}</Text>}
+                {error && <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>}
                 {disableSuccess && (
-                  <Text style={styles.successText}>✓ Đã tắt xác thực 2 lớp</Text>
+                  <Text style={[styles.successText, { color: theme.success }]}>
+                    ✓ Đã tắt xác thực 2 lớp
+                  </Text>
                 )}
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
-                    (disabling || code.length < 6) && styles.buttonDisabled,
+                    { backgroundColor: theme.primary },
+                    disabling && { backgroundColor: theme.primaryDisabled },
                   ]}
                   onPress={handleDisable}
-                  disabled={disabling || code.length < 6}
+                  disabled={disabling}
                 >
                   {disabling ? (
                     <ActivityIndicator color="#fff" size="small" />
                   ) : (
-                    <Text style={styles.primaryButtonText}>Xác nhận tắt</Text>
+                    <Text style={styles.primaryButtonText}>Xác nhận tắt 2FA</Text>
                   )}
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* ── ENABLE FLOW – Step init ── */}
             {!isEnabled && step === 'init' && (
               <View style={styles.body}>
-                <Text style={styles.description}>
-                  Xác thực 2 lớp (TOTP) thêm một lớp bảo mật bằng mã ngẫu nhiên
-                  từ ứng dụng như Google Authenticator hoặc Authy.
+                <Text style={[styles.description, { color: theme.textSecondary }]}>
+                  Xác thực 2 lớp (TOTP) thêm một lớp bảo mật bằng mã ngẫu nhiên từ ứng dụng như
+                  Google Authenticator hoặc Authy.
                 </Text>
-                <View style={styles.stepCard}>
-                  <Text style={styles.stepText}>
+                <View style={[styles.stepCard, { backgroundColor: theme.inputBg }]}>
+                  <Text style={[styles.stepText, { color: theme.primary }]}>
                     1. Cài ứng dụng xác thực trên điện thoại
                   </Text>
-                  <Text style={styles.stepText}>
+                  <Text style={[styles.stepText, { color: theme.primary }]}>
                     2. Quét mã QR hoặc nhập mã thủ công
                   </Text>
-                  <Text style={styles.stepText}>
+                  <Text style={[styles.stepText, { color: theme.primary }]}>
                     3. Nhập mã 6 chữ số để kích hoạt
                   </Text>
                 </View>
-                {setupError && <Text style={styles.errorText}>{setupError}</Text>}
+                {setupError && (
+                  <Text style={[styles.errorText, { color: theme.error }]}>{setupError}</Text>
+                )}
                 <TouchableOpacity
-                  style={[styles.primaryButton, setup2FAMutation.isPending && styles.buttonDisabled]}
+                  style={[
+                    styles.primaryButton,
+                    { backgroundColor: theme.primary },
+                    setup2FAMutation.isPending && { backgroundColor: theme.primaryDisabled },
+                  ]}
                   onPress={handleStartSetup}
                   disabled={setup2FAMutation.isPending}
                 >
@@ -169,52 +175,28 @@ export function TwoFASetupModal({
               </View>
             )}
 
-            {/* ── ENABLE FLOW – Step scan ── */}
             {!isEnabled && step === 'scan' && setupData && (
               <View style={styles.body}>
-                <Text style={styles.description}>
+                <Text style={[styles.description, { color: theme.textSecondary }]}>
                   Quét mã QR bằng ứng dụng xác thực của bạn.
                 </Text>
-
-                {/* QR Code image from API URL */}
-                <View style={styles.qrWrapper}>
+                <View style={[styles.qrWrapper, { backgroundColor: theme.inputBg }]}>
                   <Image
                     source={{ uri: setupData.qr_code_url }}
                     style={styles.qrImage}
                     contentFit="contain"
                   />
                 </View>
-
-                {/* Manual entry secret */}
-                <Text style={styles.sectionLabel}>Hoặc nhập thủ công:</Text>
-                <View style={styles.secretBox}>
-                  <Text style={styles.secretText} selectable>
+                <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+                  Hoặc nhập thủ công:
+                </Text>
+                <View style={[styles.secretBox, { backgroundColor: theme.inputBg }]}>
+                  <Text style={[styles.secretText, { color: theme.text }]} selectable>
                     {setupData.secret}
                   </Text>
                 </View>
-
-                {/* Backup codes */}
                 <TouchableOpacity
-                  onPress={() => setShowBackupCodes((v) => !v)}
-                  style={styles.backupToggle}
-                >
-                  <Text style={styles.backupToggleText}>
-                    {showBackupCodes ? '▲' : '▼'} Mã dự phòng (
-                    {setupData.backup_codes.length})
-                  </Text>
-                </TouchableOpacity>
-                {showBackupCodes && (
-                  <View style={styles.backupGrid}>
-                    {setupData.backup_codes.map((bc) => (
-                      <Text key={bc} style={styles.backupCode} selectable>
-                        {bc}
-                      </Text>
-                    ))}
-                  </View>
-                )}
-
-                <TouchableOpacity
-                  style={styles.primaryButton}
+                  style={[styles.primaryButton, { backgroundColor: theme.primary }]}
                   onPress={() => setStep('confirm')}
                 >
                   <Text style={styles.primaryButtonText}>Đã quét xong →</Text>
@@ -222,54 +204,48 @@ export function TwoFASetupModal({
               </View>
             )}
 
-            {/* ── ENABLE FLOW – Step confirm ── */}
             {!isEnabled && step === 'confirm' && (
               <View style={styles.body}>
-                <Text style={styles.description}>
+                <Text style={[styles.description, { color: theme.textSecondary }]}>
                   Nhập mã 6 chữ số từ ứng dụng xác thực để hoàn tất kích hoạt.
                 </Text>
-                <OTPInput
-                  value={code}
-                  onChange={setCode}
-                  hasError={!!error}
-                  autoFocus
-                />
-                {error && <Text style={styles.errorText}>{error}</Text>}
+                <OTPInput value={code} onChange={setCode} hasError={!!error} autoFocus />
+                {error && <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>}
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
-                    code.length < 6 && styles.buttonDisabled,
+                    { backgroundColor: theme.primary },
+                    (confirming || code.length < 6) && { backgroundColor: theme.primaryDisabled },
                   ]}
                   onPress={handleConfirmSetup}
-                  disabled={code.length < 6}
+                  disabled={confirming || code.length < 6}
                 >
-                  <Text style={styles.primaryButtonText}>Kích hoạt 2FA</Text>
+                  {confirming ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>Kích hoạt 2FA</Text>
+                  )}
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setStep('scan')}
-                  style={styles.backButton}
-                >
-                  <Text style={styles.backButtonText}>← Quay lại</Text>
+                <TouchableOpacity onPress={() => setStep('scan')} style={styles.backButton}>
+                  <Text style={[styles.backButtonText, { color: theme.textSecondary }]}>
+                    ← Quay lại
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
           </ScrollView>
-        </View>
+          </View>
+        </KeyboardAwareModalSheet>
       </View>
     </Modal>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
@@ -282,16 +258,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
   },
   closeText: {
     fontSize: 18,
-    color: '#64748B',
   },
   body: {
     paddingHorizontal: 24,
@@ -300,23 +273,19 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#64748B',
     lineHeight: 22,
   },
   stepCard: {
-    backgroundColor: '#F0F7FF',
     borderRadius: 12,
     padding: 16,
     gap: 10,
   },
   stepText: {
     fontSize: 14,
-    color: '#1E40AF',
     lineHeight: 20,
   },
   qrWrapper: {
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
     borderRadius: 16,
     padding: 16,
   },
@@ -327,10 +296,8 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
   },
   secretBox: {
-    backgroundColor: '#F1F5F9',
     borderRadius: 10,
     padding: 12,
     alignItems: 'center',
@@ -338,51 +305,22 @@ const styles = StyleSheet.create({
   secretText: {
     fontFamily: 'monospace',
     fontSize: 14,
-    color: '#1E293B',
     letterSpacing: 2,
-  },
-  backupToggle: {
-    alignSelf: 'flex-start',
-  },
-  backupToggleText: {
-    fontSize: 13,
-    color: '#2563EB',
-    fontWeight: '500',
-  },
-  backupGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  backupCode: {
-    fontFamily: 'monospace',
-    fontSize: 13,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    color: '#1E293B',
   },
   errorText: {
     fontSize: 13,
-    color: '#EF4444',
     textAlign: 'center',
   },
   successText: {
     fontSize: 14,
-    color: '#16A34A',
     fontWeight: '600',
     textAlign: 'center',
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 4,
-  },
-  buttonDisabled: {
-    backgroundColor: '#93B4F8',
   },
   primaryButtonText: {
     color: '#ffffff',
@@ -395,6 +333,5 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 14,
-    color: '#64748B',
   },
 });

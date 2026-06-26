@@ -13,6 +13,9 @@ import {
 import { z } from 'zod';
 
 import { useLogin } from '../hooks/use-login';
+import { AccountLockedBanner } from './AccountLockedBanner';
+import { GoogleSignInButton } from './GoogleSignInButton';
+import { useAuthTheme } from '../theme';
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 
@@ -32,7 +35,8 @@ interface LoginFormProps {
 
 export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isPending, error } = useLogin();
+  const theme = useAuthTheme();
+  const { login, isPending, error, lockedUntil } = useLogin();
 
   const {
     control,
@@ -116,11 +120,18 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
       </TouchableOpacity>
 
       {/* API error banner */}
-      {error && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>{error}</Text>
+      {error && lockedUntil ? (
+        <AccountLockedBanner lockedUntil={lockedUntil} message={error} />
+      ) : error ? (
+        <View
+          style={[
+            styles.errorBanner,
+            { backgroundColor: theme.errorBg, borderColor: theme.errorBorder },
+          ]}
+        >
+          <Text style={[styles.errorBannerText, { color: theme.error }]}>{error}</Text>
         </View>
-      )}
+      ) : null}
 
       {/* Submit button */}
       <TouchableOpacity
@@ -134,15 +145,33 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
         ) : (
           <Text style={styles.submitText}>Đăng nhập</Text>
         )}
+        
       </TouchableOpacity>
+
+      <View style={styles.dividerRow}>
+        <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+        <Text style={[styles.dividerText, { color: theme.textMuted }]}>hoặc</Text>
+        <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+      </View>
+
+      <GoogleSignInButton disabled={isPending} />
 
       {/* Switch to phone login */}
       <TouchableOpacity onPress={onSwitchToPhone} style={styles.switchButton}>
-        <Text style={styles.switchText}>
+        <Text style={[styles.switchText, { color: theme.textSecondary }]}>
           Đăng nhập bằng{' '}
-          <Text style={styles.switchTextAccent}>số điện thoại</Text>
+          <Text style={[styles.switchTextAccent, { color: theme.primary }]}>số điện thoại</Text>
         </Text>
       </TouchableOpacity>
+
+      <View style={styles.RegisterRow}>
+        <Text style={[styles.RegisterText, { color: theme.textSecondary }]}>
+          Chưa có tài khoản?{' '}
+        </Text>
+        <TouchableOpacity onPress={() => router.replace('/(auth)/register')}>
+          <Text style={[styles.RegisterLink, { color: theme.primary }]}>Đăng ký</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -251,5 +280,32 @@ const styles = StyleSheet.create({
   switchTextAccent: {
     color: '#2563EB',
     fontWeight: '600',
+  },
+  RegisterRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  RegisterText: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  RegisterLink: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

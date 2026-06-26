@@ -7,8 +7,6 @@ import type {
   RefreshTokenRequest,
   RefreshTokenResponse,
   SendOTPRequest,
-  TwoFADisableRequest,
-  TwoFASetupResponse,
   TwoFAVerifyRequest,
   UserProfile,
   VerifyOTPRequest,
@@ -143,6 +141,16 @@ async function handleLogin(
     const key = body.email.toLowerCase();
     const attempts = (loginAttempts.get(key) ?? 0) + 1;
     loginAttempts.set(key, attempts);
+
+    if (attempts >= 5) {
+      const lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      return fail(config, 423, {
+        message: `Account locked until ${lockedUntil}`,
+        error_code: 'ACCOUNT_LOCKED',
+        locked_until: lockedUntil,
+      });
+    }
+
     return fail(config, 401, {
       message: 'Email hoặc mật khẩu không đúng',
       error_code: 'INVALID_CREDENTIALS',
@@ -251,13 +259,14 @@ async function handleRefresh(
 async function handleVerify2FA(
   config: InternalAxiosRequestConfig,
 ): Promise<MockResult> {
-  const body = parseBody<TwoFAVerifyRequest>(config);
+  const body = parseBody<TwoFAVerifyRequest & { pendingToken?: string }>(config);
+  const tempToken = body.temp_token ?? body.pendingToken;
 
   if (body.code !== MOCK_TOTP_CODE) {
     return fail(config, 400, { message: 'Mã xác thực không đúng' });
   }
 
-  let userId = parseUserIdFromToken(body.temp_token);
+  let userId = parseUserIdFromToken(tempToken);
 
   if (!userId) {
     const auth = getAuthHeader(config);
@@ -293,21 +302,96 @@ async function handleSetup2FA(
   const otpauth = `otpauth://totp/FAMS:${user?.email ?? 'demo@fams.vn'}?secret=${secret}&issuer=FAMS`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauth)}`;
 
-  const data: TwoFASetupResponse = {
-    qr_code_url: qrUrl,
-    secret,
-    backup_codes: ['ABCD-1234', 'EFGH-5678', 'IJKL-9012', 'MNOP-3456'],
+  return ok(config, {
+    setupToken: 'mock-setup-token',
+    qrCodeUrl: qrUrl,
+    manualEntryKey: secret,
+  });
+}
+
+async function handleConfirmTotpSetup(
+  config: InternalAxiosRequestConfig,
+): Promise<MockResult> {
+  const body = parseBody<{ setupToken?: string; code?: string }>(config);
+
+  if (body.code !== MOCK_TOTP_CODE) {
+    return fail(config, 400, { message: 'Mã xác thực không đúng' });
+  }
+
+  const auth = getAuthHeader(config);
+  const userId = parseUserIdFromToken(auth?.replace('Bearer ', ''));
+  const user = userId ? findUserById(userId) : MOCK_USERS[0];
+  if (user) {
+    user.is_2fa_enabled = true;
+  }
+
+  return ok(config, null);
+}
+
+async function handleGoogleLogin(
+  config: InternalAxiosRequestConfig,
+): Promise<MockResult> {
+  const body = parseBody<{ idToken?: string }>(config);
+  if (!body.idToken) {
+    return fail(config, 401, { message: 'Invalid or expired Google ID token' });
+  }
+
+  const user = MOCK_USERS[0];
+  const data: LoginResponse = {
+    ...makeTokens(user.id),
+    user: toProfile(user),
+    requires_2fa: false,
   };
   return ok(config, data);
+}
+
+async function handleChangePassword(
+  config: InternalAxiosRequestConfig,
+): Promise<MockResult> {
+  const body = parseBody<{ currentPassword?: string; newPassword?: string }>(config);
+  const auth = getAuthHeader(config);
+  const userId = parseUserIdFromToken(auth?.replace('Bearer ', ''));
+  const user = userId ? findUserById(userId) : null;
+
+  if (!user || user.password !== body.currentPassword) {
+    return fail(config, 401, { message: 'Mật khẩu hiện tại không đúng' });
+  }
+
+  user.password = body.newPassword ?? user.password;
+  return ok(config, { message: 'Đổi mật khẩu thành công' });
+}
+
+async function handlePatchProfile(
+  config: InternalAxiosRequestConfig,
+): Promise<MockResult> {
+  const body = parseBody<{
+    displayName?: string;
+    phone?: string;
+    avatarUrl?: string;
+  }>(config);
+  const auth = getAuthHeader(config);
+  const userId = parseUserIdFromToken(auth?.replace('Bearer ', ''));
+  const user = userId ? findUserById(userId) : null;
+
+  if (!user) {
+    return fail(config, 401, { message: 'Unauthorized' });
+  }
+
+  if (body.displayName) user.full_name = body.displayName;
+  if (body.phone !== undefined) user.phone = body.phone;
+  if (body.avatarUrl !== undefined) user.avatar_url = body.avatarUrl;
+
+  return ok(config, toProfile(user));
 }
 
 async function handleDisable2FA(
   config: InternalAxiosRequestConfig,
 ): Promise<MockResult> {
-  const body = parseBody<TwoFADisableRequest>(config);
-
-  if (body.code !== MOCK_TOTP_CODE) {
-    return fail(config, 400, { message: 'Mã xác thực không đúng' });
+  const auth = getAuthHeader(config);
+  const userId = parseUserIdFromToken(auth?.replace('Bearer ', ''));
+  const user = userId ? findUserById(userId) : null;
+  if (user) {
+    user.is_2fa_enabled = false;
   }
 
   return ok(config, { message: 'Đã tắt xác thực 2 lớp' });
@@ -361,14 +445,31 @@ export async function handleAuthMockRequest(
 
   // POST /auth/login
   if (method === 'post' && path === '/auth/login') return handleLogin(config);
+  if (method === 'post' && path === '/auth/login/google') return handleGoogleLogin(config);
+  if (method === 'post' && path === '/auth/change-password') return handleChangePassword(config);
+  if (method === 'patch' && path === '/auth/me') return handlePatchProfile(config);
   if (method === 'post' && path === '/auth/otp/send') return handleSendOTP(config);
   if (method === 'post' && path === '/auth/otp/verify') return handleVerifyOTP(config);
   if (method === 'post' && path === '/auth/refresh') return handleRefresh(config);
   if (method === 'post' && path === '/auth/logout') return handleLogout(config);
-  if (method === 'post' && path === '/auth/logout-all') return handleLogout(config);
-  if (method === 'post' && path === '/auth/2fa/setup') return handleSetup2FA(config);
-  if (method === 'post' && path === '/auth/2fa/verify') return handleVerify2FA(config);
-  if (method === 'post' && path === '/auth/2fa/disable') return handleDisable2FA(config);
+  if (method === 'post' && (path === '/auth/logout-all' || path === '/auth/logout/all')) {
+    return handleLogout(config);
+  }
+  if (method === 'post' && (path === '/auth/2fa/setup' || path === '/auth/totp/setup')) {
+    return handleSetup2FA(config);
+  }
+  if (
+    method === 'post' &&
+    (path === '/auth/2fa/verify' || path === '/auth/login/totp')
+  ) {
+    return handleVerify2FA(config);
+  }
+  if (method === 'post' && path === '/auth/totp/verify') {
+    return handleConfirmTotpSetup(config);
+  }
+  if (method === 'post' && (path === '/auth/2fa/disable' || path === '/auth/totp/disable')) {
+    return handleDisable2FA(config);
+  }
   if (method === 'post' && path === '/auth/forgot-password') return handleForgotPassword(config);
   if (method === 'get' && path === '/auth/me') return handleGetProfile(config);
 

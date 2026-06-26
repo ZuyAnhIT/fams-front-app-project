@@ -5,6 +5,13 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  full_name: string;
+  phone?: string;
+}
+
 export interface SendOTPRequest {
   phone: string;
 }
@@ -23,6 +30,29 @@ export interface ForgotPasswordRequest {
   email: string;
 }
 
+export interface ResetPasswordRequest {
+  /** Token extracted from the reset-password deep link */
+  token: string;
+  new_password: string;
+}
+
+export interface GoogleLoginRequest {
+  id_token: string;
+  device_id?: string;
+}
+
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
+export interface UpdateProfileRequest {
+  full_name?: string;
+  phone?: string;
+  avatar_url?: string;
+  department?: string;
+}
+
 // ─── Response Types ───────────────────────────────────────────────────────────
 
 export interface TokenPair {
@@ -34,7 +64,8 @@ export interface TokenPair {
 }
 
 export interface LoginResponse extends TokenPair {
-  user: UserProfile;
+  /** Populated by mock API; real backend loads profile via GET /auth/me */
+  user?: UserProfile;
   /** True when TOTP is enabled – client must complete 2FA step */
   requires_2fa: boolean;
   /**
@@ -51,12 +82,17 @@ export interface RefreshTokenResponse extends TokenPair {
 // ─── 2FA Types ────────────────────────────────────────────────────────────────
 
 export interface TwoFASetupResponse {
-  /** URL to render as QR code (otpauth://…) */
+  /** Short-lived token required when confirming setup via /totp/verify */
+  setup_token: string;
+  /** URL to the backend QR page (scan with Authenticator app) */
   qr_code_url: string;
-  /** Raw secret for manual entry into authenticator apps */
+  /** Base32 secret for manual entry into authenticator apps */
   secret: string;
-  /** One-time backup codes */
-  backup_codes: string[];
+}
+
+export interface TwoFAConfirmSetupRequest {
+  setup_token: string;
+  code: string;
 }
 
 export interface TwoFAVerifyRequest {
@@ -66,9 +102,9 @@ export interface TwoFAVerifyRequest {
   temp_token?: string;
 }
 
+/** Backend disables TOTP without a code — kept for optional UI confirmation step */
 export interface TwoFADisableRequest {
-  /** Must provide current TOTP code to confirm intent */
-  code: string;
+  code?: string;
 }
 
 // ─── User ─────────────────────────────────────────────────────────────────────

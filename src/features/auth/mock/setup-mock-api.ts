@@ -1,6 +1,7 @@
-import axios, { type AxiosAdapter } from 'axios';
+import { type AxiosAdapter } from 'axios';
 
 import { USE_MOCK_API } from '@/config/env';
+import { handleTenantMockRequest } from '@/features/tenant/mock/tenant.mock-handler';
 import { apiClient } from '@/services/api-client';
 
 import { handleAuthMockRequest } from './auth.mock-handler';
@@ -8,8 +9,10 @@ import { handleAuthMockRequest } from './auth.mock-handler';
 let installed = false;
 
 /**
- * Gắn axios adapter mock cho các route /auth/*.
+ * Gắn axios adapter mock cho toàn bộ API FAMS.
  * Chỉ chạy khi EXPO_PUBLIC_USE_MOCK_API=true.
+ *
+ * Thứ tự ưu tiên: auth → tenant → (future features)
  */
 export function setupMockApi(): void {
   if (!USE_MOCK_API || installed) return;
@@ -17,18 +20,24 @@ export function setupMockApi(): void {
   const originalAdapter = apiClient.defaults.adapter as AxiosAdapter | undefined;
 
   apiClient.defaults.adapter = async (config) => {
-    const mockResult = await handleAuthMockRequest(config);
+    // Try each feature mock handler in priority order
+    const handlers = [
+      handleAuthMockRequest,
+      handleTenantMockRequest,
+    ];
 
-    if (mockResult) {
-      if (mockResult.error) throw mockResult.error;
-      return mockResult.response;
+    for (const handler of handlers) {
+      const result = await handler(config);
+      if (result) {
+        if (result.error) throw result.error;
+        return result.response;
+      }
     }
 
     if (originalAdapter) {
       return originalAdapter(config);
     }
 
-    // Chưa có backend – chỉ mock auth được hỗ trợ
     throw new Error(
       `[Mock] Route chưa mock: ${config.method?.toUpperCase()} ${config.url}`,
     );
@@ -36,6 +45,6 @@ export function setupMockApi(): void {
 
   installed = true;
   console.info(
-    '[FAMS Mock API] demo@fams.vn / 123456 | 2fa@fams.vn → OTP 654321 | SĐT 0912345678 → OTP 123456',
+    '[FAMS Mock API] auth: demo@fams.vn/123456 | tenant: /tenants, /tenants/me, /plans',
   );
 }

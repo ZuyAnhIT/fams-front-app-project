@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OTPInput } from '@/features/auth/components/OTPInput';
 import { MockDevBanner } from '@/features/auth/components/MockDevBanner';
 import { useSendOTP, useVerifyOTP } from '@/features/auth/hooks/use-phone-otp';
-import { formatCountdown } from '@/features/auth/utils';
+import { formatCountdown, normalizePhoneForBackend } from '@/features/auth/utils';
 
 const OTP_EXPIRY_SECONDS = 120;
 
@@ -119,8 +119,8 @@ export default function PhoneLoginScreen() {
             </Text>
             <Text style={styles.subtitle}>
               {step === 'enter-phone'
-                ? 'Nhập số điện thoại đã đăng ký để nhận mã OTP'
-                : `Nhập mã 6 chữ số vừa gửi đến\n${phone}`}
+                ? 'Nhập số điện thoại đã đăng ký (ví dụ: 0912345678)'
+                : `Nhập mã 6 chữ số vừa gửi đến\n${normalizePhoneForBackend(phone)}`}
             </Text>
           </View>
 
@@ -136,13 +136,16 @@ export default function PhoneLoginScreen() {
                     style={styles.input}
                     value={phone}
                     onChangeText={setPhone}
-                    placeholder="0912 345 678"
+                    placeholder="0912345678"
                     placeholderTextColor="#94A3B8"
                     keyboardType="phone-pad"
                     returnKeyType="done"
                     onSubmitEditing={handleSendOTP}
                     autoFocus
                   />
+                  <Text style={styles.hint}>
+                    Nhập số bắt đầu bằng 0 — hệ thống tự chuyển sang +84 khi gửi
+                  </Text>
                 </View>
 
                 {sendError && (
@@ -314,6 +317,11 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     backgroundColor: '#F8FAFC',
     letterSpacing: 1,
+  },
+  hint: {
+    fontSize: 12,
+    color: '#94A3B8',
+    lineHeight: 18,
   },
   countdownRow: {
     alignItems: 'center',
