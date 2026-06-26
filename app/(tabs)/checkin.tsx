@@ -1,6 +1,7 @@
-import { Text, TouchableOpacity, View } from "react-native";
-
+import { Button, Text, TouchableOpacity, View } from "react-native";
+import { useLogout } from '@/features/auth/hooks/use-logout';
 export default function CheckinScreen() {
+  const { logout, isPending } = useLogout();
   return (
     <View
       style={{
@@ -43,6 +44,11 @@ export default function CheckinScreen() {
 
         <Text>GPS: Trong vùng hợp lệ</Text>
         <Text>Face ID: Chưa xác minh</Text>
+        <Button
+        title={isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
+        onPress={() => logout()}
+        disabled={isPending}
+      />
       </View>
     </View>
   );

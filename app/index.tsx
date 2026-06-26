@@ -1,65 +1,34 @@
-import { router } from "expo-router";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Redirect } from 'expo-router';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-export default function LoginScreen() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: "#F8FAFC",
-        justifyContent: "center",
-        padding: 24,
-      }}
-    >
-      <View
-        style={{
-          backgroundColor: "white",
-          padding: 24,
-          borderRadius: 20,
-          gap: 16,
-        }}
-      >
-        <Text style={{ fontSize: 28, fontWeight: "700", textAlign: "center" }}>
-          FAMS
-        </Text>
+import { useAuthStore } from '@/features/auth/store';
 
-        <Text style={{ fontSize: 16, color: "#64748B", textAlign: "center" }}>
-          Employee Attendance App
-        </Text>
+/**
+ * Entry point – redirects immediately based on auth state.
+ * Renders a spinner while SecureStore tokens are being read (isHydrating).
+ */
+export default function Index() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isHydrating = useAuthStore((s) => s.isHydrating);
 
-        <TextInput
-          placeholder="Email hoặc số điện thoại"
-          style={{
-            borderWidth: 1,
-            borderColor: "#CBD5E1",
-            borderRadius: 12,
-            padding: 14,
-          }}
-        />
-
-        <TextInput
-          placeholder="Mật khẩu"
-          secureTextEntry
-          style={{
-            borderWidth: 1,
-            borderColor: "#CBD5E1",
-            borderRadius: 12,
-            padding: 14,
-          }}
-        />
-
-        <TouchableOpacity
-          onPress={() => router.replace("/home")}
-          style={{
-            backgroundColor: "#2563EB",
-            padding: 16,
-            borderRadius: 12,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "white", fontWeight: "700" }}>Đăng nhập</Text>
-        </TouchableOpacity>
+  if (isHydrating) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#2563EB" />
       </View>
-    </View>
+    );
+  }
+
+  return (
+    <Redirect href={isAuthenticated ? '/(tabs)/home' : '/(auth)/login'} />
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

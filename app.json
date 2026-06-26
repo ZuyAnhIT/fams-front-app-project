@@ -8,9 +8,12 @@
     "scheme": "famsfrontappproject",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.fams.mobile"
     },
     "android": {
+      "package": "com.fams.mobile",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -35,12 +38,23 @@
           }
         }
       ],
-      "expo-status-bar",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.1012796463723-coetgapvr0vul5tfr6p93kdg1s67c4pd"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e0abbdee-9b61-422d-b997-416a40e921cd"
+      }
     }
   }
 }
