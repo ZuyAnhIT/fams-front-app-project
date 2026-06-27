@@ -1,6 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
+import { useToast } from '@/components/ui/toast';
+
 import { resetPassword } from '../api';
 import type { ResetPasswordRequest } from '../types';
 import { parseAuthError } from '../utils';
@@ -22,10 +24,16 @@ export interface UseResetPasswordResult {
  * After 2 seconds of showing the success state the user is redirected to login.
  */
 export function useResetPassword(): UseResetPasswordResult {
+  const { showToast } = useToast();
+
   const mutation = useMutation({
     mutationFn: (body: ResetPasswordRequest) => resetPassword(body),
     onSuccess: () => {
+      showToast('Đặt lại mật khẩu thành công', 'success');
       setTimeout(() => router.replace('/(auth)/login'), 2000);
+    },
+    onError: (error) => {
+      showToast(parseAuthError(error), 'error');
     },
   });
 

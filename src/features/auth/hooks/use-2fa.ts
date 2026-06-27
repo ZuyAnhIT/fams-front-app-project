@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
+import { useToast } from '@/components/ui/toast';
+
 import { confirmTotpSetup, disable2FA, getMyProfile, setup2FA, verifyLoginTotp } from '../api';
 import { profileKeys } from './use-profile';
 import { useAuthStore } from '../store';
@@ -55,6 +57,7 @@ export interface Use2FAVerifyResult {
 
 export function use2FAVerify(): Use2FAVerifyResult {
   const { tempToken, setTokens, setUser, set2FARequired } = useAuthStore();
+  const { showToast } = useToast();
 
   const mutation = useMutation({
     mutationFn: (code: string) =>
@@ -64,7 +67,11 @@ export function use2FAVerify(): Use2FAVerifyResult {
       await setTokens(data.access_token, data.refresh_token);
       const user = data.user ?? (await getMyProfile());
       setUser({ ...user, is_2fa_enabled: true });
+      showToast('Xác thực 2 lớp thành công', 'success');
       router.replace('/(tabs)/home');
+    },
+    onError: (error) => {
+      showToast(parseAuthError(error), 'error');
     },
   });
 

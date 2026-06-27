@@ -1,6 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
+import { useToast } from '@/components/ui/toast';
+
 import { getMyProfile, registerUser } from '../api';
 import { useAuthStore } from '../store';
 import type { RegisterRequest } from '../types';
@@ -26,12 +28,14 @@ export interface UseRegisterResult {
  */
 export function useRegister(): UseRegisterResult {
   const { setTokens, setUser, set2FARequired } = useAuthStore();
+  const { showToast } = useToast();
 
   const mutation = useMutation({
     mutationFn: (body: RegisterRequest) => registerUser(body),
     onSuccess: async (data) => {
       if (data.requires_2fa && data.temp_token) {
         set2FARequired(true, data.temp_token);
+        showToast('Vui lòng xác thực mã 2 lớp', 'info');
         router.push('/(auth)/2fa-verify' as never);
         return;
       }
@@ -39,10 +43,12 @@ export function useRegister(): UseRegisterResult {
         await setTokens(data.access_token, data.refresh_token);
         const user = data.user ?? (await getMyProfile());
         setUser(user);
+        showToast('Đăng ký thành công', 'success');
         router.replace('/(tabs)/home');
         return;
       }
       // Server may require email verification before login
+      showToast('Đăng ký thành công — vui lòng đăng nhập', 'success');
       router.replace('/(auth)/login');
     },
   });

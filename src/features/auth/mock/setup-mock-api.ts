@@ -1,6 +1,7 @@
 import { type AxiosAdapter } from 'axios';
 
 import { USE_MOCK_API } from '@/config/env';
+import { handleNotificationMockRequest } from '@/features/notification/mock/notification.mock-handler';
 import { handleTenantMockRequest } from '@/features/tenant/mock/tenant.mock-handler';
 import { apiClient } from '@/services/api-client';
 
@@ -12,7 +13,7 @@ let installed = false;
  * Gắn axios adapter mock cho toàn bộ API FAMS.
  * Chỉ chạy khi EXPO_PUBLIC_USE_MOCK_API=true.
  *
- * Thứ tự ưu tiên: auth → tenant → (future features)
+ * Thứ tự ưu tiên: auth → tenant → notification → (future features)
  */
 export function setupMockApi(): void {
   if (!USE_MOCK_API || installed) return;
@@ -24,6 +25,7 @@ export function setupMockApi(): void {
     const handlers = [
       handleAuthMockRequest,
       handleTenantMockRequest,
+      handleNotificationMockRequest,
     ];
 
     for (const handler of handlers) {
