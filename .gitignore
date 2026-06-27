@@ -1,48 +1,57 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# ─── Dependencies ───
 node_modules/
-
-# Expo
+# ─── Expo / Metro ───
 .expo/
 dist/
+.expo-tmp-export/
 web-build/
 expo-env.d.ts
-
-# Native
+.metro-health-check*
+# ─── Native (generated — EAS/prebuild tạo lại) ───
+/ios
+/android
 .kotlin/
 *.orig.*
+# ─── Secrets & signing (KHÔNG commit) ───
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
+*.pem
 *.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# debug
+google-services.json
+GoogleService-Info.plist
+credentials.json
+secrets.json
+# ─── EAS ───
+# Keystore/credentials export — giữ local
+*.credentials.json
+# ─── Debug / logs cá nhân ───
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-
-# macOS
+*.log
+debug-*.log
+# ─── OS ───
 .DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
+Thumbs.db
+Desktop.ini
+# ─── IDE (chỉ ignore local, giữ shared settings nếu cần) ───
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.swp
+*.swo
+*~
+# ─── TypeScript ───
 *.tsbuildinfo
-
-example
-
-# generated native folders
-/ios
-/android
-node_modules/
-.expo/
-.env
-.env.*
-.vscode/
+# ─── Giữ template env trên Git ───
+!.env.example
