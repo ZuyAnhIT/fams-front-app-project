@@ -100,6 +100,12 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess]);
 
+  useEffect(() => {
+    if (error) {
+      showToast(error, 'error');
+    }
+  }, [error, showToast]);
+
   const onSubmit = ({ current_password, new_password }: FormData) =>
     submit({ current_password, new_password });
 

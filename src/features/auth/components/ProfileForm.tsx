@@ -84,6 +84,18 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess]);
 
+  useEffect(() => {
+    if (error) {
+      showToast(error, 'error');
+    }
+  }, [error, showToast]);
+
+  useEffect(() => {
+    if (uploadError) {
+      showToast(uploadError, 'error');
+    }
+  }, [uploadError, showToast]);
+
   const handleClose = () => {
     resetMutation();
     onClose();
@@ -94,8 +106,9 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
       const url = await pickAndUploadAsync();
       setAvatarUrl(url);
       showToast('Đã tải ảnh lên', 'success');
-    } catch {
-      // errors surfaced via uploadError
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Không thể tải ảnh lên';
+      showToast(message, 'error');
     }
   };
 

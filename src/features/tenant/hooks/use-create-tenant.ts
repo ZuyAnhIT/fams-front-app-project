@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
+import { useToast } from '@/components/ui/toast';
+
 import { createTenant } from '../api';
 import type { CreateTenantRequest } from '../types';
 import { parseTenantError } from '../utils';
@@ -20,16 +22,18 @@ export interface UseCreateTenantResult {
  */
 export function useCreateTenant(): UseCreateTenantResult {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const mutation = useMutation({
     mutationFn: (body: CreateTenantRequest) => createTenant(body),
     onSuccess: (newTenant) => {
-      // Invalidate list so it refreshes next time admin views it
       queryClient.invalidateQueries({ queryKey: tenantKeys.all });
-      // Pre-populate the detail cache to avoid a redundant fetch
       queryClient.setQueryData(tenantKeys.detail(newTenant.id), newTenant);
-      // Navigate to the new tenant detail (admin would manage it from there)
+      showToast('Tạo công ty thành công', 'success');
       router.replace('/(tabs)/home' as never);
+    },
+    onError: (error) => {
+      showToast(parseTenantError(error), 'error');
     },
   });
 

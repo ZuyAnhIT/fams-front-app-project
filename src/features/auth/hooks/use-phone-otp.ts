@@ -1,6 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
+import { useToast } from '@/components/ui/toast';
+
 import { sendPhoneOTP, verifyPhoneOTP, getMyProfile } from '../api';
 import { useAuthStore } from '../store';
 import type { SendOTPRequest, VerifyOTPRequest } from '../types';
@@ -10,8 +12,16 @@ import { parseAuthError } from '../utils';
 
 /** Triggers an SMS OTP to the supplied phone number */
 export function useSendOTP() {
+  const { showToast } = useToast();
+
   const mutation = useMutation({
     mutationFn: (body: SendOTPRequest) => sendPhoneOTP(body),
+    onSuccess: () => {
+      showToast('Đã gửi mã OTP', 'success');
+    },
+    onError: (error) => {
+      showToast(parseAuthError(error), 'error');
+    },
   });
 
   return {
@@ -40,19 +50,25 @@ export interface UseVerifyOTPResult {
  */
 export function useVerifyOTP(): UseVerifyOTPResult {
   const { setTokens, setUser, set2FARequired } = useAuthStore();
+  const { showToast } = useToast();
 
   const mutation = useMutation({
     mutationFn: (body: VerifyOTPRequest) => verifyPhoneOTP(body),
     onSuccess: async (data) => {
       if (data.requires_2fa && data.temp_token) {
         set2FARequired(true, data.temp_token);
+        showToast('Vui lòng xác thực mã 2 lớp', 'info');
         router.push('/(auth)/2fa-verify' as never);
         return;
       }
       await setTokens(data.access_token, data.refresh_token);
       const user = data.user ?? (await getMyProfile());
       setUser(user);
+      showToast('Đăng nhập thành công', 'success');
       router.replace('/(tabs)/home');
+    },
+    onError: (error) => {
+      showToast(parseAuthError(error), 'error');
     },
   });
 

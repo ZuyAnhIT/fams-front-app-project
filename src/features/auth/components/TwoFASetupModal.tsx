@@ -20,6 +20,7 @@ import { useToast } from '@/components/ui/toast';
 
 import { use2FAConfirmSetup, use2FADisable, use2FASetup } from '../hooks/use-2fa';
 import { useAuthTheme } from '../theme';
+import { parseAuthError } from '../utils';
 import { OTPInput } from './OTPInput';
 
 interface TwoFASetupModalProps {
@@ -75,6 +76,7 @@ export function TwoFASetupModal({
           onSuccess();
           handleClose();
         },
+        onError: (err) => showToast(parseAuthError(err), 'error'),
       },
     );
   };
@@ -86,6 +88,7 @@ export function TwoFASetupModal({
         onSuccess();
         handleClose();
       },
+      onError: (err) => showToast(parseAuthError(err), 'error'),
     });
   };
 

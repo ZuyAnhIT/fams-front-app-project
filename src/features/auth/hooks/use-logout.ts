@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
+import { useToast } from '@/components/ui/toast';
+
 import { logoutAllDevices, logoutSingleDevice } from '../api';
 import { useAuthStore } from '../store';
 
@@ -21,8 +23,10 @@ interface UseLogoutResult {
 export function useLogout(): UseLogoutResult {
   const { clearAuth } = useAuthStore();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
-  const resetAndRedirect = async () => {
+  const resetAndRedirect = async (message: string) => {
+    showToast(message, 'success');
     await clearAuth();
     queryClient.clear();
     router.replace('/(auth)/login');
@@ -33,7 +37,7 @@ export function useLogout(): UseLogoutResult {
       try {
         await logoutSingleDevice();
       } finally {
-        await resetAndRedirect();
+        await resetAndRedirect('Đã đăng xuất');
       }
     },
   });
@@ -43,7 +47,7 @@ export function useLogout(): UseLogoutResult {
       try {
         await logoutAllDevices();
       } finally {
-        await resetAndRedirect();
+        await resetAndRedirect('Đã đăng xuất khỏi tất cả thiết bị');
       }
     },
   });

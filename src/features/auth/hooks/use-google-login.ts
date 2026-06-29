@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { useToast } from '@/components/ui/toast';
 import { GOOGLE_WEB_CLIENT_ID } from '@/config/google';
 
 import {
@@ -33,6 +34,7 @@ export interface UseGoogleLoginResult {
 
 export function useGoogleLogin(): UseGoogleLoginResult {
   const { setTokens, setUser, set2FARequired } = useAuthStore();
+  const { showToast } = useToast();
   const [sessionError, setSessionError] = useState<string | null>(null);
   const useAuthSession = Platform.OS === 'web' || isExpoGo();
 
@@ -50,12 +52,14 @@ export function useGoogleLogin(): UseGoogleLoginResult {
     onSuccess: async (data) => {
       if (data.requires_2fa && data.temp_token) {
         set2FARequired(true, data.temp_token);
+        showToast('Vui lòng xác thực mã 2 lớp', 'info');
         router.push('/(auth)/2fa-verify' as never);
         return;
       }
       await setTokens(data.access_token, data.refresh_token);
       const user = data.user ?? (await getMyProfile());
       setUser(user);
+      showToast('Đăng nhập Google thành công', 'success');
       router.replace('/(tabs)/home');
     },
   });
