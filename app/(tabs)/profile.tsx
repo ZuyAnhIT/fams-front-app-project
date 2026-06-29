@@ -18,6 +18,7 @@ import { useLogout } from '@/features/auth/hooks/use-logout';
 import { useProfile } from '@/features/auth/hooks/use-profile';
 import { useAuthTheme } from '@/features/auth/theme';
 import type { UserProfile } from '@/features/auth/types';
+import { ProfileFaceSection } from '@/features/profile/components/ProfileFaceSection';
 
 // ─── Role badge ───────────────────────────────────────────────────────────────
 
@@ -226,6 +227,8 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
+
+        <ProfileFaceSection />
 
         <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
           <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Bảo mật</Text>

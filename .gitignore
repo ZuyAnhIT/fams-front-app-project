@@ -1,6 +1,7 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 # ─── Dependencies ───
 node_modules/
+
 # ─── Expo / Metro ───
 .expo/
 dist/
@@ -14,6 +15,7 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 # ─── Secrets & signing (KHÔNG commit) ───
+.cursor/
 .env
 .env.local
 .env.development.local
