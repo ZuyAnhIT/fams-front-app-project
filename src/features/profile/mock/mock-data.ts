@@ -1,4 +1,4 @@
-import type { FaceStatusResponse, TenantInvitation } from '../types';
+import type { FaceStatusResponse, TenantInvitation } from '../types/Profile';
 import { FACE_CONSENT_VERSION } from '../utils/face-quality';
 
 /** Trạng thái Face ID mặc định khi chưa đăng ký */

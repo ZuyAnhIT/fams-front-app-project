@@ -1,7 +1,7 @@
 import { apiClient } from '@/services/api-client';
 import { unwrapApiData } from '@/services/api-response';
 
-import type { AcceptInvitationResponse, TenantInvitation } from '../types';
+import type { AcceptInvitationResponse, TenantInvitation } from '../types/Profile';
 
 const BASE = '/profile/invitations';
 

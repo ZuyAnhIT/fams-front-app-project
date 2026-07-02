@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { CapturedFacePhoto, ProfileActions, ProfileState, TenantInvitation } from '../types';
+import type { CapturedFacePhoto, ProfileActions, ProfileState, TenantInvitation } from '../types/Profile';
 
 type ProfileStore = ProfileState & ProfileActions;
 

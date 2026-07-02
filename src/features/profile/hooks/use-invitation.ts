@@ -6,7 +6,7 @@ import {
   acceptInvitation,
   declineInvitation,
   getPendingInvitations,
-} from '../services/invitationService';
+} from '../services/invitation.service';
 import { useProfileStore } from '../store/profileStore';
 import { parseProfileError } from '../utils/profile.utils';
 

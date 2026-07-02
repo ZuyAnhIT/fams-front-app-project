@@ -1,4 +1,4 @@
-import type { TenantInvitation } from '../types';
+import type { TenantInvitation } from '../types/Profile';
 
 export function parseProfileError(error: unknown): string {
   if (error && typeof error === 'object' && 'response' in error) {

@@ -1,4 +1,4 @@
-import type { FaceImagePayload, FaceQualityResult } from '../types';
+import type { FaceImagePayload, FaceQualityResult } from '../types/Profile';
 
 /** Số ảnh tối thiểu / tối đa khi đăng ký Face ID */
 export const FACE_MIN_PHOTOS = 3;
@@ -57,6 +57,9 @@ export function checkFaceImageQuality(image: FaceImagePayload): FaceQualityResul
     issues,
   };
 }
+
+/** Alias dùng trong UI — client-side pre-validation trước khi gọi API */
+export const validateFaceImage = checkFaceImageQuality;
 
 export function formatFaceStatusLabel(status: string): string {
   switch (status) {

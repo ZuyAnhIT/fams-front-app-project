@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 
 import { useAuthTheme } from '@/features/auth/theme';
 
-import type { CapturedFacePhoto } from '../types';
+import type { CapturedFacePhoto } from '../types/Profile';
 
 interface FacePhotoPreviewProps {
   photos: CapturedFacePhoto[];

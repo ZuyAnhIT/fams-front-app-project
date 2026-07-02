@@ -2,7 +2,6 @@ import { type AxiosAdapter } from 'axios';
 
 import { USE_MOCK_API } from '@/config/env';
 import { handleNotificationMockRequest } from '@/features/notification/mock/notification.mock-handler';
-import { handleProfileMockRequest } from '@/features/profile/mock/profile.mock-handler';
 import { handleTenantMockRequest } from '@/features/tenant/mock/tenant.mock-handler';
 import { apiClient } from '@/services/api-client';
 
@@ -27,7 +26,6 @@ export function setupMockApi(): void {
       handleAuthMockRequest,
       handleTenantMockRequest,
       handleNotificationMockRequest,
-      handleProfileMockRequest,
     ];
 
     for (const handler of handlers) {

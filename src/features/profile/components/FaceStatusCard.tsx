@@ -2,7 +2,7 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 
 import { useAuthTheme } from '@/features/auth/theme';
 
-import type { FaceStatusResponse } from '../types';
+import type { FaceStatusResponse } from '../types/Profile';
 import { formatFaceStatusLabel } from '../utils/face-quality';
 
 interface FaceStatusCardProps {

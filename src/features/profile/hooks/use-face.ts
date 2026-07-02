@@ -2,9 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useToast } from '@/components/ui/toast';
 
-import { deleteFace, getFaceStatus, registerFace, saveConsent } from '../services/faceService';
-import type { FaceImagePayload, FaceStatusResponse, SaveConsentRequest } from '../types';
-import { FACE_CONSENT_VERSION } from '../utils/face-quality';
+import { deleteFace, getFaceStatus, registerFace, saveConsent } from '../services/face.service';
+import type { FaceImagePayload, FaceStatusResponse, SaveConsentRequest } from '../types/Profile';
 import { parseProfileError } from '../utils/profile.utils';
 
 export const faceKeys = {

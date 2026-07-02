@@ -9,7 +9,7 @@ import type {
   SaveConsentRequest,
   SaveConsentResponse,
   TenantInvitation,
-} from '../types';
+} from '../types/Profile';
 import { checkFaceImageQuality } from '../utils/face-quality';
 import {
   DEFAULT_FACE_STATUS,

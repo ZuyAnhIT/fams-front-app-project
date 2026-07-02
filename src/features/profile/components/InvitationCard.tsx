@@ -2,7 +2,7 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 
 import { useAuthTheme } from '@/features/auth/theme';
 
-import type { TenantInvitation } from '../types';
+import type { TenantInvitation } from '../types/Profile';
 import { formatInvitationExpiry, isInvitationExpired } from '../utils/profile.utils';
 
 interface InvitationCardProps {

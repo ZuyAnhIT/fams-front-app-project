@@ -11,7 +11,7 @@ import type { CameraView as CameraViewType } from 'expo-camera';
 
 import { useAuthTheme } from '@/features/auth/theme';
 
-import { validateFaceImage } from '../services/faceService';
+import { validateFaceImage } from '../utils/face-quality';
 import { useProfileStore } from '../store/profileStore';
 import {
   FACE_MAX_PHOTOS,
