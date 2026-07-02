@@ -4,6 +4,6 @@ export {
   useFaceRegister,
   useFaceStatus,
   faceKeys,
-} from './use-face';
+} from './useFaceRegistration';
 export { useFaceEnroll } from './use-face-enroll';
 export { useInvitationActions, usePendingInvitations, invitationKeys } from './use-invitation';

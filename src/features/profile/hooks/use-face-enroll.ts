@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useProfileStore } from '../store/profileStore';
 import { FACE_CONSENT_VERSION } from '../utils/face-quality';
-import { useFaceConsent, useFaceRegister, useFaceStatus } from './use-face';
+import { useFaceConsent, useFaceRegister, useFaceStatus } from './useFaceRegistration';
 
 export type FaceEnrollStep = 'consent' | 'capture' | 'done';
 

@@ -4,7 +4,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthTheme } from '@/features/auth/theme';
 
-import { useFaceDelete, useFaceStatus } from '../hooks/use-face';
+import { useFaceDelete, useFaceStatus } from '../hooks/useFaceRegistration';
 import { useInvitationActions, usePendingInvitations } from '../hooks/use-invitation';
 import { FaceStatusCard } from './FaceStatusCard';
 import { InvitationCard } from './InvitationCard';
