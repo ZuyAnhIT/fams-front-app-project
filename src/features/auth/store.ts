@@ -5,6 +5,7 @@ import type { AuthActions, AuthState, UserProfile } from './types';
 
 const KEY_ACCESS = 'fams_access_token';
 const KEY_REFRESH = 'fams_refresh_token';
+const KEY_ACTIVE_TENANT = 'fams_active_tenant_id';
 
 type AuthStore = AuthState & AuthActions;
 
@@ -17,6 +18,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   isHydrating: true,
   is2FARequired: false,
   tempToken: null,
+  activeTenantId: null,
 
   // ─── Actions ────────────────────────────────────────────────────────────────
 
@@ -31,14 +33,27 @@ export const useAuthStore = create<AuthStore>((set) => ({
   set2FARequired: (required, tempToken = null) =>
     set({ is2FARequired: required, tempToken }),
 
+  setActiveTenantId: async (tenantId: string | null) => {
+    if (tenantId) {
+      await SecureStore.setItemAsync(KEY_ACTIVE_TENANT, tenantId);
+    } else {
+      await SecureStore.deleteItemAsync(KEY_ACTIVE_TENANT);
+    }
+    set({ activeTenantId: tenantId });
+  },
+
   hydrateFromSecureStore: async () => {
     try {
-      const [access, refresh] = await Promise.all([
+      const [access, refresh, activeTenantId] = await Promise.all([
         SecureStore.getItemAsync(KEY_ACCESS),
         SecureStore.getItemAsync(KEY_REFRESH),
+        SecureStore.getItemAsync(KEY_ACTIVE_TENANT),
       ]);
       if (access && refresh) {
         set({ accessToken: access, refreshToken: refresh, isAuthenticated: true });
+      }
+      if (activeTenantId) {
+        set({ activeTenantId });
       }
     } catch {
       // Hydration failure leaves the user unauthenticated – that's correct
@@ -51,6 +66,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     await Promise.allSettled([
       SecureStore.deleteItemAsync(KEY_ACCESS),
       SecureStore.deleteItemAsync(KEY_REFRESH),
+      SecureStore.deleteItemAsync(KEY_ACTIVE_TENANT),
     ]);
     set({
       user: null,
@@ -59,6 +75,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       isAuthenticated: false,
       is2FARequired: false,
       tempToken: null,
+      activeTenantId: null,
     });
   },
 }));

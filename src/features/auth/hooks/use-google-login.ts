@@ -16,7 +16,8 @@ import {
   isExpoGo,
   isNativeGoogleSignInAvailable,
 } from '../google-sign-in-service';
-import { getMyProfile, loginWithGoogle } from '../api';
+import { loginWithGoogle } from '../api';
+import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
 import { useAuthStore } from '../store';
 import { parseAuthError } from '../utils';
 import { getDeviceId } from '@/services/avatar-upload';
@@ -57,10 +58,10 @@ export function useGoogleLogin(): UseGoogleLoginResult {
         return;
       }
       await setTokens(data.access_token, data.refresh_token);
-      const user = data.user ?? (await getMyProfile());
-      setUser(user);
+      const session = await resolveAuthenticatedSession(data.user);
+      setUser(session.user);
       showToast('Đăng nhập Google thành công', 'success');
-      router.replace('/(tabs)/home');
+      navigateAfterAuth(session);
     },
   });
 

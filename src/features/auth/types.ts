@@ -139,6 +139,13 @@ export interface AuthState {
   is2FARequired: boolean;
   /** Short-lived token held during the 2FA verification step */
   tempToken: string | null;
+  /**
+   * Tenant the user is currently operating in. Backend has no single
+   * "current tenant" concept (users can hold roles in multiple tenants via
+   * `user_roles`), so this is chosen client-side after login and persisted
+   * across app restarts independently of `user`.
+   */
+  activeTenantId: string | null;
 }
 
 export interface AuthActions {
@@ -146,6 +153,8 @@ export interface AuthActions {
   setTokens: (access: string, refresh: string) => Promise<void>;
   setUser: (user: UserProfile) => void;
   set2FARequired: (required: boolean, tempToken?: string | null) => void;
+  /** Persists the chosen active tenant to SecureStore and updates in-memory state */
+  setActiveTenantId: (tenantId: string | null) => Promise<void>;
   /** Called once on app start to restore a previous session */
   hydrateFromSecureStore: () => Promise<void>;
   /** Wipes all auth state and removes tokens from SecureStore */

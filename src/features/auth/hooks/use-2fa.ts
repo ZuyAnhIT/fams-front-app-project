@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
 import { confirmTotpSetup, disable2FA, getMyProfile, setup2FA, verifyLoginTotp } from '../api';
 import { profileKeys } from './use-profile';
+import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
 import { useAuthStore } from '../store';
 import type { TwoFAConfirmSetupRequest } from '../types';
 import { parseAuthError } from '../utils';
@@ -65,10 +65,10 @@ export function use2FAVerify(): Use2FAVerifyResult {
     onSuccess: async (data) => {
       set2FARequired(false, null);
       await setTokens(data.access_token, data.refresh_token);
-      const user = data.user ?? (await getMyProfile());
-      setUser({ ...user, is_2fa_enabled: true });
+      const session = await resolveAuthenticatedSession(data.user);
+      setUser({ ...session.user, is_2fa_enabled: true });
       showToast('Xác thực 2 lớp thành công', 'success');
-      router.replace('/(tabs)/home');
+      navigateAfterAuth(session);
     },
     onError: (error) => {
       showToast(parseAuthError(error), 'error');

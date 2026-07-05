@@ -16,6 +16,8 @@ expo-env.d.ts
 *.orig.*
 # ─── Secrets & signing (KHÔNG commit) ───
 .cursor/
+.claude/
+CLADUE.md
 .env
 .env.local
 .env.development.local

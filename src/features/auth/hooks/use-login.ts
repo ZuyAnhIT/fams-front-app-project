@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { loginWithEmail, getMyProfile } from '../api';
+import { loginWithEmail } from '../api';
+import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
 import { useAuthStore } from '../store';
 import type { LoginRequest } from '../types';
 import { getLockedUntil, isAccountLockedError, parseAuthError } from '../utils';
@@ -29,10 +30,10 @@ export function useLogin(): UseLoginResult {
         return;
       }
       await setTokens(data.access_token, data.refresh_token);
-      const user = data.user ?? (await getMyProfile());
-      setUser(user);
+      const session = await resolveAuthenticatedSession(data.user);
+      setUser(session.user);
       showToast('Đăng nhập thành công', 'success');
-      router.replace('/(tabs)/home');
+      navigateAfterAuth(session);
     },
   });
 
