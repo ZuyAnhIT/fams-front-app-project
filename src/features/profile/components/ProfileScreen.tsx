@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -41,6 +42,7 @@ const ROLE_COLOR: Record<UserProfile['role'], string> = {
  */
 export function ProfileScreen() {
   const theme = useAuthTheme();
+  const router = useRouter();
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [twoFAVisible, setTwoFAVisible] = useState(false);
@@ -175,6 +177,31 @@ export function ProfileScreen() {
         </View>
 
         <ProfileFaceSection />
+
+        <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Công việc</Text>
+
+          <ProfileSettingsRow
+            icon="🏗️"
+            label="Công trình"
+            sublabel="Danh sách và chi tiết công trình"
+            onPress={() =>
+              // expo-router typed routes chỉ nhận diện `/site` sau khi chạy `expo start`
+              // một lần để regenerate `.expo/types`; cast tạm thời cho đến khi đó.
+              router.push('/site' as unknown as Parameters<typeof router.push>[0])
+            }
+            theme={theme}
+          />
+          <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+
+          <ProfileSettingsRow
+            icon="🏢"
+            label="Chuyển đổi công ty"
+            sublabel="Đổi công ty đang thao tác — không cần đăng xuất"
+            onPress={() => router.push('/(auth)/select-tenant' as never)}
+            theme={theme}
+          />
+        </View>
 
         <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
           <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Bảo mật</Text>

@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { getMyProfile, registerUser } from '../api';
+import { registerUser } from '../api';
+import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
 import { useAuthStore } from '../store';
 import type { RegisterRequest } from '../types';
 import { parseAuthError } from '../utils';
@@ -41,10 +42,10 @@ export function useRegister(): UseRegisterResult {
       }
       if (data.access_token) {
         await setTokens(data.access_token, data.refresh_token);
-        const user = data.user ?? (await getMyProfile());
-        setUser(user);
+        const session = await resolveAuthenticatedSession(data.user);
+        setUser(session.user);
         showToast('Đăng ký thành công', 'success');
-        router.replace('/(tabs)/home');
+        navigateAfterAuth(session);
         return;
       }
       // Server may require email verification before login

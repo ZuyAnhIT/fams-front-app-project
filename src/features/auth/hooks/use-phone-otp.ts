@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { sendPhoneOTP, verifyPhoneOTP, getMyProfile } from '../api';
+import { sendPhoneOTP, verifyPhoneOTP } from '../api';
+import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
 import { useAuthStore } from '../store';
 import type { SendOTPRequest, VerifyOTPRequest } from '../types';
 import { parseAuthError } from '../utils';
@@ -62,10 +63,10 @@ export function useVerifyOTP(): UseVerifyOTPResult {
         return;
       }
       await setTokens(data.access_token, data.refresh_token);
-      const user = data.user ?? (await getMyProfile());
-      setUser(user);
+      const session = await resolveAuthenticatedSession(data.user);
+      setUser(session.user);
       showToast('Đăng nhập thành công', 'success');
-      router.replace('/(tabs)/home');
+      navigateAfterAuth(session);
     },
     onError: (error) => {
       showToast(parseAuthError(error), 'error');
