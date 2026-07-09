@@ -16,6 +16,7 @@ export default function TabLayout() {
       <Tabs.Screen name="checkin" options={{ title: 'Chấm công' }} />
       <Tabs.Screen name="random-check" options={{ title: 'Kiểm tra' }} />
       <Tabs.Screen name="attendance" options={{ title: 'Công' }} />
+      <Tabs.Screen name="assignment" options={{ title: 'Phân công' }} />
       <Tabs.Screen
         name="notifications"
         options={{
