@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { useSiteList } from '../hooks/use-site-list';
@@ -79,36 +80,36 @@ export function SiteList() {
 
   if (isForbidden) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView edges={['top']} style={styles.centered}>
         <Text style={styles.errorIcon}>🔒</Text>
         <Text style={styles.errorTitle}>Bạn không có quyền xem danh sách công trình</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (isLoading) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView edges={['top']} style={styles.centered}>
         <ActivityIndicator size="large" color="#2563EB" />
         <Text style={styles.loadingText}>Đang tải công trình...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (isError) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView edges={['top']} style={styles.centered}>
         <Text style={styles.errorIcon}>⚠️</Text>
         <Text style={styles.errorTitle}>Không thể tải danh sách công trình</Text>
         <Pressable style={styles.retryButton} onPress={refetch}>
           <Text style={styles.retryButtonText}>Thử lại</Text>
         </Pressable>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.toolbar}>
         <TextInput
           style={styles.searchInput}
@@ -189,7 +190,7 @@ export function SiteList() {
           ) : null
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

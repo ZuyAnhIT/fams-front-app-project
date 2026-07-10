@@ -1,10 +1,10 @@
 import { Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function RandomCheckScreen() {
+export default function NotificationScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Kiểm tra ngẫu nhiên</Text>
+      <Text>Thông báo</Text>
     </SafeAreaView>
   );
 }

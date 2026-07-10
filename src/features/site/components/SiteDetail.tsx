@@ -1,4 +1,5 @@
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Circle, Marker } from 'react-native-maps';
 
 import { useSiteDetail } from '../hooks/use-site-detail';
@@ -20,22 +21,22 @@ export function SiteDetail({ siteId }: SiteDetailProps) {
 
   if (isLoading) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView edges={['top']} style={styles.centered}>
         <ActivityIndicator size="large" color="#2563EB" />
         <Text style={styles.loadingText}>Đang tải công trình...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (isError || !detail) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView edges={['top']} style={styles.centered}>
         <Text style={styles.errorIcon}>⚠️</Text>
         <Text style={styles.errorTitle}>Không thể tải chi tiết công trình</Text>
         <Pressable style={styles.retryButton} onPress={refetch}>
           <Text style={styles.retryButtonText}>Thử lại</Text>
         </Pressable>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -45,7 +46,8 @@ export function SiteDetail({ siteId }: SiteDetailProps) {
   const hasCoordinates = latitude != null && longitude != null;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView edges={['top']} style={styles.container}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       <View style={styles.section}>
         <Text style={styles.code}>{code ?? '—'}</Text>
         <Text style={styles.name}>{name}</Text>
@@ -132,6 +134,7 @@ export function SiteDetail({ siteId }: SiteDetailProps) {
         )}
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

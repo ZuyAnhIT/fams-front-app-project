@@ -71,7 +71,10 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <AppInit />
-        <Stack screenOptions={{ headerShown: false }} />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="modal/checkin-result" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="modal/random-check-result" options={{ presentation: 'modal' }} />
+        </Stack>
       </ToastProvider>
     </QueryClientProvider>
   );

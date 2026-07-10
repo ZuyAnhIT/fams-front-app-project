@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAssignmentList, useSiteOptions, useSiteShiftNames, type AssignmentRow } from '../hooks/use-assignment';
 import type { AssignmentListParams, AssignmentRole, AssignmentStatus } from '../types/assignment.type';
@@ -125,23 +126,23 @@ export function AssignmentListScreen() {
 
   if (isLoadingSites) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView edges={['top']} style={styles.centered}>
         <ActivityIndicator size="large" color="#2563EB" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (sites.length === 0) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView edges={['top']} style={styles.centered}>
         <Text style={styles.errorIcon}>🏗️</Text>
         <Text style={styles.errorTitle}>Chưa có site nào để xem phân công</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.toolbar}>
         <ScrollView
           horizontal
@@ -292,7 +293,7 @@ export function AssignmentListScreen() {
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
