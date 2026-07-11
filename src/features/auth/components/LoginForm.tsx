@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -103,7 +104,11 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
             onPress={() => setShowPassword((v) => !v)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+            <Ionicons
+              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={theme.textSecondary}
+            />
           </TouchableOpacity>
         </View>
         {errors.password && (
@@ -116,7 +121,7 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
         onPress={() => router.push('/(auth)/forgot-password' as never)}
         style={styles.forgotButton}
       >
-        <Text style={styles.forgotText}>Quên mật khẩu?</Text>
+        <Text style={[styles.linkText, { color: theme.primary }]}>Quên mật khẩu?</Text>
       </TouchableOpacity>
 
       {/* API error banner */}
@@ -135,7 +140,11 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
 
       {/* Submit button */}
       <TouchableOpacity
-        style={[styles.submitButton, isPending && styles.submitButtonDisabled]}
+        style={[
+          styles.submitButton,
+          { backgroundColor: theme.primary },
+          isPending && { backgroundColor: theme.primaryDisabled },
+        ]}
         onPress={handleSubmit(onSubmit)}
         disabled={isPending}
         activeOpacity={0.85}
@@ -145,12 +154,11 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
         ) : (
           <Text style={styles.submitText}>Đăng nhập</Text>
         )}
-        
       </TouchableOpacity>
 
       <View style={styles.dividerRow}>
         <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-        <Text style={[styles.dividerText, { color: theme.textMuted }]}>hoặc</Text>
+        <Text style={[styles.dividerText, { color: theme.textSecondary }]}>HOẶC</Text>
         <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
       </View>
 
@@ -160,7 +168,7 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
       <TouchableOpacity onPress={onSwitchToPhone} style={styles.switchButton}>
         <Text style={[styles.switchText, { color: theme.textSecondary }]}>
           Đăng nhập bằng{' '}
-          <Text style={[styles.switchTextAccent, { color: theme.primary }]}>số điện thoại</Text>
+          <Text style={[styles.linkText, { color: theme.primary }]}>số điện thoại</Text>
         </Text>
       </TouchableOpacity>
 
@@ -169,7 +177,7 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
           Chưa có tài khoản?{' '}
         </Text>
         <TouchableOpacity onPress={() => router.replace('/(auth)/register')}>
-          <Text style={[styles.RegisterLink, { color: theme.primary }]}>Đăng ký</Text>
+          <Text style={[styles.linkText, { color: theme.primary }]}>Đăng ký</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -237,11 +245,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginTop: -8,
   },
-  forgotText: {
-    fontSize: 13,
-    color: '#2563EB',
-    fontWeight: '500',
-  },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
@@ -255,14 +258,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   submitButton: {
-    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 4,
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#93B4F8',
   },
   submitText: {
     color: '#ffffff',
@@ -277,8 +276,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
   },
-  switchTextAccent: {
-    color: '#2563EB',
+  linkText: {
+    fontSize: 14,
     fontWeight: '600',
   },
   RegisterRow: {
@@ -289,10 +288,6 @@ const styles = StyleSheet.create({
   RegisterText: {
     fontSize: 14,
     color: '#64748B',
-  },
-  RegisterLink: {
-    fontSize: 14,
-    fontWeight: '700',
   },
   dividerRow: {
     flexDirection: 'row',
@@ -305,7 +300,8 @@ const styles = StyleSheet.create({
     height: 1,
   },
   dividerText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
 });

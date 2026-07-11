@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
@@ -102,7 +103,7 @@ export function TwoFASetupModal({
               {isEnabled ? 'Tắt xác thực 2 lớp' : 'Bật xác thực 2 lớp'}
             </Text>
             <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={[styles.closeText, { color: theme.textSecondary }]}>✕</Text>
+              <Ionicons name="close" size={22} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -265,9 +266,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-  },
-  closeText: {
-    fontSize: 18,
   },
   body: {
     paddingHorizontal: 24,

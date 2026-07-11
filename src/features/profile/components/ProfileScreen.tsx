@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -67,12 +68,15 @@ export function ProfileScreen() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Không thể tải hồ sơ</Text>
-          <Text style={styles.errorDesc}>
+          <Ionicons name="alert-circle-outline" size={56} color={theme.error} />
+          <Text style={[styles.errorTitle, { color: theme.text }]}>Không thể tải hồ sơ</Text>
+          <Text style={[styles.errorDesc, { color: theme.textSecondary }]}>
             Đã có lỗi xảy ra khi tải thông tin. Vui lòng thử lại.
           </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: theme.primary }]}
+            onPress={() => refetch()}
+          >
             <Text style={styles.retryButtonText}>Thử lại</Text>
           </TouchableOpacity>
         </View>
@@ -164,9 +168,15 @@ export function ProfileScreen() {
           )}
 
           {profile.locked_until && new Date(profile.locked_until) > new Date() && (
-            <View style={[styles.lockedBanner, { borderColor: theme.errorBorder }]}>
+            <View
+              style={[
+                styles.lockedBanner,
+                { backgroundColor: theme.errorBg, borderColor: theme.errorBorder },
+              ]}
+            >
+              <Ionicons name="lock-closed-outline" size={16} color={theme.error} />
               <Text style={[styles.lockedText, { color: theme.error }]}>
-                🔒 Tài khoản tạm khóa đến{' '}
+                Tài khoản tạm khóa đến{' '}
                 {new Date(profile.locked_until).toLocaleTimeString('vi-VN', {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -182,7 +192,7 @@ export function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Công việc</Text>
 
           <ProfileSettingsRow
-            icon="🏗️"
+            icon="business-outline"
             label="Công trình"
             sublabel="Danh sách và chi tiết công trình"
             onPress={() =>
@@ -195,7 +205,7 @@ export function ProfileScreen() {
           <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
 
           <ProfileSettingsRow
-            icon="🏢"
+            icon="swap-horizontal-outline"
             label="Chuyển đổi công ty"
             sublabel="Đổi công ty đang thao tác — không cần đăng xuất"
             onPress={() => router.push('/(auth)/select-tenant' as never)}
@@ -207,7 +217,7 @@ export function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Bảo mật</Text>
 
           <ProfileSettingsRow
-            icon="✏️"
+            icon="create-outline"
             label="Chỉnh sửa hồ sơ"
             sublabel="Tên, ảnh đại diện, số điện thoại"
             onPress={() => setEditProfileVisible(true)}
@@ -216,7 +226,7 @@ export function ProfileScreen() {
           <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
 
           <ProfileSettingsRow
-            icon="🔐"
+            icon="lock-closed-outline"
             label="Đổi mật khẩu"
             onPress={() => setChangePasswordVisible(true)}
             theme={theme}
@@ -224,7 +234,7 @@ export function ProfileScreen() {
           <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
 
           <ProfileSettingsRow
-            icon={profile.is_2fa_enabled ? '🛡️' : '🔓'}
+            icon={profile.is_2fa_enabled ? 'shield-checkmark-outline' : 'shield-outline'}
             label={profile.is_2fa_enabled ? 'Xác thực 2 lớp · Đang bật' : 'Bật xác thực 2 lớp'}
             sublabel={
               profile.is_2fa_enabled
@@ -240,7 +250,7 @@ export function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Tài khoản</Text>
 
           <ProfileSettingsRow
-            icon="🚪"
+            icon="log-out-outline"
             label="Đăng xuất"
             sublabel="Thiết bị hiện tại"
             onPress={handleLogout}
@@ -251,7 +261,7 @@ export function ProfileScreen() {
           <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
 
           <ProfileSettingsRow
-            icon="🗑️"
+            icon="trash-outline"
             label="Đăng xuất tất cả thiết bị"
             sublabel="Thu hồi mọi phiên đang hoạt động"
             onPress={handleLogoutAll}
@@ -348,12 +358,14 @@ const styles = StyleSheet.create({
   },
   monoText: { fontFamily: 'monospace', letterSpacing: 1 },
   lockedBanner: {
-    backgroundColor: '#FEF2F2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     borderRadius: 10,
     padding: 10,
     borderWidth: 1,
   },
-  lockedText: { fontSize: 13, fontWeight: '500' },
+  lockedText: { flex: 1, fontSize: 13, fontWeight: '500' },
   sectionCard: {
     borderRadius: 20,
     overflow: 'hidden',
@@ -387,21 +399,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
-  errorIcon: { fontSize: 56 },
   errorTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1E293B',
     textAlign: 'center',
   },
   errorDesc: {
     fontSize: 14,
-    color: '#64748B',
     textAlign: 'center',
     lineHeight: 22,
   },
   retryButton: {
-    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 28,

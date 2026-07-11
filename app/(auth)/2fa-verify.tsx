@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -13,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OTPInput } from '@/features/auth/components/OTPInput';
 import { use2FAVerify } from '@/features/auth/hooks/use-2fa';
+import { useAuthTheme } from '@/features/auth/theme';
 
 /**
  * 2FA verification screen – shown after email/phone login
@@ -21,6 +23,7 @@ import { use2FAVerify } from '@/features/auth/hooks/use-2fa';
  * The temp_token is read from authStore inside use2FAVerify.
  */
 export default function TwoFAVerifyScreen() {
+  const theme = useAuthTheme();
   const [code, setCode] = useState('');
   const { verify, isPending, error } = use2FAVerify();
 
@@ -37,12 +40,13 @@ export default function TwoFAVerifyScreen() {
         <View style={styles.container}>
           {/* Back button */}
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Quay lại</Text>
+            <Ionicons name="chevron-back" size={18} color={theme.primary} />
+            <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>
 
           {/* Icon */}
           <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>🔐</Text>
+            <Ionicons name="shield-checkmark-outline" size={36} color={theme.primary} />
           </View>
 
           {/* Title */}
@@ -77,7 +81,8 @@ export default function TwoFAVerifyScreen() {
             <TouchableOpacity
               style={[
                 styles.primaryButton,
-                (isPending || code.length < 6) && styles.buttonDisabled,
+                { backgroundColor: theme.primary },
+                (isPending || code.length < 6) && { backgroundColor: theme.primaryDisabled },
               ]}
               onPress={handleSubmit}
               disabled={isPending || code.length < 6}
@@ -120,6 +125,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
     position: 'absolute',
     top: 0,
@@ -137,9 +144,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  iconText: {
-    fontSize: 40,
   },
   title: {
     fontSize: 26,
@@ -184,13 +188,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#93B4F8',
   },
   primaryButtonText: {
     color: '#ffffff',

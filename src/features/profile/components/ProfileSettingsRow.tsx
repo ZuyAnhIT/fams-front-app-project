@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -9,7 +10,7 @@ import {
 import type { AuthTheme } from '@/features/auth/theme';
 
 interface ProfileSettingsRowProps {
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   sublabel?: string;
   onPress: () => void;
@@ -35,7 +36,9 @@ export function ProfileSettingsRow({
       activeOpacity={0.7}
     >
       <View style={styles.rowLeft}>
-        <Text style={styles.rowIcon}>{icon}</Text>
+        <View style={styles.rowIcon}>
+          <Ionicons name={icon} size={20} color={destructive ? theme.error : theme.textSecondary} />
+        </View>
         <View style={styles.rowTexts}>
           <Text style={[styles.rowLabel, { color: destructive ? theme.error : theme.text }]}>
             {label}
@@ -48,7 +51,7 @@ export function ProfileSettingsRow({
       {loading ? (
         <ActivityIndicator size="small" color={theme.textMuted} />
       ) : (
-        <Text style={[styles.rowChevron, { color: theme.border }]}>›</Text>
+        <Ionicons name="chevron-forward" size={18} color={theme.border} />
       )}
     </TouchableOpacity>
   );
@@ -69,9 +72,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowIcon: {
-    fontSize: 20,
     width: 28,
-    textAlign: 'center',
+    alignItems: 'center',
   },
   rowTexts: {
     flex: 1,
@@ -83,9 +85,5 @@ const styles = StyleSheet.create({
   },
   rowSublabel: {
     fontSize: 12,
-  },
-  rowChevron: {
-    fontSize: 22,
-    fontWeight: '300',
   },
 });

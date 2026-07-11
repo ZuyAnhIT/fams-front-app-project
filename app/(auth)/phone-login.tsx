@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -16,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OTPInput } from '@/features/auth/components/OTPInput';
 import { MockDevBanner } from '@/features/auth/components/MockDevBanner';
 import { useSendOTP, useVerifyOTP } from '@/features/auth/hooks/use-phone-otp';
+import { useAuthTheme } from '@/features/auth/theme';
 import { formatCountdown, normalizePhoneForBackend } from '@/features/auth/utils';
 
 const OTP_EXPIRY_SECONDS = 120;
@@ -29,6 +31,7 @@ type Step = 'enter-phone' | 'enter-otp';
  * Step 2 – Enter 6-digit OTP → countdown + resend → tap "Xác nhận"
  */
 export default function PhoneLoginScreen() {
+  const theme = useAuthTheme();
   const [step, setStep] = useState<Step>('enter-phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -109,13 +112,14 @@ export default function PhoneLoginScreen() {
         >
           {/* Back button */}
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Quay lại</Text>
+            <Ionicons name="chevron-back" size={18} color={theme.primary} />
+            <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>
 
           {/* ── Title ── */}
           <View style={styles.titleArea}>
             <Text style={styles.title}>
-              {step === 'enter-phone' ? '📱 Đăng nhập OTP' : '🔐 Xác nhận OTP'}
+              {step === 'enter-phone' ? 'Đăng nhập OTP' : 'Xác nhận OTP'}
             </Text>
             <Text style={styles.subtitle}>
               {step === 'enter-phone'
@@ -157,7 +161,8 @@ export default function PhoneLoginScreen() {
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
-                    (sending || !phone.trim()) && styles.buttonDisabled,
+                    { backgroundColor: theme.primary },
+                    (sending || !phone.trim()) && { backgroundColor: theme.primaryDisabled },
                   ]}
                   onPress={handleSendOTP}
                   disabled={sending || !phone.trim()}
@@ -216,7 +221,8 @@ export default function PhoneLoginScreen() {
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
-                    (verifying || otp.length < 6) && styles.buttonDisabled,
+                    { backgroundColor: theme.primary },
+                    (verifying || otp.length < 6) && { backgroundColor: theme.primaryDisabled },
                   ]}
                   onPress={handleVerifyOTP}
                   disabled={verifying || otp.length < 6}
@@ -261,10 +267,13 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
+    justifyContent: 'center',
     padding: 24,
     gap: 20,
   },
   backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
   },
   backBtnText: {
@@ -363,14 +372,10 @@ const styles = StyleSheet.create({
     color: '#92400E',
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 4,
-  },
-  buttonDisabled: {
-    backgroundColor: '#93B4F8',
   },
   primaryButtonText: {
     color: '#ffffff',

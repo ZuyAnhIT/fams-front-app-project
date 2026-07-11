@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -126,7 +127,7 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
               onPress={handleClose}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.closeText}>✕</Text>
+              <Ionicons name="close" size={22} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -138,7 +139,7 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
           >
             {isSuccess ? (
               <View style={styles.successBox}>
-                <Text style={styles.successIcon}>✅</Text>
+                <Ionicons name="checkmark-circle-outline" size={48} color={theme.success} />
                 <Text style={styles.successTitle}>Đổi mật khẩu thành công!</Text>
                 <Text style={styles.successSub}>Cửa sổ sẽ tự đóng...</Text>
               </View>
@@ -172,9 +173,11 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
                           style={styles.eyeBtn}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Text style={styles.eyeIcon}>
-                            {showCurrent ? '🙈' : '👁️'}
-                          </Text>
+                          <Ionicons
+                            name={showCurrent ? 'eye-off-outline' : 'eye-outline'}
+                            size={20}
+                            color={theme.textSecondary}
+                          />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -213,7 +216,11 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
                           style={styles.eyeBtn}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Text style={styles.eyeIcon}>{showNew ? '🙈' : '👁️'}</Text>
+                          <Ionicons
+                            name={showNew ? 'eye-off-outline' : 'eye-outline'}
+                            size={20}
+                            color={theme.textSecondary}
+                          />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -254,9 +261,11 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
                           style={styles.eyeBtn}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Text style={styles.eyeIcon}>
-                            {showConfirm ? '🙈' : '👁️'}
-                          </Text>
+                          <Ionicons
+                            name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+                            size={20}
+                            color={theme.textSecondary}
+                          />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -277,7 +286,11 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
 
                 {/* Submit */}
                 <TouchableOpacity
-                  style={[styles.primaryButton, isPending && styles.buttonDisabled]}
+                  style={[
+                    styles.primaryButton,
+                    { backgroundColor: theme.primary },
+                    isPending && { backgroundColor: theme.primaryDisabled },
+                  ]}
                   onPress={handleSubmit(onSubmit)}
                   disabled={isPending}
                   activeOpacity={0.85}
@@ -326,10 +339,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E293B',
   },
-  closeText: {
-    fontSize: 18,
-    color: '#64748B',
-  },
   body: {
     paddingHorizontal: 24,
     paddingTop: 20,
@@ -370,9 +379,6 @@ const styles = StyleSheet.create({
   eyeBtn: {
     paddingHorizontal: 4,
   },
-  eyeIcon: {
-    fontSize: 18,
-  },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
@@ -385,14 +391,10 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 4,
-  },
-  buttonDisabled: {
-    backgroundColor: '#93B4F8',
   },
   primaryButtonText: {
     color: '#ffffff',
@@ -403,9 +405,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingVertical: 24,
-  },
-  successIcon: {
-    fontSize: 48,
   },
   successTitle: {
     fontSize: 18,

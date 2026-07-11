@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -12,6 +13,7 @@ import {
 import { z } from 'zod';
 
 import { useRegister } from '../hooks/use-register';
+import { useAuthTheme } from '../theme';
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 
@@ -47,6 +49,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const theme = useAuthTheme();
   const { register, isPending, error } = useRegister();
 
   const {
@@ -169,7 +172,11 @@ export function RegisterForm() {
                 style={styles.eyeBtn}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={theme.textSecondary}
+                />
               </TouchableOpacity>
             </View>
           )}
@@ -204,7 +211,11 @@ export function RegisterForm() {
                 style={styles.eyeBtn}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.eyeIcon}>{showConfirm ? '🙈' : '👁️'}</Text>
+                <Ionicons
+                  name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={theme.textSecondary}
+                />
               </TouchableOpacity>
             </View>
           )}
@@ -223,7 +234,11 @@ export function RegisterForm() {
 
       {/* Submit */}
       <TouchableOpacity
-        style={[styles.primaryButton, isPending && styles.buttonDisabled]}
+        style={[
+          styles.primaryButton,
+          { backgroundColor: theme.primary },
+          isPending && { backgroundColor: theme.primaryDisabled },
+        ]}
         onPress={handleSubmit(onSubmit)}
         disabled={isPending}
         activeOpacity={0.85}
@@ -292,9 +307,6 @@ const styles = StyleSheet.create({
   eyeBtn: {
     paddingHorizontal: 4,
   },
-  eyeIcon: {
-    fontSize: 18,
-  },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
@@ -307,14 +319,10 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 4,
-  },
-  buttonDisabled: {
-    backgroundColor: '#93B4F8',
   },
   primaryButtonText: {
     color: '#ffffff',

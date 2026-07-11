@@ -1,5 +1,3 @@
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
 export const authColors = {
   light: {
     background: '#F8FAFC',
@@ -40,6 +38,10 @@ export const authColors = {
 export type AuthTheme = (typeof authColors)[keyof typeof authColors];
 
 export function useAuthTheme(): AuthTheme {
-  const scheme = useColorScheme();
-  return authColors[scheme === 'dark' ? 'dark' : 'light'];
+  // App chưa có công tắc dark mode và toàn bộ các màn khác (Home, Checkin,
+  // Attendance, Assignment, Site...) đang hardcode màu theme sáng — nên bám
+  // theo OS color scheme ở đây sẽ khiến riêng các màn dùng useAuthTheme()
+  // (Profile, Auth, Face ID...) lật sang tối khi máy bật Dark Mode, lệch với
+  // phần còn lại của app. Cố định light cho tới khi toàn app hỗ trợ dark mode.
+  return authColors.light;
 }
