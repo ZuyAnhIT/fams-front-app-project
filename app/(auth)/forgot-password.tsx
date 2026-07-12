@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
@@ -15,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { useForgotPassword } from '@/features/auth/hooks/use-forgot-password';
+import { useAuthTheme } from '@/features/auth/theme';
 
 const schema = z.object({
   email: z.string().min(1, 'Vui lòng nhập email').email('Email không hợp lệ'),
@@ -27,6 +29,7 @@ type FormData = z.infer<typeof schema>;
  * Full OTP reset flow will be added in Sprint 2.
  */
 export default function ForgotPasswordScreen() {
+  const theme = useAuthTheme();
   const { submit, isPending, isSuccess, error } = useForgotPassword();
 
   const {
@@ -48,7 +51,8 @@ export default function ForgotPasswordScreen() {
       >
         <View style={styles.container}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Quay lại</Text>
+            <Ionicons name="chevron-back" size={18} color={theme.primary} />
+            <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>
 
           <Text style={styles.title}>Quên mật khẩu</Text>
@@ -59,13 +63,13 @@ export default function ForgotPasswordScreen() {
           <View style={styles.card}>
             {isSuccess ? (
               <View style={styles.successBox}>
-                <Text style={styles.successIcon}>✉️</Text>
+                <Ionicons name="mail-open-outline" size={48} color={theme.primary} />
                 <Text style={styles.successTitle}>Đã gửi email!</Text>
                 <Text style={styles.successText}>
                   Kiểm tra hộp thư và làm theo hướng dẫn để đặt lại mật khẩu.
                 </Text>
                 <TouchableOpacity
-                  style={styles.primaryButton}
+                  style={[styles.primaryButton, { backgroundColor: theme.primary }]}
                   onPress={() => router.back()}
                 >
                   <Text style={styles.primaryButtonText}>Quay lại đăng nhập</Text>
@@ -106,7 +110,11 @@ export default function ForgotPasswordScreen() {
                 )}
 
                 <TouchableOpacity
-                  style={[styles.primaryButton, isPending && styles.buttonDisabled]}
+                  style={[
+                    styles.primaryButton,
+                    { backgroundColor: theme.primary },
+                    isPending && { backgroundColor: theme.primaryDisabled },
+                  ]}
                   onPress={handleSubmit(onSubmit)}
                   disabled={isPending}
                 >
@@ -129,7 +137,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
   flex: { flex: 1 },
   container: { flex: 1, padding: 24, gap: 16 },
-  backBtn: { alignSelf: 'flex-start' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start' },
   backBtnText: { fontSize: 15, color: '#2563EB', fontWeight: '500' },
   title: { fontSize: 26, fontWeight: '800', color: '#1E293B' },
   subtitle: { fontSize: 14, color: '#64748B', lineHeight: 22 },
@@ -167,15 +175,12 @@ const styles = StyleSheet.create({
   },
   errorText: { fontSize: 13, color: '#DC2626' },
   primaryButton: {
-    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
   },
-  buttonDisabled: { backgroundColor: '#93B4F8' },
   primaryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
   successBox: { alignItems: 'center', gap: 12 },
-  successIcon: { fontSize: 48 },
   successTitle: { fontSize: 20, fontWeight: '700', color: '#16A34A' },
   successText: {
     fontSize: 14,

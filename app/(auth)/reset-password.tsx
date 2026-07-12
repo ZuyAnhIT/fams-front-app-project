@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -17,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { useResetPassword } from '@/features/auth/hooks/use-reset-password';
+import { useAuthTheme } from '@/features/auth/theme';
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 
@@ -48,6 +50,7 @@ type FormData = z.infer<typeof schema>;
  * On success the user is automatically redirected to login after 2 s.
  */
 export default function ResetPasswordScreen() {
+  const theme = useAuthTheme();
   const { token } = useLocalSearchParams<{ token?: string }>();
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -73,14 +76,14 @@ export default function ResetPasswordScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
+          <Ionicons name="alert-circle-outline" size={56} color={theme.error} />
           <Text style={styles.errorTitle}>Liên kết không hợp lệ</Text>
           <Text style={styles.errorDesc}>
             Liên kết đặt lại mật khẩu đã hết hạn hoặc không đúng.
             Vui lòng yêu cầu lại từ màn hình quên mật khẩu.
           </Text>
           <TouchableOpacity
-            style={styles.primaryButton}
+            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
             onPress={() => router.replace('/(auth)/forgot-password')}
           >
             <Text style={styles.primaryButtonText}>Quên mật khẩu lại</Text>
@@ -103,12 +106,13 @@ export default function ResetPasswordScreen() {
         >
           {/* Back */}
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Quay lại</Text>
+            <Ionicons name="chevron-back" size={18} color={theme.primary} />
+            <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>
 
           {/* Icon + title */}
           <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>🔑</Text>
+            <Ionicons name="key-outline" size={36} color={theme.primary} />
           </View>
           <Text style={styles.title}>Đặt mật khẩu mới</Text>
           <Text style={styles.subtitle}>
@@ -119,7 +123,7 @@ export default function ResetPasswordScreen() {
           <View style={styles.card}>
             {isSuccess ? (
               <View style={styles.successBox}>
-                <Text style={styles.successIcon}>✅</Text>
+                <Ionicons name="checkmark-circle-outline" size={48} color={theme.success} />
                 <Text style={styles.successTitle}>Đặt lại thành công!</Text>
                 <Text style={styles.successText}>
                   Đang chuyển về màn hình đăng nhập...
@@ -155,7 +159,11 @@ export default function ResetPasswordScreen() {
                           style={styles.eyeBtn}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Text style={styles.eyeIcon}>{showNew ? '🙈' : '👁️'}</Text>
+                          <Ionicons
+                            name={showNew ? 'eye-off-outline' : 'eye-outline'}
+                            size={20}
+                            color={theme.textSecondary}
+                          />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -193,9 +201,11 @@ export default function ResetPasswordScreen() {
                           style={styles.eyeBtn}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Text style={styles.eyeIcon}>
-                            {showConfirm ? '🙈' : '👁️'}
-                          </Text>
+                          <Ionicons
+                            name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+                            size={20}
+                            color={theme.textSecondary}
+                          />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -224,7 +234,11 @@ export default function ResetPasswordScreen() {
 
                 {/* Submit */}
                 <TouchableOpacity
-                  style={[styles.primaryButton, isPending && styles.buttonDisabled]}
+                  style={[
+                    styles.primaryButton,
+                    { backgroundColor: theme.primary },
+                    isPending && { backgroundColor: theme.primaryDisabled },
+                  ]}
                   onPress={handleSubmit(onSubmit)}
                   disabled={isPending}
                   activeOpacity={0.85}
@@ -261,6 +275,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
   },
   backBtnText: {
@@ -275,9 +291,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  iconText: {
-    fontSize: 40,
   },
   title: {
     fontSize: 26,
@@ -337,9 +350,6 @@ const styles = StyleSheet.create({
   eyeBtn: {
     paddingHorizontal: 4,
   },
-  eyeIcon: {
-    fontSize: 18,
-  },
   hintBox: {
     backgroundColor: '#F0F7FF',
     borderRadius: 12,
@@ -368,13 +378,9 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#93B4F8',
   },
   primaryButtonText: {
     color: '#ffffff',
@@ -385,9 +391,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingVertical: 12,
-  },
-  successIcon: {
-    fontSize: 48,
   },
   successTitle: {
     fontSize: 20,
@@ -405,9 +408,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
-  },
-  errorIcon: {
-    fontSize: 56,
   },
   errorTitle: {
     fontSize: 22,

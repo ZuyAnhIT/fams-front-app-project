@@ -1,13 +1,14 @@
 import { useLocalSearchParams } from 'expo-router';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AssignmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
       <Text>Chi tiết phân công</Text>
       <Text style={{ marginTop: 8, color: '#64748B' }}>ID: {id}</Text>
-    </View>
+    </SafeAreaView>
   );
 }

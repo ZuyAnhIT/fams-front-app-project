@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useAuthTheme } from '@/features/auth/theme';
@@ -44,7 +45,7 @@ export function FaceStatusCard({
   return (
     <View style={[styles.card, { backgroundColor: theme.card }]}>
       <View style={styles.header}>
-        <Text style={styles.icon}>🧑‍💼</Text>
+        <Ionicons name="person-circle-outline" size={28} color={theme.textSecondary} />
         <View style={styles.texts}>
           <Text style={[styles.title, { color: theme.text }]}>Face ID</Text>
           <View style={[styles.badge, { backgroundColor: `${color}18` }]}>
@@ -109,7 +110,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  icon: { fontSize: 28 },
   texts: { flex: 1, gap: 6 },
   title: { fontSize: 16, fontWeight: '700' },
   badge: {

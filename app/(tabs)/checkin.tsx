@@ -1,9 +1,12 @@
 import { Button, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLogout } from '@/features/auth/hooks/use-logout';
+
 export default function CheckinScreen() {
   const { logout, isPending } = useLogout();
   return (
-    <View
+    <SafeAreaView
+      edges={["top"]}
       style={{
         flex: 1,
         backgroundColor: "#F8FAFC",
@@ -50,6 +53,6 @@ export default function CheckinScreen() {
         disabled={isPending}
       />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

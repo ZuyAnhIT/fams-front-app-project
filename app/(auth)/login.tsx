@@ -1,5 +1,6 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -25,8 +26,20 @@ type LoginTab = 'email' | 'phone';
 export default function LoginScreen() {
   const [activeTab, setActiveTab] = useState<LoginTab>('email');
 
+  // "phone" is not a real in-place tab — selecting it navigates away
+  // immediately to /phone-login. Without this, tapping phone then
+  // navigating back (Stack.back keeps this same screen instance mounted)
+  // left `activeTab` stuck at 'phone', so LoginForm's conditional render
+  // never re-appeared and the card collapsed to just the tab row.
+  // Resetting on every focus makes this self-healing regardless of the
+  // navigation path used to come back (phone-login, 2FA, etc.).
+  useFocusEffect(
+    useCallback(() => {
+      setActiveTab('email');
+    }, []),
+  );
+
   const handleSwitchToPhone = () => {
-    setActiveTab('phone');
     router.push('/(auth)/phone-login' as never);
   };
 
@@ -68,13 +81,20 @@ export default function LoginScreen() {
                   }}
                   activeOpacity={0.8}
                 >
+                  <Ionicons
+                    name={tab === 'email' ? 'mail-outline' : 'call-outline'}
+                    size={16}
+                    color={activeTab === tab ? '#1E293B' : '#64748B'}
+                    style={styles.tabIcon}
+                  />
                   <Text
                     style={[
                       styles.tabText,
                       activeTab === tab && styles.tabTextActive,
                     ]}
+                    numberOfLines={1}
                   >
-                    {tab === 'email' ? '📧  Email' : '📱  Số điện thoại'}
+                    {tab === 'email' ? 'Email' : 'Số điện thoại'}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -163,9 +183,15 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
+    flexDirection: 'row',
     paddingVertical: 10,
+    paddingHorizontal: 6,
     borderRadius: 9,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIcon: {
+    marginRight: 6,
   },
   tabActive: {
     backgroundColor: '#ffffff',

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import {
   ActivityIndicator,
@@ -10,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSelectTenant } from '@/features/auth/hooks/use-select-tenant';
+import { useAuthTheme } from '@/features/auth/theme';
 
 /**
  * Tenant picker. Reached two ways: right after login when the account can
@@ -20,6 +22,7 @@ import { useSelectTenant } from '@/features/auth/hooks/use-select-tenant';
  * tenant-detail endpoint.
  */
 export default function SelectTenantScreen() {
+  const theme = useAuthTheme();
   const { tenants, isLoading, isError, selectedId, select, confirm, isConfirming } =
     useSelectTenant();
   const canGoBack = router.canGoBack();
@@ -29,7 +32,8 @@ export default function SelectTenantScreen() {
       <View style={styles.container}>
         {canGoBack && (
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Quay lại</Text>
+            <Ionicons name="chevron-back" size={18} color={theme.primary} />
+            <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>
         )}
         <Text style={styles.title}>Chọn công ty</Text>
@@ -59,7 +63,11 @@ export default function SelectTenantScreen() {
         />
 
         <TouchableOpacity
-          style={[styles.primaryButton, (!selectedId || isConfirming) && styles.buttonDisabled]}
+          style={[
+            styles.primaryButton,
+            { backgroundColor: theme.primary },
+            (!selectedId || isConfirming) && { backgroundColor: theme.primaryDisabled },
+          ]}
           onPress={confirm}
           disabled={!selectedId || isConfirming}
           activeOpacity={0.85}
@@ -86,6 +94,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
   },
   backBtnText: {
@@ -130,13 +140,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#93B4F8',
   },
   primaryButtonText: {
     color: '#ffffff',

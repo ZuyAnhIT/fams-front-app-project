@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
@@ -130,7 +131,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
           <View style={[styles.header, { borderBottomColor: theme.borderLight }]}>
             <Text style={[styles.title, { color: theme.text }]}>Chỉnh sửa hồ sơ</Text>
             <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={[styles.closeText, { color: theme.textSecondary }]}>✕</Text>
+              <Ionicons name="close" size={22} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -142,7 +143,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
           >
             {isSuccess ? (
               <View style={styles.successBox}>
-                <Text style={styles.successIcon}>✅</Text>
+                <Ionicons name="checkmark-circle-outline" size={48} color={theme.success} />
                 <Text style={[styles.successTitle, { color: theme.success }]}>
                   Cập nhật thành công!
                 </Text>
@@ -292,7 +293,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   title: { fontSize: 18, fontWeight: '700' },
-  closeText: { fontSize: 18 },
   body: { paddingHorizontal: 24, paddingTop: 20, gap: 16, paddingBottom: 8 },
   avatarSection: { alignItems: 'center', gap: 12 },
   avatarImage: { width: 88, height: 88, borderRadius: 44 },
@@ -330,6 +330,5 @@ const styles = StyleSheet.create({
   primaryButton: { borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginTop: 4 },
   primaryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
   successBox: { alignItems: 'center', gap: 12, paddingVertical: 24 },
-  successIcon: { fontSize: 48 },
   successTitle: { fontSize: 18, fontWeight: '700' },
 });

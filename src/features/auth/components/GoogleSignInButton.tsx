@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -36,7 +37,7 @@ export function GoogleSignInButton({ disabled }: GoogleSignInButtonProps) {
           <ActivityIndicator color={theme.textSecondary} size="small" />
         ) : (
           <>
-            <Text style={styles.googleIcon}>G</Text>
+            <Ionicons name="logo-google" size={18} color="#EA4335" />
             <Text style={[styles.label, { color: theme.text }]}>
               Đăng nhập bằng Google
             </Text>
@@ -70,14 +71,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   buttonDisabled: {
     opacity: 0.6,
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#4285F4',
   },
   label: {
     fontSize: 15,

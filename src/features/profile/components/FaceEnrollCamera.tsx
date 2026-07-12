@@ -191,7 +191,8 @@ const styles = StyleSheet.create({
   permissionDesc: { fontSize: 14, lineHeight: 20 },
   poseHint: { fontSize: 15, fontWeight: '600', textAlign: 'center' },
   cameraWrap: {
-    height: 360,
+    width: '100%',
+    aspectRatio: 3 / 4,
     borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: '#000',
