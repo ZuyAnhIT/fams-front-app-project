@@ -60,6 +60,7 @@ export default function TabLayout() {
           _layout.tsx) so list->detail keeps native swipe-back. */}
       <Tabs.Screen name="site" options={{ href: null }} />
       <Tabs.Screen name="notification/index" options={{ href: null }} />
+      <Tabs.Screen name="checkin-history" options={{ href: null }} />
     </Tabs>
   );
 }

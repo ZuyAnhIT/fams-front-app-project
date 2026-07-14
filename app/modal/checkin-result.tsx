@@ -1,10 +1,8 @@
-import { Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
+
+import { CheckinResult } from '@/features/checkin/components/CheckinResult';
 
 export default function CheckinResultModal() {
-  return (
-    <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Kết quả chấm công</Text>
-    </SafeAreaView>
-  );
+  const { checkinId } = useLocalSearchParams<{ checkinId: string }>();
+  return <CheckinResult checkinId={checkinId} />;
 }
