@@ -48,6 +48,13 @@
       ],
       "expo-secure-store",
       [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "FAMS cần quyền vị trí để xác thực chấm công GPS.",
+          "locationWhenInUsePermission": "FAMS cần quyền vị trí để xác thực chấm công GPS."
+        }
+      ],
+      [
         "@react-native-google-signin/google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.1012796463723-coetgapvr0vul5tfr6p93kdg1s67c4pd"
