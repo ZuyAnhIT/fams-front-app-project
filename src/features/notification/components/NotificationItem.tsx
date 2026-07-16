@@ -1,27 +1,29 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { Notification } from '../types/Notification';
+import type { NotificationItem as NotificationItemType } from '../types/Notification';
 import {
   formatNotificationTime,
   getEventTypeIcon,
   getEventTypeLabel,
+  isNotificationRead,
 } from '../utils/notification.utils';
 
 interface NotificationItemProps {
-  notification: Notification;
-  onPress: (notification: Notification) => void;
+  notification: NotificationItemType;
+  onPress: (notification: NotificationItemType) => void;
 }
 
 export function NotificationItem({ notification, onPress }: NotificationItemProps) {
-  const icon = getEventTypeIcon(notification.event_type);
-  const typeLabel = getEventTypeLabel(notification.event_type);
+  const read = isNotificationRead(notification);
+  const icon = getEventTypeIcon(notification.eventType);
+  const typeLabel = getEventTypeLabel(notification.eventType);
 
   return (
     <Pressable
       onPress={() => onPress(notification)}
       style={({ pressed }) => [
         styles.container,
-        !notification.is_read && styles.unread,
+        !read && styles.unread,
         pressed && styles.pressed,
       ]}
       accessibilityRole="button"
@@ -34,10 +36,10 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
       <View style={styles.content}>
         <View style={styles.headerRow}>
           <Text style={styles.typeLabel}>{typeLabel}</Text>
-          <Text style={styles.time}>{formatNotificationTime(notification.created_at)}</Text>
+          <Text style={styles.time}>{formatNotificationTime(notification.createdAt)}</Text>
         </View>
 
-        <Text style={[styles.title, !notification.is_read && styles.titleUnread]} numberOfLines={1}>
+        <Text style={[styles.title, !read && styles.titleUnread]} numberOfLines={1}>
           {notification.title}
         </Text>
 
@@ -46,7 +48,7 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
         </Text>
       </View>
 
-      {!notification.is_read && <View style={styles.unreadDot} />}
+      {!read && <View style={styles.unreadDot} />}
     </Pressable>
   );
 }

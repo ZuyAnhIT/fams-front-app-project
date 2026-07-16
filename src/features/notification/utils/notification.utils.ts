@@ -1,6 +1,16 @@
-import type { NotificationEventType } from '../types/Notification';
+import type { NotificationItem } from '../types/Notification';
 
-export const EVENT_TYPE_LABELS: Record<NotificationEventType, string> = {
+/**
+ * Nguồn xác định "đã đọc" tập trung một chỗ. Response backend có cả `read`
+ * và `isRead` với giá trị có thể khác nhau (chưa xác nhận field nào đúng) —
+ * tạm dùng `read`. Đổi ở đây nếu backend xác nhận `isRead` mới là đúng.
+ */
+export function isNotificationRead(notification: Pick<NotificationItem, 'read'>): boolean {
+  return notification.read;
+}
+
+/** Best-effort — Swagger không công bố danh sách eventType cố định. */
+const EVENT_TYPE_LABELS: Record<string, string> = {
   random_check: 'Kiểm tra ngẫu nhiên',
   violation: 'Vi phạm',
   system_alert: 'Hệ thống',
@@ -9,7 +19,7 @@ export const EVENT_TYPE_LABELS: Record<NotificationEventType, string> = {
   attendance: 'Công',
 };
 
-export const EVENT_TYPE_ICONS: Record<NotificationEventType, string> = {
+const EVENT_TYPE_ICONS: Record<string, string> = {
   random_check: '🎲',
   violation: '⚠️',
   system_alert: '🔔',
@@ -18,25 +28,15 @@ export const EVENT_TYPE_ICONS: Record<NotificationEventType, string> = {
   attendance: '📊',
 };
 
-export const EVENT_TYPE_FILTER_OPTIONS: Array<{
-  value: NotificationEventType | 'all';
-  label: string;
-}> = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'random_check', label: EVENT_TYPE_LABELS.random_check },
-  { value: 'violation', label: EVENT_TYPE_LABELS.violation },
-  { value: 'system_alert', label: EVENT_TYPE_LABELS.system_alert },
-  { value: 'assignment', label: EVENT_TYPE_LABELS.assignment },
-  { value: 'checkin', label: EVENT_TYPE_LABELS.checkin },
-  { value: 'attendance', label: EVENT_TYPE_LABELS.attendance },
-];
+const DEFAULT_LABEL = 'Thông báo';
+const DEFAULT_ICON = '🔔';
 
-export function getEventTypeLabel(eventType: NotificationEventType): string {
-  return EVENT_TYPE_LABELS[eventType];
+export function getEventTypeLabel(eventType: string): string {
+  return EVENT_TYPE_LABELS[eventType] ?? DEFAULT_LABEL;
 }
 
-export function getEventTypeIcon(eventType: NotificationEventType): string {
-  return EVENT_TYPE_ICONS[eventType];
+export function getEventTypeIcon(eventType: string): string {
+  return EVENT_TYPE_ICONS[eventType] ?? DEFAULT_ICON;
 }
 
 export function formatNotificationTime(isoDate: string): string {

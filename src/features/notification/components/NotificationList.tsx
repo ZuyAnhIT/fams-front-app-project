@@ -4,7 +4,6 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -12,17 +11,16 @@ import {
 
 import { useMarkAsRead } from '../hooks/useMarkAsRead';
 import { useNotifications } from '../hooks/useNotifications';
-import { useNotificationStore } from '../store/notificationStore';
-import type { Notification, NotificationEventType } from '../types/Notification';
-import { navigateToNotificationDeepLink } from '../utils/deep-link';
-import { EVENT_TYPE_FILTER_OPTIONS } from '../utils/notification.utils';
+import type { NotificationItem as NotificationItemType } from '../types/Notification';
+import { isNotificationRead } from '../utils/notification.utils';
 import { NotificationItem } from './NotificationItem';
 
 export function NotificationList() {
-  const [eventType, setEventType] = useState<NotificationEventType | 'all'>('all');
+  const [unreadOnly, setUnreadOnly] = useState(false);
 
   const {
     notifications,
+    unreadCount,
     isLoading,
     isRefetching,
     isFetchingNextPage,
@@ -30,17 +28,15 @@ export function NotificationList() {
     hasNextPage,
     fetchNextPage,
     refetch,
-  } = useNotifications({ eventType });
+  } = useNotifications({ unreadOnly });
 
   const { markAsRead, markAllAsRead, isMarkingAllRead } = useMarkAsRead();
-  const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   const handlePress = useCallback(
-    (notification: Notification) => {
-      if (!notification.is_read) {
+    (notification: NotificationItemType) => {
+      if (!isNotificationRead(notification)) {
         markAsRead(notification.id);
       }
-      navigateToNotificationDeepLink(notification.deep_link);
     },
     [markAsRead],
   );
@@ -77,26 +73,14 @@ export function NotificationList() {
   return (
     <View style={styles.container}>
       <View style={styles.toolbar}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
+        <Pressable
+          onPress={() => setUnreadOnly((prev) => !prev)}
+          style={[styles.filterChip, unreadOnly && styles.filterChipActive]}
         >
-          {EVENT_TYPE_FILTER_OPTIONS.map((option) => {
-            const active = eventType === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                onPress={() => setEventType(option.value)}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-              >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                  {option.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+          <Text style={[styles.filterChipText, unreadOnly && styles.filterChipTextActive]}>
+            Chỉ hiện chưa đọc
+          </Text>
+        </Pressable>
 
         {hasUnread && (
           <Pressable
@@ -151,22 +135,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E2E8F0',
-    paddingBottom: 8,
-  },
-  filterRow: {
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   filterChip: {
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
     backgroundColor: '#F1F5F9',
-    marginRight: 8,
   },
   filterChipActive: {
     backgroundColor: '#2563EB',
@@ -180,9 +162,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   markAllButton: {
-    alignSelf: 'flex-end',
-    marginRight: 16,
-    marginTop: 8,
     minHeight: 24,
     justifyContent: 'center',
   },
