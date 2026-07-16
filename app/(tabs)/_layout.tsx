@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { useUnreadCount } from '@/features/notification/hooks/useUnreadCount';
-import { useNotificationStore } from '@/features/notification/store/notificationStore';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -13,8 +12,7 @@ function tabIcon(outline: IoniconName, filled: IoniconName) {
 }
 
 export default function TabLayout() {
-  useUnreadCount();
-  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const { unreadCount } = useUnreadCount();
 
   const tabBarBadge =
     unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : undefined;

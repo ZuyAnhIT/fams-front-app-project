@@ -1,13 +1,13 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 
+import { useAuthStore } from '@/features/auth/store';
 import { useToast } from '@/components/ui/toast';
 
 import {
   markAllNotificationsAsRead,
   markNotificationAsRead,
 } from '../services/notification.service';
-import { useNotificationStore } from '../store/notificationStore';
-import type { Notification } from '../types/Notification';
+import type { NotificationItem, NotificationListResponse } from '../types/Notification';
 import { notificationKeys } from './useNotifications';
 
 export interface UseMarkAsReadResult {
@@ -19,38 +19,23 @@ export interface UseMarkAsReadResult {
   markAllReadError: unknown;
 }
 
-function wasUnreadInCache(
+function patchListsCache(
   queryClient: ReturnType<typeof useQueryClient>,
-  id: string,
-): boolean {
-  const queries = queryClient.getQueriesData<{ pages: Array<{ content: Notification[] }> }>({
-    queryKey: notificationKeys.lists(),
-  });
-
-  for (const [, data] of queries) {
-    const found = data?.pages
-      .flatMap((page) => page.content)
-      .find((item) => item.id === id);
-    if (found) return !found.is_read;
-  }
-
-  return false;
-}
-
-function patchNotificationInCache(
-  queryClient: ReturnType<typeof useQueryClient>,
-  id: string,
-  updater: (item: Notification) => Notification,
+  tenantId: string,
+  updater: (item: NotificationItem) => NotificationItem,
+  matchId?: string,
 ): void {
-  queryClient.setQueriesData<{ pages: Array<{ content: Notification[] }> }>(
-    { queryKey: notificationKeys.lists() },
+  queryClient.setQueriesData<InfiniteData<NotificationListResponse>>(
+    { queryKey: notificationKeys.lists(tenantId) },
     (old) => {
       if (!old) return old;
       return {
         ...old,
         pages: old.pages.map((page) => ({
           ...page,
-          content: page.content.map((item) => (item.id === id ? updater(item) : item)),
+          items: page.items.map((item) =>
+            !matchId || item.id === matchId ? updater(item) : item,
+          ),
         })),
       };
     },
@@ -60,18 +45,20 @@ function patchNotificationInCache(
 export function useMarkAsRead(): UseMarkAsReadResult {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const decrementUnreadCount = useNotificationStore((s) => s.decrementUnreadCount);
-  const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
+  const tenantId = useAuthStore((s) => s.activeTenantId);
 
   const markReadMutation = useMutation({
-    mutationFn: markNotificationAsRead,
-    onSuccess: (updated) => {
-      const wasUnread = wasUnreadInCache(queryClient, updated.id);
-      patchNotificationInCache(queryClient, updated.id, () => updated);
-      if (wasUnread) {
-        decrementUnreadCount(1);
-      }
-      void queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount() });
+    mutationFn: (id: string) => markNotificationAsRead(tenantId!, id),
+    onSuccess: (_result, id) => {
+      const now = new Date().toISOString();
+      patchListsCache(
+        queryClient,
+        tenantId!,
+        (item) => ({ ...item, read: true, isRead: true, readAt: item.readAt ?? now }),
+        id,
+      );
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.badge(tenantId!) });
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.lists(tenantId!) });
     },
     onError: () => {
       showToast('Không thể đánh dấu đã đọc', 'error');
@@ -79,31 +66,20 @@ export function useMarkAsRead(): UseMarkAsReadResult {
   });
 
   const markAllMutation = useMutation({
-    mutationFn: markAllNotificationsAsRead,
+    mutationFn: () => markAllNotificationsAsRead(tenantId!),
     onSuccess: (result) => {
-      if (result.updated_count > 0) {
+      if (result.markedCount > 0) {
         showToast('Đã đánh dấu tất cả là đã đọc', 'success');
       }
-      queryClient.setQueriesData<{ pages: Array<{ content: Notification[] }> }>(
-        { queryKey: notificationKeys.lists() },
-        (old) => {
-          if (!old) return old;
-          const now = new Date().toISOString();
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              content: page.content.map((item) =>
-                item.is_read ? item : { ...item, is_read: true, read_at: now },
-              ),
-            })),
-          };
-        },
-      );
-      setUnreadCount(0);
-      void queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount() });
-      void queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
-      return result;
+      const now = new Date().toISOString();
+      patchListsCache(queryClient, tenantId!, (item) => ({
+        ...item,
+        read: true,
+        isRead: true,
+        readAt: item.readAt ?? now,
+      }));
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.badge(tenantId!) });
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.lists(tenantId!) });
     },
     onError: () => {
       showToast('Không thể đánh dấu đã đọc tất cả', 'error');

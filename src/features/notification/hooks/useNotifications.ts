@@ -7,29 +7,26 @@ import {
 import { useAuthStore } from '@/features/auth/store';
 
 import { getNotifications } from '../services/notification.service';
-import type {
-  Notification,
-  NotificationEventType,
-  NotificationListResponse,
-} from '../types/Notification';
+import type { NotificationItem, NotificationListResponse } from '../types/Notification';
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 20;
 
 export const notificationKeys = {
-  all: ['notifications'] as const,
-  lists: () => [...notificationKeys.all, 'list'] as const,
-  list: (eventType: NotificationEventType | 'all') =>
-    [...notificationKeys.lists(), eventType] as const,
-  unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
+  all: (tenantId: string) => ['notifications', tenantId] as const,
+  lists: (tenantId: string) => [...notificationKeys.all(tenantId), 'list'] as const,
+  list: (tenantId: string, unreadOnly: boolean) =>
+    [...notificationKeys.lists(tenantId), { unreadOnly }] as const,
+  badge: (tenantId: string) => [...notificationKeys.all(tenantId), 'badge'] as const,
 };
 
 export interface UseNotificationsOptions {
-  eventType?: NotificationEventType | 'all';
+  unreadOnly?: boolean;
   pageSize?: number;
 }
 
 export interface UseNotificationsResult {
-  notifications: Notification[];
+  notifications: NotificationItem[];
+  unreadCount: number;
   isLoading: boolean;
   isRefetching: boolean;
   isFetchingNextPage: boolean;
@@ -43,30 +40,26 @@ export interface UseNotificationsResult {
 export function useNotifications(
   options: UseNotificationsOptions = {},
 ): UseNotificationsResult {
-  const { eventType = 'all', pageSize = DEFAULT_PAGE_SIZE } = options;
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { unreadOnly = false, pageSize = DEFAULT_PAGE_SIZE } = options;
+  const tenantId = useAuthStore((s) => s.activeTenantId);
 
-  const query: UseInfiniteQueryResult<
-    InfiniteData<NotificationListResponse>,
-    Error
-  > = useInfiniteQuery({
-    queryKey: notificationKeys.list(eventType),
-    queryFn: ({ pageParam }) =>
-      getNotifications({
-        page: pageParam,
-        size: pageSize,
-        event_type: eventType,
-      }),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => (lastPage.last ? undefined : lastPage.page + 1),
-    enabled: isAuthenticated,
-    staleTime: 60 * 1000,
-  });
+  const query: UseInfiniteQueryResult<InfiniteData<NotificationListResponse>, Error> =
+    useInfiniteQuery({
+      queryKey: notificationKeys.list(tenantId ?? '', unreadOnly),
+      queryFn: ({ pageParam }) =>
+        getNotifications(tenantId!, { page: pageParam, size: pageSize, unreadOnly }),
+      initialPageParam: 0,
+      getNextPageParam: (lastPage) => (lastPage.last ? undefined : lastPage.page + 1),
+      enabled: !!tenantId,
+      staleTime: 60 * 1000,
+    });
 
-  const notifications = query.data?.pages.flatMap((page) => page.content) ?? [];
+  const notifications = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const unreadCount = query.data?.pages[0]?.unreadCount ?? 0;
 
   return {
     notifications,
+    unreadCount,
     isLoading: query.isLoading,
     isRefetching: query.isRefetching,
     isFetchingNextPage: query.isFetchingNextPage,

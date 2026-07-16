@@ -1,45 +1,40 @@
-/** Loại sự kiện thông báo in-app – mở rộng khi thêm module mới. */
-export type NotificationEventType =
-  | 'random_check'
-  | 'violation'
-  | 'system_alert'
-  | 'assignment'
-  | 'checkin'
-  | 'attendance';
-
-export interface Notification {
+/**
+ * Khớp NotificationResponse/NotificationPageResponse của backend.
+ * ⚠️ Response thật có cả `read` và `isRead`, hai giá trị có thể khác nhau.
+ * Tạm dùng `read` làm nguồn chính — xem `isNotificationRead()` trong
+ * `utils/notification.utils.ts` để đổi tập trung một chỗ khi cần.
+ */
+export interface NotificationItem {
   id: string;
+  tenantId: string;
+  userId: string;
+  /** Không có enum cố định từ Swagger — backend có thể trả bất kỳ string nào. */
+  eventType: string;
   title: string;
   body: string;
-  event_type: NotificationEventType;
-  is_read: boolean;
-  deep_link: string | null;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-  read_at: string | null;
+  readAt: string | null;
+  createdAt: string;
+  read: boolean;
+  isRead: boolean;
 }
 
 export interface NotificationListParams {
   page?: number;
   size?: number;
-  event_type?: NotificationEventType | 'all';
+  unreadOnly?: boolean;
 }
 
-/** Chuẩn PageResponse của Spring Boot backend. */
 export interface NotificationListResponse {
-  content: Notification[];
+  items: NotificationItem[];
   page: number;
   size: number;
   totalElements: number;
   totalPages: number;
   first: boolean;
   last: boolean;
-}
-
-export interface UnreadCountResponse {
-  unread_count: number;
+  unreadCount: number;
 }
 
 export interface MarkAllReadResponse {
-  updated_count: number;
+  markedCount: number;
 }

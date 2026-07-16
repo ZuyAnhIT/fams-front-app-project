@@ -3,40 +3,32 @@ import { unwrapApiData } from '@/services/api-response';
 
 import type {
   MarkAllReadResponse,
-  Notification,
   NotificationListParams,
   NotificationListResponse,
-  UnreadCountResponse,
 } from '../types/Notification';
 
-const BASE = '/notifications';
-
-function buildListParams(params?: NotificationListParams) {
-  const { event_type, ...rest } = params ?? {};
-  return {
-    ...rest,
-    ...(event_type && event_type !== 'all' ? { event_type } : {}),
-  };
+function notificationBase(tenantId: string): string {
+  return `/tenants/${tenantId}/notifications`;
 }
 
 export async function getNotifications(
+  tenantId: string,
   params?: NotificationListParams,
 ): Promise<NotificationListResponse> {
-  const { data } = await apiClient.get(BASE, { params: buildListParams(params) });
+  const { data } = await apiClient.get(notificationBase(tenantId), { params });
   return unwrapApiData<NotificationListResponse>(data);
 }
 
-export async function getUnreadCount(): Promise<UnreadCountResponse> {
-  const { data } = await apiClient.get(`${BASE}/unread-count`);
-  return unwrapApiData<UnreadCountResponse>(data);
+export async function markNotificationAsRead(
+  tenantId: string,
+  notificationId: string,
+): Promise<void> {
+  await apiClient.patch(`${notificationBase(tenantId)}/${notificationId}/read`);
 }
 
-export async function markNotificationAsRead(id: string): Promise<Notification> {
-  const { data } = await apiClient.patch(`${BASE}/${id}/read`);
-  return unwrapApiData<Notification>(data);
-}
-
-export async function markAllNotificationsAsRead(): Promise<MarkAllReadResponse> {
-  const { data } = await apiClient.patch(`${BASE}/read-all`);
+export async function markAllNotificationsAsRead(
+  tenantId: string,
+): Promise<MarkAllReadResponse> {
+  const { data } = await apiClient.patch(`${notificationBase(tenantId)}/read-all`);
   return unwrapApiData<MarkAllReadResponse>(data);
 }
