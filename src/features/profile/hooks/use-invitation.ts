@@ -1,29 +1,26 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
-import { useToast } from '@/components/ui/toast';
+import { useAuthStore } from '@/features/auth/store';
 
-import {
-  acceptInvitation,
-  declineInvitation,
-  getPendingInvitations,
-} from '../services/invitation.service';
+import { getPendingInvitations } from '../services/invitation.service';
 import { useProfileStore } from '../store/profileStore';
-import { parseProfileError } from '../utils/profile.utils';
 
 export const invitationKeys = {
-  pending: () => ['profile', 'invitations', 'pending'] as const,
+  pending: (tenantId: string) => ['profile', 'invitations', 'pending', tenantId] as const,
 };
 
 export function usePendingInvitations() {
+  const tenantId = useAuthStore((s) => s.activeTenantId);
   const setPendingInvitations = useProfileStore((s) => s.setPendingInvitations);
 
   const query = useQuery({
-    queryKey: invitationKeys.pending(),
+    queryKey: invitationKeys.pending(tenantId ?? ''),
     queryFn: async () => {
-      const list = await getPendingInvitations();
-      setPendingInvitations(list);
-      return list;
+      const response = await getPendingInvitations(tenantId as string);
+      setPendingInvitations(response.content);
+      return response.content;
     },
+    enabled: !!tenantId,
     staleTime: 2 * 60 * 1000,
   });
 
@@ -31,38 +28,5 @@ export function usePendingInvitations() {
     invitations: query.data ?? [],
     isLoading: query.isLoading,
     refetch: query.refetch,
-  };
-}
-
-export function useInvitationActions() {
-  const queryClient = useQueryClient();
-  const removeInvitation = useProfileStore((s) => s.removeInvitation);
-  const { showToast } = useToast();
-
-  const acceptMutation = useMutation({
-    mutationFn: acceptInvitation,
-    onSuccess: (data) => {
-      removeInvitation(data.invitation.id);
-      queryClient.invalidateQueries({ queryKey: invitationKeys.pending() });
-      showToast(data.message, 'success');
-    },
-    onError: (error) => showToast(parseProfileError(error), 'error'),
-  });
-
-  const declineMutation = useMutation({
-    mutationFn: declineInvitation,
-    onSuccess: (invitation) => {
-      removeInvitation(invitation.id);
-      queryClient.invalidateQueries({ queryKey: invitationKeys.pending() });
-      showToast('Đã từ chối lời mời', 'info');
-    },
-    onError: (error) => showToast(parseProfileError(error), 'error'),
-  });
-
-  return {
-    accept: acceptMutation.mutate,
-    decline: declineMutation.mutate,
-    isAccepting: acceptMutation.isPending,
-    isDeclining: declineMutation.isPending,
   };
 }

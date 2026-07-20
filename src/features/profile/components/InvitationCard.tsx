@@ -1,4 +1,4 @@
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useAuthTheme } from '@/features/auth/theme';
 
@@ -7,22 +7,11 @@ import { formatInvitationExpiry, isInvitationExpired } from '../utils/profile.ut
 
 interface InvitationCardProps {
   invitation: TenantInvitation;
-  onAccept: (id: string) => void;
-  onDecline: (id: string) => void;
-  isAccepting?: boolean;
-  isDeclining?: boolean;
 }
 
-export function InvitationCard({
-  invitation,
-  onAccept,
-  onDecline,
-  isAccepting,
-  isDeclining,
-}: InvitationCardProps) {
+export function InvitationCard({ invitation }: InvitationCardProps) {
   const theme = useAuthTheme();
   const expired = isInvitationExpired(invitation);
-  const busy = isAccepting || isDeclining;
 
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.borderLight }]}>
@@ -44,32 +33,10 @@ export function InvitationCard({
         {expired ? 'Đã hết hạn' : `Hết hạn: ${formatInvitationExpiry(invitation.expires_at)}`}
       </Text>
 
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.btnSecondary, { borderColor: theme.border }]}
-          onPress={() => onDecline(invitation.id)}
-          disabled={busy || expired}
-        >
-          {isDeclining ? (
-            <ActivityIndicator size="small" color={theme.textMuted} />
-          ) : (
-            <Text style={[styles.btnSecondaryText, { color: theme.textSecondary }]}>Từ chối</Text>
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.btnPrimary,
-            { backgroundColor: expired ? theme.primaryDisabled : theme.primary },
-          ]}
-          onPress={() => onAccept(invitation.id)}
-          disabled={busy || expired}
-        >
-          {isAccepting ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.btnPrimaryText}>Chấp nhận</Text>
-          )}
-        </TouchableOpacity>
+      <View style={[styles.pendingNotice, { borderColor: theme.border }]}>
+        <Text style={[styles.pendingNoticeText, { color: theme.textMuted }]}>
+          Chức năng chấp nhận/từ chối đang chờ cập nhật
+        </Text>
       </View>
     </View>
   );
@@ -90,20 +57,12 @@ const styles = StyleSheet.create({
   meta: { fontSize: 13 },
   message: { fontSize: 13, lineHeight: 18 },
   expiry: { fontSize: 12, fontWeight: '500' },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  btnSecondary: {
-    flex: 1,
-    paddingVertical: 11,
+  pendingNotice: {
+    marginTop: 8,
     borderRadius: 10,
     borderWidth: 1,
+    paddingVertical: 10,
     alignItems: 'center',
   },
-  btnSecondaryText: { fontSize: 14, fontWeight: '600' },
-  btnPrimary: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  btnPrimaryText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  pendingNoticeText: { fontSize: 13, fontWeight: '500' },
 });

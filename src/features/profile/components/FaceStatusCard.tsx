@@ -3,11 +3,11 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 
 import { useAuthTheme } from '@/features/auth/theme';
 
-import type { FaceStatusResponse } from '../types/Profile';
-import { formatFaceStatusLabel } from '../utils/face-quality';
+import type { FaceIdStatusDto } from '@/features/face/types/FaceId';
+import { formatFaceStatusLabel } from '@/features/face/utils/face-quality';
 
 interface FaceStatusCardProps {
-  faceStatus?: FaceStatusResponse;
+  faceStatus?: FaceIdStatusDto;
   isLoading?: boolean;
   onEnroll: () => void;
   onDelete: () => void;
@@ -15,10 +15,10 @@ interface FaceStatusCardProps {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  registered: '#16A34A',
-  consent_pending: '#D97706',
+  enrolled: '#16A34A',
+  pending: '#D97706',
   revoked: '#94A3B8',
-  not_registered: '#64748B',
+  not_enrolled: '#64748B',
 };
 
 export function FaceStatusCard({
@@ -38,9 +38,9 @@ export function FaceStatusCard({
     );
   }
 
-  const status = faceStatus?.status ?? 'not_registered';
+  const status = faceStatus?.status ?? 'not_enrolled';
   const color = STATUS_COLOR[status] ?? theme.textMuted;
-  const isRegistered = status === 'registered';
+  const isEnrolled = status === 'enrolled';
 
   return (
     <View style={[styles.card, { backgroundColor: theme.card }]}>
@@ -55,29 +55,25 @@ export function FaceStatusCard({
         </View>
       </View>
 
-      {faceStatus?.consent_given && faceStatus.consent_at && (
+      {faceStatus?.consentGiven && faceStatus.consentGivenAt && (
         <Text style={[styles.meta, { color: theme.textMuted }]}>
-          Đồng ý: {new Date(faceStatus.consent_at).toLocaleDateString('vi-VN')}
+          Đồng ý: {new Date(faceStatus.consentGivenAt).toLocaleDateString('vi-VN')}
         </Text>
       )}
-      {isRegistered && faceStatus?.registered_at && (
+      {isEnrolled && faceStatus?.enrolledAt && (
         <Text style={[styles.meta, { color: theme.textMuted }]}>
-          Đăng ký: {new Date(faceStatus.registered_at).toLocaleDateString('vi-VN')}
-          {faceStatus.photo_count ? ` · ${faceStatus.photo_count} ảnh` : ''}
-          {faceStatus.quality_score
-            ? ` · Chất lượng ${(faceStatus.quality_score * 100).toFixed(0)}%`
-            : ''}
+          Đăng ký: {new Date(faceStatus.enrolledAt).toLocaleDateString('vi-VN')}
         </Text>
       )}
 
       <View style={styles.actions}>
-        {!isRegistered ? (
+        {!isEnrolled ? (
           <TouchableOpacity
             style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
             onPress={onEnroll}
           >
             <Text style={styles.btnPrimaryText}>
-              {status === 'consent_pending' ? 'Tiếp tục đăng ký' : 'Đăng ký Face ID'}
+              {status === 'pending' ? 'Tiếp tục đăng ký' : 'Đăng ký Face ID'}
             </Text>
           </TouchableOpacity>
         ) : (

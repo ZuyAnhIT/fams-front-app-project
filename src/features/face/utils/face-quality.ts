@@ -1,4 +1,4 @@
-import type { FaceImagePayload, FaceQualityResult } from '../types/Profile';
+import type { FaceImagePayload, FaceQualityResult } from '../types/FaceId';
 
 /** Số ảnh tối thiểu / tối đa khi đăng ký Face ID */
 export const FACE_MIN_PHOTOS = 3;
@@ -63,9 +63,9 @@ export const validateFaceImage = checkFaceImageQuality;
 
 export function formatFaceStatusLabel(status: string): string {
   switch (status) {
-    case 'registered':
+    case 'enrolled':
       return 'Đã đăng ký';
-    case 'consent_pending':
+    case 'pending':
       return 'Chờ hoàn tất đăng ký';
     case 'revoked':
       return 'Đã thu hồi';

@@ -16,10 +16,7 @@ import {
 } from 'react-native';
 import { z } from 'zod';
 
-import {
-  KeyboardAwareModalSheet,
-  logModalInputFocus,
-} from '@/components/ui/keyboard-aware-sheet';
+import { KeyboardAwareModalSheet } from '@/components/ui/keyboard-aware-sheet';
 import { useToast } from '@/components/ui/toast';
 
 import { useAvatarUpload } from '../hooks/use-avatar-upload';
@@ -126,7 +123,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
-        <KeyboardAwareModalSheet debugName="ProfileForm">
+        <KeyboardAwareModalSheet>
           <View style={[styles.sheet, { backgroundColor: theme.card }]}>
           <View style={[styles.header, { borderBottomColor: theme.borderLight }]}>
             <Text style={[styles.title, { color: theme.text }]}>Chỉnh sửa hồ sơ</Text>
@@ -188,7 +185,6 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
-                        onFocus={() => logModalInputFocus('ProfileForm', 'full_name')}
                         placeholder="Nguyễn Văn A"
                         placeholderTextColor={theme.textMuted}
                         autoCapitalize="words"
@@ -219,7 +215,6 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
-                        onFocus={() => logModalInputFocus('ProfileForm', 'phone')}
                         placeholder="0901234567"
                         placeholderTextColor={theme.textMuted}
                         keyboardType="phone-pad"
