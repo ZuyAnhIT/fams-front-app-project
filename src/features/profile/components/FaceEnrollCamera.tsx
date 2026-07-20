@@ -11,13 +11,14 @@ import type { CameraView as CameraViewType } from 'expo-camera';
 
 import { useAuthTheme } from '@/features/auth/theme';
 
-import { validateFaceImage } from '../utils/face-quality';
-import { useProfileStore } from '../store/profileStore';
+import { useFaceEnrollStore } from '@/features/face/store/face-enroll.store';
 import {
   FACE_MAX_PHOTOS,
   FACE_MIN_PHOTOS,
   FACE_POSE_HINTS,
-} from '../utils/face-quality';
+  validateFaceImage,
+} from '@/features/face/utils/face-quality';
+import { prepareFaceImageForUpload } from '@/features/face/utils/face-id.utils';
 import { FaceEnrollProgress } from './FaceEnrollProgress';
 import { FacePhotoPreview } from './FacePhotoPreview';
 
@@ -35,9 +36,9 @@ export function FaceEnrollCamera({ onComplete, onRegister, isRegistering }: Face
   const [cameraReady, setCameraReady] = useState(false);
   const [qualityError, setQualityError] = useState<string | null>(null);
 
-  const enrollSession = useProfileStore((s) => s.enrollSession);
-  const addCapturedPhoto = useProfileStore((s) => s.addCapturedPhoto);
-  const removeLastPhoto = useProfileStore((s) => s.removeLastPhoto);
+  const enrollSession = useFaceEnrollStore((s) => s.enrollSession);
+  const addCapturedPhoto = useFaceEnrollStore((s) => s.addCapturedPhoto);
+  const removeLastPhoto = useFaceEnrollStore((s) => s.removeLastPhoto);
 
   const photos = enrollSession?.photos ?? [];
   const photoCount = photos.length;
@@ -73,10 +74,13 @@ export function FaceEnrollCamera({ onComplete, onRegister, isRegistering }: Face
         return;
       }
 
+      // Resize/nén dưới 1MB + convert sang JPEG (kể cả HEIC) trước khi lưu vào batch
+      const processed = await prepareFaceImageForUpload(picture.uri);
+
       addCapturedPhoto({
-        uri: picture.uri,
-        width: picture.width,
-        height: picture.height,
+        uri: processed.uri,
+        width: processed.width,
+        height: processed.height,
         quality,
         capturedAt: new Date().toISOString(),
       });

@@ -15,10 +15,7 @@ import {
 } from 'react-native';
 import { z } from 'zod';
 
-import {
-  KeyboardAwareModalSheet,
-  logModalInputFocus,
-} from '@/components/ui/keyboard-aware-sheet';
+import { KeyboardAwareModalSheet } from '@/components/ui/keyboard-aware-sheet';
 import { useToast } from '@/components/ui/toast';
 
 import { useChangePassword } from '../hooks/use-change-password';
@@ -118,7 +115,7 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
       onRequestClose={handleClose}
     >
       <View style={styles.overlay}>
-        <KeyboardAwareModalSheet debugName="PasswordChangeForm">
+        <KeyboardAwareModalSheet>
           <View style={styles.sheet}>
           {/* Header */}
           <View style={styles.header}>
@@ -161,7 +158,6 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
                           value={value}
                           onChangeText={onChange}
                           onBlur={onBlur}
-                          onFocus={() => logModalInputFocus('PasswordChangeForm', 'current_password')}
                           placeholder="Nhập mật khẩu hiện tại"
                           placeholderTextColor="#94A3B8"
                           secureTextEntry={!showCurrent}
@@ -248,7 +244,6 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
                           value={value}
                           onChangeText={onChange}
                           onBlur={onBlur}
-                          onFocus={() => logModalInputFocus('PasswordChangeForm', 'confirm_password')}
                           placeholder="Nhập lại mật khẩu mới"
                           placeholderTextColor="#94A3B8"
                           secureTextEntry={!showConfirm}

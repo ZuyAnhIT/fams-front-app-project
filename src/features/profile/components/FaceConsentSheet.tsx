@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthTheme } from '@/features/auth/theme';
 
-import { FACE_CONSENT_VERSION } from '../utils/face-quality';
+import { FACE_CONSENT_VERSION } from '@/features/face/utils/face-quality';
 
 interface FaceConsentSheetProps {
   visible: boolean;

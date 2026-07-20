@@ -12,10 +12,7 @@ import {
   View,
 } from 'react-native';
 
-import {
-  KeyboardAwareModalSheet,
-  logModalInputFocus,
-} from '@/components/ui/keyboard-aware-sheet';
+import { KeyboardAwareModalSheet } from '@/components/ui/keyboard-aware-sheet';
 
 import { useToast } from '@/components/ui/toast';
 
@@ -96,7 +93,7 @@ export function TwoFASetupModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
-        <KeyboardAwareModalSheet debugName="TwoFASetupModal">
+        <KeyboardAwareModalSheet>
           <View style={[styles.sheet, { backgroundColor: theme.card }]}>
           <View style={[styles.header, { borderBottomColor: theme.borderLight }]}>
             <Text style={[styles.title, { color: theme.text }]}>

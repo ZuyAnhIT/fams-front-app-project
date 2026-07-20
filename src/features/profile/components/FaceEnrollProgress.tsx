@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useAuthTheme } from '@/features/auth/theme';
 
-import { FACE_MAX_PHOTOS, FACE_MIN_PHOTOS } from '../utils/face-quality';
+import { FACE_MAX_PHOTOS, FACE_MIN_PHOTOS } from '@/features/face/utils/face-quality';
 
 interface FaceEnrollProgressProps {
   current: number;

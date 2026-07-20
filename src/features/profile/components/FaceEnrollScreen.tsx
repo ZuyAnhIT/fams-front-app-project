@@ -10,9 +10,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthTheme } from '@/features/auth/theme';
 
-import { useFaceEnroll } from '../hooks/use-face-enroll';
+import { useFaceEnroll } from '@/features/face/hooks/use-face-enroll';
 import { FaceConsentSheet } from './FaceConsentSheet';
 import { FaceEnrollCamera } from './FaceEnrollCamera';
+import { FaceVerifyTest } from './FaceVerifyTest';
 
 export function FaceEnrollScreen() {
   const theme = useAuthTheme();
@@ -20,6 +21,7 @@ export function FaceEnrollScreen() {
     step,
     consentVisible,
     isLoading,
+    employeeId,
     isSavingConsent,
     isRegistering,
     handleConsentConfirm,
@@ -38,6 +40,24 @@ export function FaceEnrollScreen() {
     );
   }
 
+  if (!employeeId) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+        <View style={styles.doneWrap}>
+          <Text style={[styles.doneTitle, { color: theme.text }]}>
+            Tài khoản này không có hồ sơ nhân viên, không thể dùng Face-ID
+          </Text>
+          <TouchableOpacity
+            style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
+            onPress={goToProfile}
+          >
+            <Text style={styles.btnPrimaryText}>Về Hồ sơ</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (step === 'done') {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -47,6 +67,9 @@ export function FaceEnrollScreen() {
           <Text style={[styles.doneDesc, { color: theme.textSecondary }]}>
             Bạn có thể sử dụng nhận diện khuôn mặt khi chấm công.
           </Text>
+
+          <FaceVerifyTest />
+
           <TouchableOpacity
             style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
             onPress={goToProfile}

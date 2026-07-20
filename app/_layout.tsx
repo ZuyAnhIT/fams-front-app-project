@@ -7,28 +7,8 @@ import { ToastProvider } from "@/components/ui/toast";
 import { setupAuthInterceptors } from "@/features/auth/api-interceptors";
 import { useAuthStore } from "@/features/auth/store";
 import { setupMockApi } from "@/features/auth/mock/setup-mock-api";
-import { clearMockFaceData } from "@/features/profile/services/faceService";
 
 WebBrowser.maybeCompleteAuthSession();
-
-// #region agent log
-fetch("http://127.0.0.1:7569/ingest/cdcc833e-b1f1-4602-a45f-9f9830cbf8bc", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "X-Debug-Session-Id": "03d2d2",
-  },
-  body: JSON.stringify({
-    sessionId: "03d2d2",
-    location: "app/_layout.tsx:boot",
-    message: "JS bundle loaded — native modules OK",
-    data: { platform: "android-simulator-check" },
-    timestamp: Date.now(),
-    hypothesisId: "A-verify",
-    runId: "post-fix",
-  }),
-}).catch(() => {});
-// #endregion
 
 /** Shared QueryClient instance – lives for the lifetime of the app */
 const queryClient = new QueryClient({
@@ -54,7 +34,6 @@ function AppInit() {
 
   useEffect(() => {
     setupMockApi();
-    clearMockFaceData();
     hydrateFromSecureStore();
     setupAuthInterceptors(() => {
       clearAuth();

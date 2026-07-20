@@ -65,10 +65,6 @@ function formatGoogleSignInError(e: unknown): string {
 export async function getGoogleIdTokenNative(): Promise<string> {
   const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
 
-  // #region agent log
-  fetch('http://127.0.0.1:7569/ingest/cdcc833e-b1f1-4602-a45f-9f9830cbf8bc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'03d2d2'},body:JSON.stringify({sessionId:'03d2d2',location:'google-sign-in-service.ts:configure',message:'native google sign-in configure',data:{platform:Platform.OS,androidPackage:ANDROID_PACKAGE,hasWebClientId:!!GOOGLE_WEB_CLIENT_ID,clientIdSuffix:GOOGLE_WEB_CLIENT_ID.slice(-20)},timestamp:Date.now(),hypothesisId:'B-D-E',runId:'dev-error'})}).catch(()=>{});
-  // #endregion
-
   GoogleSignin.configure({
     webClientId: GOOGLE_WEB_CLIENT_ID,
     offlineAccess: false,
@@ -89,16 +85,8 @@ export async function getGoogleIdTokenNative(): Promise<string> {
       throw new Error('Không nhận được Google ID token. Kiểm tra Web Client ID trên Google Console.');
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7569/ingest/cdcc833e-b1f1-4602-a45f-9f9830cbf8bc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'03d2d2'},body:JSON.stringify({sessionId:'03d2d2',location:'google-sign-in-service.ts:success',message:'native google sign-in got id token',data:{hasIdToken:true},timestamp:Date.now(),hypothesisId:'success',runId:'dev-error'})}).catch(()=>{});
-    // #endregion
-
     return idToken;
   } catch (e) {
-    const err = e as { code?: string; message?: string };
-    // #region agent log
-    fetch('http://127.0.0.1:7569/ingest/cdcc833e-b1f1-4602-a45f-9f9830cbf8bc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'03d2d2'},body:JSON.stringify({sessionId:'03d2d2',location:'google-sign-in-service.ts:signIn-error',message:'native google sign-in failed',data:{code:err?.code,message:err?.message,isDeveloperError:isDeveloperError(e),androidPackage:ANDROID_PACKAGE},timestamp:Date.now(),hypothesisId:'A-B-C',runId:'dev-error'})}).catch(()=>{});
-    // #endregion
     throw new Error(formatGoogleSignInError(e));
   }
 }

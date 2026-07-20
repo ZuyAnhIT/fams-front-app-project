@@ -129,11 +129,14 @@ fams-front-app-project/
 │   ├── constants/            # Thiết kế hệ thống (Theme colors, Spacing, Typography...)
 │   ├── features/             # THƯ MỤC TÍNH NĂNG (Feature Modules)
 │   │   ├── auth/             # Quản lý Đăng nhập, 2FA, Google Sign-In
-│   │   ├── profile/          # Thông tin cá nhân & Quản lý Face ID
-│   │   │   ├── components/   # FaceEnrollCamera, FaceConsentSheet, PhotoPreview...
-│   │   │   ├── hooks/        # use-face-enroll, useFaceRegistration...
-│   │   │   ├── services/     # faceService.ts (Mock AsyncStorage), face.service.ts
-│   │   │   └── types/        # Định nghĩa kiểu dữ liệu Face ID
+│   │   ├── profile/          # Thông tin cá nhân, lời mời tenant & màn hình UI Face ID
+│   │   │   └── components/   # FaceEnrollScreen, FaceEnrollCamera, FaceConsentSheet... (chỉ UI, import logic từ face/)
+│   │   ├── face/             # Toàn bộ logic Face ID (enroll/consent/status/revoke)
+│   │   │   ├── hooks/        # use-face-id, use-face-enroll, use-current-employee-id
+│   │   │   ├── services/     # face.service.ts, employee-id.service.ts (REST API thật)
+│   │   │   ├── store/        # face-enroll.store.ts (session chụp ảnh)
+│   │   │   ├── types/        # FaceId.ts
+│   │   │   └── utils/        # face-id.utils.ts, face-quality.ts
 │   │   ├── tenant/           # Thiết lập Workspace/Doanh nghiệp của người dùng
 │   │   └── notification/     # Quản lý trạng thái và nhận thông báo
 │   ├── hooks/                # Custom React Hooks dùng chung hệ thống
@@ -154,23 +157,14 @@ fams-front-app-project/
   npx expo start -c
   ```
 
-### 2. Cơ chế Mock Face ID trong giai đoạn phát triển
+### 2. Face ID gọi API thật (tenant + employeeId scoped)
 
-- Do backend AI nhận diện khuôn mặt đang trong quá trình hoàn thiện, chức năng **Face ID** hiện tại đang sử dụng dịch vụ giả lập **Mock Face Service** qua `AsyncStorage` cục bộ.
-- Logic mock nằm tại: [faceService.ts](file:///d:/BaiTap/FAMS/fams-front-app-project/src/features/profile/services/faceService.ts) với key lưu trữ `@fams_mock_face_registration`.
-- Quy trình mock sẽ giả lập:
-  - Ký văn bản đồng ý điều khoản Face ID (Consent).
-  - Chụp và kiểm tra chất lượng từ **3 đến 5 ảnh** (độ sáng, góc nghiêng, khoảng cách mắt).
-  - Lưu thông tin đăng ký cùng thông tin thiết bị (`expo-device`) và chất lượng ảnh giả lập.
-  - Khi backend chính thức hoàn thiện, chỉ cần đổi import trong các hook từ `faceService` (Mock) sang `face.service` (gọi REST API thật) mà không cần viết lại giao diện.
+- Toàn bộ logic Face ID nằm ở feature riêng `src/features/face/` — `profile/` chỉ còn UI (màn hình enroll, status card, nút revoke), không tự gọi API. Face ID không còn dùng mock `AsyncStorage` — các hook trong `src/features/face/hooks/use-face-id.ts` gọi thẳng REST API qua [face.service.ts](file:///d:/BaiTap/FAMS/fams-front-app-project/src/features/face/services/face.service.ts):
+  `POST/GET/DELETE /tenants/{tenantId}/employees/{employeeId}/face-id[/consent|/enroll]`.
+- `employeeId` được lấy qua hook `useCurrentEmployeeId()` (dựa trên API `attendance/me/monthly`) — không dùng `user.id`. Nếu tài khoản không có employee profile trong tenant, toàn bộ entry point Face ID sẽ bị ẩn/disable.
+- Ảnh chụp được resize/nén dưới 1MB và convert sang JPEG (kể cả HEIC) qua `expo-image-manipulator` trước khi upload — xem `src/features/face/utils/face-id.utils.ts`.
 
-### 3. Cách Reset Dữ Liệu Mock Face ID
-
-- Khi muốn test lại luồng đăng ký Face ID từ đầu (Chưa đăng ký -> Đã đăng ký):
-  - Hàm `clearMockFaceData()` đã được cấu hình tự động dọn dẹp dữ liệu mock khi app reload/khởi chạy lại lần đầu.
-  - Hoặc bạn có thể xóa bộ nhớ cache & dữ liệu lưu trữ của ứng dụng **Expo Go** trên thiết bị của mình.
-
-### 4. Yêu cầu phiên bản Expo SDK
+### 3. Yêu cầu phiên bản Expo SDK
 
 - Dự án đang khóa cứng phiên bản **Expo SDK 54**. Vui lòng không tự ý nâng cấp các thư viện chính như `expo`, `react-native`, `expo-router` bằng lệnh `npm install` thông thường để tránh xung đột phiên bản. Hãy dùng lệnh sau nếu muốn cài thêm thư viện tương thích:
   ```bash
