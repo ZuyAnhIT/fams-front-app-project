@@ -2,6 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -100,6 +101,7 @@ export function FaceEnrollCamera({ onComplete, onRegister, isRegistering }: Face
   }
 
   if (!permission.granted) {
+    const canRequestAgain = permission.canAskAgain;
     return (
       <View style={[styles.permissionBox, { backgroundColor: theme.card }]}>
         <Text style={[styles.permissionTitle, { color: theme.text }]}>Cần quyền Camera</Text>
@@ -108,9 +110,13 @@ export function FaceEnrollCamera({ onComplete, onRegister, isRegistering }: Face
         </Text>
         <TouchableOpacity
           style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
-          onPress={requestPermission}
+          onPress={canRequestAgain ? requestPermission : () => void Linking.openSettings()}
+          accessibilityRole="button"
+          accessibilityLabel={canRequestAgain ? 'Cấp quyền Camera' : 'Mở cài đặt ứng dụng'}
         >
-          <Text style={styles.btnPrimaryText}>Cấp quyền Camera</Text>
+          <Text style={styles.btnPrimaryText}>
+            {canRequestAgain ? 'Cấp quyền Camera' : 'Mở cài đặt ứng dụng'}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -151,6 +157,9 @@ export function FaceEnrollCamera({ onComplete, onRegister, isRegistering }: Face
           ]}
           onPress={handleCapture}
           disabled={photoCount >= FACE_MAX_PHOTOS || isCapturing || !cameraReady}
+          accessibilityRole="button"
+          accessibilityLabel={`Chụp ảnh khuôn mặt thứ ${Math.min(photoCount + 1, FACE_MAX_PHOTOS)}`}
+          accessibilityState={{ disabled: photoCount >= FACE_MAX_PHOTOS || isCapturing || !cameraReady, busy: isCapturing }}
         >
           {isCapturing ? (
             <ActivityIndicator color={theme.primary} />
@@ -166,6 +175,8 @@ export function FaceEnrollCamera({ onComplete, onRegister, isRegistering }: Face
             style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
             onPress={onRegister}
             disabled={isRegistering}
+            accessibilityRole="button"
+            accessibilityLabel={`Hoàn tất đăng ký với ${photoCount} ảnh`}
           >
             {isRegistering ? (
               <ActivityIndicator color="#fff" />

@@ -81,6 +81,9 @@ export function FaceConsentSheet({
           style={styles.checkboxRow}
           onPress={() => setChecked((v) => !v)}
           activeOpacity={0.8}
+          accessibilityRole="checkbox"
+          accessibilityLabel="Đồng ý cho phép sử dụng dữ liệu khuôn mặt theo điều khoản"
+          accessibilityState={{ checked }}
         >
           <View
             style={[

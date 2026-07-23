@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +18,7 @@ import { z } from 'zod';
 
 import { useForgotPassword } from '@/features/auth/hooks/use-forgot-password';
 import { useAuthTheme } from '@/features/auth/theme';
+import { shadows } from '@/theme/tokens';
 
 const schema = z.object({
   email: z.string().min(1, 'Vui lòng nhập email').email('Email không hợp lệ'),
@@ -49,7 +51,11 @@ export default function ForgotPasswordScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={18} color={theme.primary} />
             <Text style={styles.backBtnText}>Quay lại</Text>
@@ -95,6 +101,7 @@ export default function ForgotPasswordScreen() {
                         autoFocus
                         returnKeyType="done"
                         onSubmitEditing={handleSubmit(onSubmit)}
+                        accessibilityLabel="Email"
                       />
                     )}
                   />
@@ -127,7 +134,7 @@ export default function ForgotPasswordScreen() {
               </>
             )}
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -136,7 +143,14 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
   flex: { flex: 1 },
-  container: { flex: 1, padding: 24, gap: 16 },
+  container: {
+    flexGrow: 1,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    padding: 24,
+    gap: 16,
+  },
   backBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start' },
   backBtnText: { fontSize: 15, color: '#2563EB', fontWeight: '500' },
   title: { fontSize: 26, fontWeight: '800', color: '#1E293B' },
@@ -146,11 +160,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
     gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    ...shadows.card,
   },
   fieldGroup: { gap: 6 },
   label: { fontSize: 14, fontWeight: '600', color: '#1E293B' },

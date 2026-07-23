@@ -90,6 +90,9 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
     padding: 24,
     gap: 16,
   },

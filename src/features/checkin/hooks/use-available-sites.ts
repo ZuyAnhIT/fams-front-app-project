@@ -22,6 +22,7 @@ export function useAvailableSites() {
   return {
     sites: query.data ?? [],
     isLoading: query.isLoading,
+    isRefetching: query.isRefetching,
     isError: query.isError,
     isForbidden,
     error: query.error,

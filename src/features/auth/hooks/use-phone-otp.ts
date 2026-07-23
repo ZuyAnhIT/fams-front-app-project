@@ -3,38 +3,16 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { sendPhoneOTP, verifyPhoneOTP } from '../api';
+import { verifyPhoneOTP } from '../api';
 import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
 import { useAuthStore } from '../store';
-import type { SendOTPRequest, VerifyOTPRequest } from '../types';
+import type { VerifyOTPRequest } from '../types';
 import { parseAuthError } from '../utils';
 
-// ─── Send OTP ────────────────────────────────────────────────────────────────
-
-/** Triggers an SMS OTP to the supplied phone number */
-export function useSendOTP() {
-  const { showToast } = useToast();
-
-  const mutation = useMutation({
-    mutationFn: (body: SendOTPRequest) => sendPhoneOTP(body),
-    onSuccess: () => {
-      showToast('Đã gửi mã OTP', 'success');
-    },
-    onError: (error) => {
-      showToast(parseAuthError(error), 'error');
-    },
-  });
-
-  return {
-    /** Accepts an optional second arg for per-call callbacks (TanStack Query v5) */
-    sendOTP: mutation.mutate,
-    isPending: mutation.isPending,
-    isSuccess: mutation.isSuccess,
-    error: mutation.isError ? parseAuthError(mutation.error) : null,
-  };
-}
-
 // ─── Verify OTP ──────────────────────────────────────────────────────────────
+// Sending the SMS code itself is handled by useFirebasePhoneAuth (Firebase
+// Client SDK, not a backend call) — this hook only covers the step where the
+// resulting Firebase ID token is exchanged for FAMS JWTs.
 
 export interface UseVerifyOTPResult {
   verifyOTP: (body: VerifyOTPRequest) => void;

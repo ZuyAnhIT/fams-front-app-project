@@ -15,20 +15,24 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OTPInput } from '@/features/auth/components/OTPInput';
-import { MockDevBanner } from '@/features/auth/components/MockDevBanner';
-import { useSendOTP, useVerifyOTP } from '@/features/auth/hooks/use-phone-otp';
+import { useFirebasePhoneAuth } from '@/features/auth/hooks/use-firebase-phone-auth';
+import { useVerifyOTP } from '@/features/auth/hooks/use-phone-otp';
 import { useAuthTheme } from '@/features/auth/theme';
-import { formatCountdown, normalizePhoneForBackend } from '@/features/auth/utils';
+import { formatCountdown, mapFirebasePhoneError, normalizePhoneForBackend } from '@/features/auth/utils';
+import { shadows } from '@/theme/tokens';
 
 const OTP_EXPIRY_SECONDS = 120;
 
 type Step = 'enter-phone' | 'enter-otp';
 
 /**
- * Phone OTP login screen.
+ * Phone OTP login screen (backlog #2, docs/BACKLOG.md).
  *
- * Step 1 – Enter phone number → tap "Gửi OTP"
- * Step 2 – Enter 6-digit OTP → countdown + resend → tap "Xác nhận"
+ * Step 1 – Enter phone number → Firebase Client SDK sends the SMS directly.
+ * Step 2 – Enter 6-digit OTP → confirmed against Firebase → the resulting
+ *          Firebase ID token is exchanged for FAMS JWTs (POST /auth/otp/verify).
+ *
+ * The backend never sees the phone number or the code — only the ID token.
  */
 export default function PhoneLoginScreen() {
   const theme = useAuthTheme();
@@ -36,18 +40,17 @@ export default function PhoneLoginScreen() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phoneInputRef = useRef<TextInput>(null);
 
-  const { sendOTP, isPending: sending, error: sendError } = useSendOTP();
+  const { sendCode, confirmCode, isSending: sending } = useFirebasePhoneAuth();
   const { verifyOTP, isPending: verifying, error: verifyError } = useVerifyOTP();
 
-  // Tick countdown after OTP is sent
-  useEffect(() => {
-    if (step !== 'enter-otp') return;
+  const startCountdown = () => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
     setCountdown(OTP_EXPIRY_SECONDS);
-
     countdownRef.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -57,46 +60,39 @@ export default function PhoneLoginScreen() {
         return prev - 1;
       });
     }, 1000);
+  };
 
+  useEffect(() => {
     return () => {
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, [step]);
+  }, []);
 
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
     if (!phone.trim()) return;
-    sendOTP(
-      { phone: phone.trim() },
-      { onSuccess: () => setStep('enter-otp') },
-    );
+    setSendError(null);
+    try {
+      await sendCode(normalizePhoneForBackend(phone));
+      setOtp('');
+      setStep('enter-otp');
+      startCountdown();
+    } catch (error: unknown) {
+      setSendError(mapFirebasePhoneError(error));
+    }
   };
 
-  const handleVerifyOTP = () => {
+  const handleVerifyOTP = async () => {
     if (otp.length !== 6) return;
-    verifyOTP({ phone: phone.trim(), otp });
+    try {
+      const firebaseIdToken = await confirmCode(otp);
+      verifyOTP({ firebaseIdToken });
+    } catch (error: unknown) {
+      setSendError(mapFirebasePhoneError(error));
+    }
   };
 
   const handleResend = () => {
-    setOtp('');
-    sendOTP(
-      { phone: phone.trim() },
-      {
-        onSuccess: () => {
-          // Restart countdown
-          if (countdownRef.current) clearInterval(countdownRef.current);
-          setCountdown(OTP_EXPIRY_SECONDS);
-          countdownRef.current = setInterval(() => {
-            setCountdown((prev) => {
-              if (prev <= 1) {
-                clearInterval(countdownRef.current!);
-                return 0;
-              }
-              return prev - 1;
-            });
-          }, 1000);
-        },
-      },
-    );
+    handleSendOTP();
   };
 
   return (
@@ -146,6 +142,7 @@ export default function PhoneLoginScreen() {
                     returnKeyType="done"
                     onSubmitEditing={handleSendOTP}
                     autoFocus
+                    accessibilityLabel="Số điện thoại"
                   />
                   <Text style={styles.hint}>
                     Nhập số bắt đầu bằng 0 — hệ thống tự chuyển sang +84 khi gửi
@@ -247,8 +244,6 @@ export default function PhoneLoginScreen() {
               </View>
             )}
           </View>
-
-          <MockDevBanner />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -270,6 +265,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
     gap: 20,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
   },
   backBtn: {
     flexDirection: 'row',
@@ -297,11 +295,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    ...shadows.card,
     overflow: 'hidden',
   },
   body: {

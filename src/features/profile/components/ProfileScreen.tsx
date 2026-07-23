@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppHeader } from '@/components/ui/app-header';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { PasswordChangeForm } from '@/features/auth/components/PasswordChangeForm';
 import { ProfileForm } from '@/features/auth/components/ProfileForm';
 import { TwoFASetupModal } from '@/features/auth/components/TwoFASetupModal';
@@ -20,6 +22,7 @@ import { useLogout } from '@/features/auth/hooks/use-logout';
 import { useProfile } from '@/features/auth/hooks/use-profile';
 import { useAuthTheme } from '@/features/auth/theme';
 import type { UserProfile } from '@/features/auth/types';
+import { shadows } from '@/theme/tokens';
 
 import { ProfileFaceSection } from './ProfileFaceSection';
 import { ProfileSettingsRow } from './ProfileSettingsRow';
@@ -38,6 +41,18 @@ const ROLE_COLOR: Record<UserProfile['role'], string> = {
   hr: '#059669',
 };
 
+// Issue #4 (docs/issues/ISSUES.md)
+const GENDER_LABEL: Record<string, string> = {
+  male: 'Nam',
+  female: 'Nữ',
+  other: 'Khác',
+};
+
+function formatDob(iso: string): string {
+  const [year, month, day] = iso.split('-');
+  return day && month && year ? `${day}/${month}/${year}` : iso;
+}
+
 /**
  * Màn hình Hồ sơ — thông tin cá nhân, Face ID, lời mời, bảo mật & đăng xuất.
  */
@@ -47,6 +62,7 @@ export function ProfileScreen() {
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [twoFAVisible, setTwoFAVisible] = useState(false);
+  const [logoutConfirmation, setLogoutConfirmation] = useState<'current' | 'all' | null>(null);
 
   const { profile, isLoading, isError, refetch } = useProfile();
   const { logout, logoutAll, isPending: isLoggingOut } = useLogout();
@@ -84,32 +100,16 @@ export function ProfileScreen() {
     );
   }
 
-  const handleLogout = () => {
-    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất khỏi thiết bị này?', [
-      { text: 'Huỷ', style: 'cancel' },
-      { text: 'Đăng xuất', style: 'destructive', onPress: logout },
-    ]);
-  };
-
-  const handleLogoutAll = () => {
-    Alert.alert(
-      'Đăng xuất tất cả',
-      'Bạn sẽ bị đăng xuất khỏi tất cả thiết bị. Tiếp tục?',
-      [
-        { text: 'Huỷ', style: 'cancel' },
-        { text: 'Xác nhận', style: 'destructive', onPress: logoutAll },
-      ],
-    );
-  };
-
   const roleColor = ROLE_COLOR[profile.role];
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+      <AppHeader title="Hồ sơ" subtitle="Thông tin cá nhân và bảo mật" />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer style={styles.responsiveContent}>
         <View style={[styles.identityCard, { backgroundColor: theme.card }]}>
           {profile.avatar_url ? (
             <Image
@@ -164,6 +164,34 @@ export function ProfileScreen() {
               <Text style={[styles.detailValue, styles.monoText, { color: theme.text }]}>
                 {profile.employee_code}
               </Text>
+            </View>
+          )}
+          {profile.date_of_birth && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Ngày sinh</Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>
+                {formatDob(profile.date_of_birth)}
+              </Text>
+            </View>
+          )}
+          {profile.gender && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Giới tính</Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>
+                {GENDER_LABEL[profile.gender] ?? profile.gender}
+              </Text>
+            </View>
+          )}
+          {profile.hometown && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Quê quán</Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>{profile.hometown}</Text>
+            </View>
+          )}
+          {profile.address && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Địa chỉ</Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>{profile.address}</Text>
             </View>
           )}
 
@@ -253,7 +281,7 @@ export function ProfileScreen() {
             icon="log-out-outline"
             label="Đăng xuất"
             sublabel="Thiết bị hiện tại"
-            onPress={handleLogout}
+            onPress={() => setLogoutConfirmation('current')}
             destructive
             loading={isLoggingOut}
             theme={theme}
@@ -264,7 +292,7 @@ export function ProfileScreen() {
             icon="trash-outline"
             label="Đăng xuất tất cả thiết bị"
             sublabel="Thu hồi mọi phiên đang hoạt động"
-            onPress={handleLogoutAll}
+            onPress={() => setLogoutConfirmation('all')}
             destructive
             loading={isLoggingOut}
             theme={theme}
@@ -272,6 +300,7 @@ export function ProfileScreen() {
         </View>
 
         <Text style={[styles.footer, { color: theme.textMuted }]}>FAMS · v1.0.0</Text>
+        </ResponsiveContainer>
       </ScrollView>
 
       <ProfileForm
@@ -294,24 +323,39 @@ export function ProfileScreen() {
           refetch();
         }}
       />
+
+      <ConfirmDialog
+        visible={logoutConfirmation !== null}
+        title={logoutConfirmation === 'all' ? 'Đăng xuất tất cả thiết bị?' : 'Đăng xuất khỏi thiết bị này?'}
+        description={
+          logoutConfirmation === 'all'
+            ? 'Mọi phiên đăng nhập đang hoạt động sẽ bị thu hồi và cần đăng nhập lại.'
+            : 'Bạn sẽ cần đăng nhập lại để tiếp tục sử dụng FAMS trên thiết bị này.'
+        }
+        confirmLabel={logoutConfirmation === 'all' ? 'Đăng xuất tất cả' : 'Đăng xuất'}
+        destructive
+        loading={isLoggingOut}
+        onCancel={() => setLogoutConfirmation(null)}
+        onConfirm={() => {
+          if (logoutConfirmation === 'all') logoutAll();
+          else logout();
+        }}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  scroll: { padding: 20, gap: 16, paddingBottom: 32 },
+  scroll: { padding: 20, paddingBottom: 32 },
+  responsiveContent: { gap: 16 },
   identityCard: {
     borderRadius: 24,
     padding: 24,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    ...shadows.card,
   },
   avatarCircle: {
     width: 72,
@@ -338,11 +382,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.card,
   },
   detailRow: {
     flexDirection: 'row',
@@ -369,11 +409,7 @@ const styles = StyleSheet.create({
   sectionCard: {
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.card,
   },
   sectionTitle: {
     fontSize: 12,

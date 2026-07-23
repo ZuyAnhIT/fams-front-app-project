@@ -1,4 +1,5 @@
 import { apiClient } from '@/services/api-client';
+import { unwrapApiData } from '@/services/api-response';
 
 import type {
   CreateTenantRequest,
@@ -19,7 +20,7 @@ const BASE = '/tenants';
 /** Platform Admin: create a new tenant and return the created record */
 export async function createTenant(body: CreateTenantRequest): Promise<Tenant> {
   const { data } = await apiClient.post<Tenant>(BASE, body);
-  return data;
+  return unwrapApiData<Tenant>(data);
 }
 
 /**
@@ -29,20 +30,35 @@ export async function createTenant(body: CreateTenantRequest): Promise<Tenant> {
 export async function getTenantList(
   params?: TenantListParams,
 ): Promise<TenantListResponse> {
-  const { data } = await apiClient.get<TenantListResponse>(BASE, { params });
-  return data;
+  const { data } = await apiClient.get(BASE, { params });
+  const page = unwrapApiData<{
+    items?: Tenant[];
+    content?: Tenant[];
+    total?: number;
+    totalElements?: number;
+    page?: number;
+    page_size?: number;
+    size?: number;
+  }>(data);
+
+  return {
+    items: page.items ?? page.content ?? [],
+    total: page.total ?? page.totalElements ?? 0,
+    page: page.page ?? 0,
+    page_size: page.page_size ?? page.size ?? 0,
+  };
 }
 
 /** Get full tenant details by ID */
 export async function getTenant(id: string): Promise<Tenant> {
   const { data } = await apiClient.get<Tenant>(`${BASE}/${id}`);
-  return data;
+  return unwrapApiData<Tenant>(data);
 }
 
 /** Get the currently authenticated user's tenant */
 export async function getMyTenant(): Promise<Tenant> {
   const { data } = await apiClient.get<Tenant>(`${BASE}/me`);
-  return data;
+  return unwrapApiData<Tenant>(data);
 }
 
 /** Update tenant basic info (name, logo, industry) */
@@ -51,7 +67,7 @@ export async function updateTenant(
   body: UpdateTenantRequest,
 ): Promise<Tenant> {
   const { data } = await apiClient.patch<Tenant>(`${BASE}/${id}`, body);
-  return data;
+  return unwrapApiData<Tenant>(data);
 }
 
 // ─── Tenant Settings ──────────────────────────────────────────────────────────
@@ -59,7 +75,7 @@ export async function updateTenant(
 /** Get the settings for a tenant */
 export async function getTenantSettings(id: string): Promise<TenantSettings> {
   const { data } = await apiClient.get<TenantSettings>(`${BASE}/${id}/settings`);
-  return data;
+  return unwrapApiData<TenantSettings>(data);
 }
 
 /** Partial update to tenant settings */
@@ -71,7 +87,7 @@ export async function updateTenantSettings(
     `${BASE}/${id}/settings`,
     body,
   );
-  return data;
+  return unwrapApiData<TenantSettings>(data);
 }
 
 // ─── Subscription ─────────────────────────────────────────────────────────────
@@ -81,11 +97,11 @@ export async function getTenantSubscription(id: string): Promise<Subscription> {
   const { data } = await apiClient.get<Subscription>(
     `${BASE}/${id}/subscription`,
   );
-  return data;
+  return unwrapApiData<Subscription>(data);
 }
 
 /** Platform Admin: fetch all available plan definitions */
 export async function getAvailablePlans(): Promise<PlanDetail[]> {
   const { data } = await apiClient.get<PlanDetail[]>('/plans');
-  return data;
+  return unwrapApiData<PlanDetail[]>(data);
 }

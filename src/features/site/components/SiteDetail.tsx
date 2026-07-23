@@ -1,8 +1,15 @@
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Circle, Marker } from 'react-native-maps';
+import { useRouter } from 'expo-router';
+
+import { AppHeader } from '@/components/ui/app-header';
+import { AppButton } from '@/components/ui/app-button';
+import { FeedbackState } from '@/components/ui/feedback-state';
+import { ResponsiveContainer } from '@/components/ui/responsive-container';
+import { palette, radius, spacing } from '@/theme/tokens';
 
 import { useSiteDetail } from '../hooks/use-site-detail';
+import { SiteLocationMap } from './SiteLocationMap';
 import { useSiteSupervisors } from '../hooks/use-site-supervisors';
 import {
   SITE_STATUS_LABELS,
@@ -16,26 +23,38 @@ export interface SiteDetailProps {
 }
 
 export function SiteDetail({ siteId }: SiteDetailProps) {
+  const router = useRouter();
   const { detail, isLoading, isError, refetch } = useSiteDetail(siteId);
   const { supervisors, isLoading: isLoadingSupervisors } = useSiteSupervisors(siteId);
 
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/site');
+  };
+
   if (isLoading) {
     return (
-      <SafeAreaView edges={['top']} style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={styles.loadingText}>Đang tải công trình...</Text>
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <AppHeader title="Chi tiết công trình" onBack={goBack} />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={palette.primary} />
+          <Text style={styles.loadingText}>Đang tải công trình...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
   if (isError || !detail) {
     return (
-      <SafeAreaView edges={['top']} style={styles.centered}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorTitle}>Không thể tải chi tiết công trình</Text>
-        <Pressable style={styles.retryButton} onPress={refetch}>
-          <Text style={styles.retryButtonText}>Thử lại</Text>
-        </Pressable>
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <AppHeader title="Chi tiết công trình" onBack={goBack} />
+        <FeedbackState
+          icon="cloud-offline-outline"
+          title="Không thể tải chi tiết công trình"
+          description="Kiểm tra kết nối mạng rồi thử lại."
+          actionLabel="Thử lại"
+          onAction={refetch}
+        />
       </SafeAreaView>
     );
   }
@@ -44,10 +63,18 @@ export function SiteDetail({ siteId }: SiteDetailProps) {
     detail;
 
   const hasCoordinates = latitude != null && longitude != null;
+  const openExternalMap = () => {
+    if (!hasCoordinates) return;
+    void Linking.openURL(
+      `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`,
+    );
+  };
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+    <AppHeader title="Chi tiết công trình" subtitle={code ?? undefined} onBack={goBack} />
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ResponsiveContainer style={styles.responsiveContent}>
       <View style={styles.section}>
         <Text style={styles.code}>{code ?? '—'}</Text>
         <Text style={styles.name}>{name}</Text>
@@ -60,41 +87,34 @@ export function SiteDetail({ siteId }: SiteDetailProps) {
         <Text style={styles.value}>{formatCoordinates(latitude, longitude)}</Text>
 
         {hasCoordinates && Platform.OS !== 'web' ? (
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude,
-              longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-            scrollEnabled={false}
-            zoomEnabled={false}
-            pointerEvents="none"
-          >
-            <Marker coordinate={{ latitude, longitude }} title={name} />
-            {geofence && (
-              <Circle
-                center={{ latitude, longitude }}
-                radius={geofence.bufferMeters}
-                strokeColor="#2563EB"
-                fillColor="rgba(37, 99, 235, 0.15)"
-              />
-            )}
-          </MapView>
+          <SiteLocationMap
+            name={name}
+            latitude={latitude}
+            longitude={longitude}
+            geofenceBufferMeters={geofence?.bufferMeters}
+          />
         ) : hasCoordinates ? (
-          <Text style={styles.muted}>Bản đồ chưa hỗ trợ trên web, xem tọa độ ở trên</Text>
+          <Text style={styles.muted}>Sử dụng nút bên dưới để mở vị trí trên bản đồ.</Text>
         ) : (
           <Text style={styles.muted}>Chưa có tọa độ để hiển thị bản đồ</Text>
         )}
 
+        {hasCoordinates && (
+          <AppButton
+            label="Mở vị trí trên bản đồ"
+            icon="map-outline"
+            variant="secondary"
+            onPress={openExternalMap}
+          />
+        )}
+
         {geofence ? (
           <View style={styles.geofenceRow}>
-            <Text style={styles.value}>Geofence đang hoạt động</Text>
-            <Text style={styles.muted}>{formatGeofenceRadius(geofence.bufferMeters)}</Text>
+            <Text style={styles.value}>Phạm vi chấm công đang áp dụng</Text>
+            <Text style={styles.muted}>Bán kính {formatGeofenceRadius(geofence.bufferMeters)}</Text>
           </View>
         ) : (
-          <Text style={styles.muted}>Chưa có geofence đang hoạt động</Text>
+          <Text style={styles.muted}>Chưa thiết lập phạm vi chấm công GPS</Text>
         )}
       </View>
 
@@ -133,34 +153,36 @@ export function SiteDetail({ siteId }: SiteDetailProps) {
           ))
         )}
       </View>
+      </ResponsiveContainer>
     </ScrollView>
     </SafeAreaView>
   );
 }
 
-const MAP_HEIGHT = Platform.select({ web: 0, default: 180 });
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: palette.canvas,
   },
+  scroll: { flex: 1 },
   content: {
-    padding: 16,
-    gap: 16,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxxl,
   },
+  responsiveContent: { gap: spacing.lg },
   section: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
-    gap: 4,
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.xs,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#64748B',
+    color: palette.textMuted,
     marginBottom: 4,
     textTransform: 'uppercase',
   },
@@ -172,34 +194,29 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: palette.text,
   },
   address: {
     fontSize: 14,
-    color: '#475569',
+    color: palette.textSecondary,
   },
   status: {
     fontSize: 13,
-    color: '#1E293B',
+    color: palette.text,
     marginTop: 4,
   },
   value: {
     fontSize: 14,
-    color: '#1E293B',
+    color: palette.text,
     fontWeight: '600',
   },
   muted: {
     fontSize: 13,
-    color: '#64748B',
+    color: palette.textMuted,
   },
   geofenceRow: {
     marginTop: 6,
     gap: 2,
-  },
-  map: {
-    height: MAP_HEIGHT,
-    borderRadius: 10,
-    marginVertical: 8,
   },
   centered: {
     flex: 1,

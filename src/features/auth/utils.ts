@@ -1,5 +1,25 @@
 import { isAxiosError } from 'axios';
 
+/** Maps Firebase Auth error codes (from useFirebasePhoneAuth) to Vietnamese messages. */
+export function mapFirebasePhoneError(error: unknown): string {
+  const code = (error as { code?: string } | null)?.code;
+  switch (code) {
+    case 'auth/invalid-phone-number':
+      return 'Số điện thoại không hợp lệ.';
+    case 'auth/too-many-requests':
+    case 'auth/quota-exceeded':
+      return 'Bạn đã yêu cầu mã OTP quá nhiều lần. Vui lòng thử lại sau.';
+    case 'auth/invalid-verification-code':
+      return 'Mã OTP không chính xác.';
+    case 'auth/code-expired':
+      return 'Mã OTP đã hết hạn. Vui lòng gửi lại.';
+    case 'auth/network-request-failed':
+      return 'Lỗi kết nối mạng. Vui lòng kiểm tra lại.';
+    default:
+      return error instanceof Error && error.message ? error.message : 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+  }
+}
+
 /** Parses ISO date from backend locked-account messages */
 function parseLockedUntilFromMessage(message: string): string | undefined {
   const match = message.match(/locked until (.+)$/i);
@@ -32,6 +52,10 @@ export function parseAuthError(error: unknown): string {
   const data = error.response?.data as Record<string, unknown> | undefined;
   const status = error.response?.status;
   const serverMessage = typeof data?.message === 'string' ? data.message : '';
+  // Backend sends both a technical `message` (often raw English) and a `userMessage`
+  // (always Vietnamese — see BusinessException/ApiResponse on the backend). Prefer it
+  // whenever present instead of the generic-status switch further down.
+  const userMessage = typeof data?.userMessage === 'string' ? data.userMessage : '';
 
   // Account locked – HTTP 423 or message pattern from Spring Boot
   if (
@@ -63,11 +87,14 @@ export function parseAuthError(error: unknown): string {
     if (messages.length > 0) return messages.join('. ');
   }
 
-  if (serverMessage && serverMessage !== 'Validation failed') {
-    return serverMessage;
+  if (userMessage) {
+    return userMessage;
   }
   if (serverMessage === 'Validation failed') {
     return 'Thông tin không hợp lệ. Vui lòng kiểm tra lại';
+  }
+  if (serverMessage) {
+    return serverMessage;
   }
 
   if (!error.response) return 'Không thể kết nối đến máy chủ';

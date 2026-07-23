@@ -1,4 +1,5 @@
 import { apiClient } from '@/services/api-client';
+import { getDeviceId } from '@/services/avatar-upload';
 import { unwrapApiData } from '@/services/api-response';
 
 import { mapLoginResponse, mapTotpSetupResponse, mapUserProfile } from './api-mappers';
@@ -13,7 +14,6 @@ import type {
   RefreshTokenResponse,
   RegisterRequest,
   ResetPasswordRequest,
-  SendOTPRequest,
   TwoFAConfirmSetupRequest,
   TwoFASetupResponse,
   TwoFAVerifyRequest,
@@ -40,7 +40,12 @@ export async function registerUser(body: RegisterRequest): Promise<LoginResponse
 // ─── Email / Password Login ───────────────────────────────────────────────────
 
 export async function loginWithEmail(body: LoginRequest): Promise<LoginResponse> {
-  const { data } = await apiClient.post(`${BASE}/login`, body);
+  const payload = {
+    email: body.email,
+    password: body.password,
+    deviceId: body.device_id ?? getDeviceId(),
+  };
+  const { data } = await apiClient.post(`${BASE}/login`, payload);
   return mapLoginResponse(unwrapApiData(data));
 }
 
@@ -55,18 +60,14 @@ export async function loginWithGoogle(body: GoogleLoginRequest): Promise<LoginRe
 }
 
 // ─── Phone OTP ────────────────────────────────────────────────────────────────
-
-export async function sendPhoneOTP(body: SendOTPRequest): Promise<{ message: string }> {
-  const payload = { phone: normalizePhoneForBackend(body.phone) };
-  const { data } = await apiClient.post(`${BASE}/otp/send`, payload);
-  const envelope = data as { message?: string };
-  return { message: envelope.message ?? 'OTP sent' };
-}
+// Sending/confirming the SMS code happens entirely against Firebase, client-side
+// (see useFirebasePhoneAuth) — the backend never sees a phone number or a code,
+// only the resulting Firebase ID token.
 
 export async function verifyPhoneOTP(body: VerifyOTPRequest): Promise<LoginResponse> {
   const payload = {
-    phone: normalizePhoneForBackend(body.phone),
-    code: body.otp,
+    firebaseIdToken: body.firebaseIdToken,
+    deviceId: body.deviceId ?? getDeviceId(),
   };
   const { data } = await apiClient.post(`${BASE}/otp/verify`, payload);
   return mapLoginResponse(unwrapApiData(data));
@@ -77,8 +78,30 @@ export async function verifyPhoneOTP(body: VerifyOTPRequest): Promise<LoginRespo
 export async function refreshAccessToken(
   body: RefreshTokenRequest,
 ): Promise<RefreshTokenResponse> {
-  const { data } = await apiClient.post<RefreshTokenResponse>(`${BASE}/refresh`, body);
-  return unwrapApiData(data);
+  const { data } = await apiClient.post(`${BASE}/refresh`, body);
+  const raw = unwrapApiData<{
+    accessToken?: string;
+    refreshToken?: string;
+    tokenType?: string;
+    expiresIn?: number;
+    access_token?: string;
+    refresh_token?: string;
+    token_type?: string;
+    expires_in?: number;
+  }>(data);
+
+  const accessToken = raw.accessToken ?? raw.access_token;
+  const refreshToken = raw.refreshToken ?? raw.refresh_token;
+  if (!accessToken || !refreshToken) {
+    throw new Error('Refresh response does not contain a valid token pair');
+  }
+
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    token_type: 'Bearer',
+    expires_in: raw.expiresIn ?? raw.expires_in ?? 0,
+  };
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
@@ -166,6 +189,11 @@ export async function updateMyProfile(
     payload.phone = body.phone ? normalizePhoneForBackend(body.phone) : '';
   }
   if (body.avatar_url !== undefined) payload.avatarUrl = body.avatar_url;
+  // Issue #4 (docs/issues/ISSUES.md)
+  if (body.date_of_birth !== undefined) payload.dateOfBirth = body.date_of_birth;
+  if (body.hometown !== undefined) payload.hometown = body.hometown;
+  if (body.gender !== undefined) payload.gender = body.gender;
+  if (body.address !== undefined) payload.address = body.address;
 
   const { data } = await apiClient.patch(`${BASE}/me`, payload);
   return mapUserProfile(unwrapApiData(data), existing ?? undefined);

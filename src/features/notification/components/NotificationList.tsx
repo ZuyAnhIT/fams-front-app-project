@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,6 +10,9 @@ import {
   View,
 } from 'react-native';
 
+import { FeedbackState } from '@/components/ui/feedback-state';
+import { palette, radius, spacing } from '@/theme/tokens';
+
 import { useMarkAsRead } from '../hooks/useMarkAsRead';
 import { useNotifications } from '../hooks/useNotifications';
 import type { NotificationItem as NotificationItemType } from '../types/Notification';
@@ -16,6 +20,7 @@ import { isNotificationRead } from '../utils/notification.utils';
 import { NotificationItem } from './NotificationItem';
 
 export function NotificationList() {
+  const router = useRouter();
   const [unreadOnly, setUnreadOnly] = useState(false);
 
   const {
@@ -37,8 +42,14 @@ export function NotificationList() {
       if (!isNotificationRead(notification)) {
         markAsRead(notification.id);
       }
+
+      if (notification.eventType === 'assignment') {
+        router.push('/(tabs)/assignment');
+      } else if (notification.eventType === 'checkin' || notification.eventType === 'attendance') {
+        router.push('/(tabs)/checkin-history');
+      }
     },
-    [markAsRead],
+    [markAsRead, router],
   );
 
   const handleEndReached = useCallback(() => {
@@ -52,7 +63,7 @@ export function NotificationList() {
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563EB" />
+        <ActivityIndicator size="large" color={palette.primary} />
         <Text style={styles.loadingText}>Đang tải thông báo...</Text>
       </View>
     );
@@ -60,13 +71,13 @@ export function NotificationList() {
 
   if (isError) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorTitle}>Không thể tải thông báo</Text>
-        <Pressable style={styles.retryButton} onPress={refetch}>
-          <Text style={styles.retryButtonText}>Thử lại</Text>
-        </Pressable>
-      </View>
+      <FeedbackState
+        icon="cloud-offline-outline"
+        title="Không thể tải thông báo"
+        description="Kiểm tra kết nối mạng rồi thử lại."
+        actionLabel="Thử lại"
+        onAction={refetch}
+      />
     );
   }
 
@@ -76,9 +87,11 @@ export function NotificationList() {
         <Pressable
           onPress={() => setUnreadOnly((prev) => !prev)}
           style={[styles.filterChip, unreadOnly && styles.filterChipActive]}
+          accessibilityRole="button"
+          accessibilityState={{ selected: unreadOnly }}
         >
           <Text style={[styles.filterChipText, unreadOnly && styles.filterChipTextActive]}>
-            Chỉ hiện chưa đọc
+            Chưa đọc
           </Text>
         </Pressable>
 
@@ -87,11 +100,14 @@ export function NotificationList() {
             onPress={() => markAllAsRead()}
             disabled={isMarkingAllRead}
             style={styles.markAllButton}
+            accessibilityRole="button"
+            accessibilityLabel="Đánh dấu tất cả thông báo là đã đọc"
+            accessibilityState={{ disabled: isMarkingAllRead, busy: isMarkingAllRead }}
           >
             {isMarkingAllRead ? (
-              <ActivityIndicator size="small" color="#2563EB" />
+              <ActivityIndicator size="small" color={palette.primary} />
             ) : (
-              <Text style={styles.markAllText}>Đọc tất cả</Text>
+              <Text style={styles.markAllText}>Đánh dấu đã đọc</Text>
             )}
           </Pressable>
         )}
@@ -100,27 +116,30 @@ export function NotificationList() {
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={[styles.listContent, notifications.length === 0 && styles.emptyList]}
         renderItem={({ item }) => (
           <NotificationItem notification={item} onPress={handlePress} />
         )}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#2563EB" />
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={palette.primary} />
         }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.3}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🔔</Text>
-            <Text style={styles.emptyTitle}>Chưa có thông báo</Text>
-            <Text style={styles.emptyDesc}>
-              Thông báo về kiểm tra, vi phạm và hệ thống sẽ hiển thị tại đây.
-            </Text>
-          </View>
+          <FeedbackState
+            icon={unreadOnly ? 'checkmark-done-outline' : 'notifications-outline'}
+            title={unreadOnly ? 'Bạn đã đọc tất cả thông báo' : 'Chưa có thông báo'}
+            description={
+              unreadOnly
+                ? 'Thông báo chưa đọc mới sẽ xuất hiện tại đây.'
+                : 'Các cập nhật về chấm công và phân công sẽ xuất hiện tại đây.'
+            }
+          />
         }
         ListFooterComponent={
           isFetchingNextPage ? (
             <View style={styles.footerLoader}>
-              <ActivityIndicator size="small" color="#2563EB" />
+              <ActivityIndicator size="small" color={palette.primary} />
             </View>
           ) : null
         }
@@ -132,43 +151,52 @@ export function NotificationList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: palette.canvas,
   },
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: palette.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderBottomColor: palette.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
+  listContent: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+    paddingBottom: spacing.xxxl,
+  },
+  emptyList: { flexGrow: 1 },
   filterChip: {
-    borderRadius: 20,
+    borderRadius: radius.pill,
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    backgroundColor: '#F1F5F9',
+    minHeight: 40,
+    justifyContent: 'center',
+    backgroundColor: palette.surfaceMuted,
   },
   filterChipActive: {
-    backgroundColor: '#2563EB',
+    backgroundColor: palette.primary,
   },
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: palette.textSecondary,
   },
   filterChipTextActive: {
     color: '#FFFFFF',
   },
   markAllButton: {
-    minHeight: 24,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
     justifyContent: 'center',
   },
   markAllText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2563EB',
+    color: palette.primary,
   },
   centered: {
     flex: 1,

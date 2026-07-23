@@ -3,6 +3,7 @@
 export interface LoginRequest {
   email: string;
   password: string;
+  device_id?: string;
 }
 
 export interface RegisterRequest {
@@ -12,14 +13,13 @@ export interface RegisterRequest {
   phone?: string;
 }
 
-export interface SendOTPRequest {
-  phone: string;
-}
-
+/** Đăng nhập bằng số điện thoại — backend chỉ verify Firebase ID token đã có sẵn
+ *  (xem FirebasePhoneTokenVerifier), không có bước "gửi OTP" ở phía backend —
+ *  việc gửi/xác thực mã SMS do Firebase Client SDK làm trực tiếp
+ *  (xem useFirebasePhoneAuth). */
 export interface VerifyOTPRequest {
-  phone: string;
-  /** 6-digit OTP sent via SMS */
-  otp: string;
+  firebaseIdToken: string;
+  deviceId?: string;
 }
 
 export interface RefreshTokenRequest {
@@ -51,6 +51,11 @@ export interface UpdateProfileRequest {
   phone?: string;
   avatar_url?: string;
   department?: string;
+  /** Issue #4 (docs/issues/ISSUES.md) */
+  date_of_birth?: string;
+  hometown?: string;
+  gender?: string;
+  address?: string;
 }
 
 // ─── Response Types ───────────────────────────────────────────────────────────
@@ -64,7 +69,7 @@ export interface TokenPair {
 }
 
 export interface LoginResponse extends TokenPair {
-  /** Populated by mock API; real backend loads profile via GET /auth/me */
+  /** Always undefined from the real backend — resolveAuthenticatedSession() falls back to GET /auth/me */
   user?: UserProfile;
   /** True when TOTP is enabled – client must complete 2FA step */
   requires_2fa: boolean;
@@ -124,6 +129,13 @@ export interface UserProfile {
   is_2fa_enabled: boolean;
   /** ISO 8601 – present when account is temporarily locked */
   locked_until?: string;
+  /** Issue #4 (docs/issues/ISSUES.md) — ISO 8601 date (yyyy-MM-dd) */
+  date_of_birth?: string;
+  hometown?: string;
+  gender?: string;
+  address?: string;
+  /** Issue #7 (docs/issues/ISSUES.md): whether a Google account is linked for one-click login. */
+  google_linked?: boolean;
 }
 
 // ─── Auth Store ───────────────────────────────────────────────────────────────

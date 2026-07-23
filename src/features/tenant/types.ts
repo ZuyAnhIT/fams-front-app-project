@@ -105,7 +105,7 @@ export interface UpdateTenantRequest {
   industry?: TenantIndustry;
 }
 
-export interface UpdateTenantSettingsRequest extends Partial<TenantSettings> {}
+export type UpdateTenantSettingsRequest = Partial<TenantSettings>;
 
 // ─── Response Types ───────────────────────────────────────────────────────────
 

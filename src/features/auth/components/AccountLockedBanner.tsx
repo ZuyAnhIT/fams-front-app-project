@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -44,7 +45,7 @@ export function AccountLockedBanner({ lockedUntil, message }: AccountLockedBanne
         { backgroundColor: theme.errorBg, borderColor: theme.errorBorder },
       ]}
     >
-      <Text style={styles.icon}>🔒</Text>
+      <Ionicons name="lock-closed-outline" size={22} color={theme.error} style={styles.icon} />
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.error }]}>Tài khoản tạm khóa</Text>
         {message ? (
@@ -74,10 +75,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
   },
-  icon: {
-    fontSize: 22,
-    marginTop: 2,
-  },
+  icon: { marginTop: 2 },
   content: {
     flex: 1,
     gap: 6,

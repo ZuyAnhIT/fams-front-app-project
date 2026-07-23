@@ -5,6 +5,7 @@
   },
   "build": {
     "development": {
+      "environment": "development",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
@@ -12,9 +13,6 @@
       },
       "ios": {
         "simulator": false
-      },
-      "env": {
-        "EXPO_PUBLIC_USE_MOCK_API": "false"
       }
     },
     "development-simulator": {
@@ -24,19 +22,15 @@
       }
     },
     "preview": {
+      "environment": "preview",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_USE_MOCK_API": "false"
       }
     },
     "production": {
-      "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_USE_MOCK_API": "false"
-      }
+      "environment": "production",
+      "autoIncrement": true
     }
   },
   "submit": {

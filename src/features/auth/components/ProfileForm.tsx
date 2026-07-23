@@ -24,6 +24,11 @@ import { useUpdateProfile } from '../hooks/use-profile';
 import { useAuthTheme } from '../theme';
 import type { UserProfile } from '../types';
 
+// Issue #4 (docs/issues/ISSUES.md): dd/mm/yyyy text input — no native date-picker dependency
+// is installed in this project yet, so a validated text field avoids adding a new native
+// module (which would need a fresh EAS dev-client build, currently blocked — see docs/PROJECT_HANDOFF.md).
+const DOB_REGEX = /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/(19|20)\d{2}$/;
+
 const schema = z.object({
   full_name: z.string().min(2, 'Họ tên ít nhất 2 ký tự').max(100, 'Họ tên quá dài'),
   phone: z
@@ -31,9 +36,36 @@ const schema = z.object({
     .regex(/^(0|\+84)[0-9]{9}$/, 'Số điện thoại không hợp lệ')
     .optional()
     .or(z.literal('')),
+  date_of_birth: z
+    .string()
+    .regex(DOB_REGEX, 'Định dạng ngày/tháng/năm không hợp lệ (VD: 15/04/1995)')
+    .optional()
+    .or(z.literal('')),
+  hometown: z.string().max(255, 'Quê quán quá dài').optional().or(z.literal('')),
+  address: z.string().max(500, 'Địa chỉ quá dài').optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof schema>;
+
+const GENDER_OPTIONS: { value: string; label: string }[] = [
+  { value: 'male', label: 'Nam' },
+  { value: 'female', label: 'Nữ' },
+  { value: 'other', label: 'Khác' },
+];
+
+/** dd/mm/yyyy (as typed) <-> yyyy-MM-dd (as the backend expects) */
+function dobToIso(dob: string): string | undefined {
+  const match = dob.match(DOB_REGEX);
+  if (!match) return undefined;
+  const [day, month, year] = dob.split('/');
+  return `${year}-${month}-${day}`;
+}
+
+function isoToDob(iso?: string): string {
+  if (!iso) return '';
+  const [year, month, day] = iso.split('-');
+  return day && month && year ? `${day}/${month}/${year}` : '';
+}
 
 interface ProfileFormProps {
   visible: boolean;
@@ -45,6 +77,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
   const theme = useAuthTheme();
   const { showToast } = useToast();
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? '');
+  const [gender, setGender] = useState(profile.gender ?? '');
   const { update, isPending, isSuccess, error, reset: resetMutation } = useUpdateProfile();
   const { pickAndUploadAsync, isPending: isUploading, error: uploadError } = useAvatarUpload();
 
@@ -58,6 +91,9 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
     defaultValues: {
       full_name: profile.full_name,
       phone: profile.phone ?? '',
+      date_of_birth: isoToDob(profile.date_of_birth),
+      hometown: profile.hometown ?? '',
+      address: profile.address ?? '',
     },
   });
 
@@ -66,8 +102,12 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
       resetForm({
         full_name: profile.full_name,
         phone: profile.phone ?? '',
+        date_of_birth: isoToDob(profile.date_of_birth),
+        hometown: profile.hometown ?? '',
+        address: profile.address ?? '',
       });
       setAvatarUrl(profile.avatar_url ?? '');
+      setGender(profile.gender ?? '');
       resetMutation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,11 +150,15 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
     }
   };
 
-  const onSubmit = ({ full_name, phone }: FormData) =>
+  const onSubmit = ({ full_name, phone, date_of_birth, hometown, address }: FormData) =>
     update({
       full_name,
       phone: phone || undefined,
       avatar_url: avatarUrl,
+      date_of_birth: date_of_birth ? dobToIso(date_of_birth) : undefined,
+      hometown: hometown || undefined,
+      gender: gender || undefined,
+      address: address || undefined,
     });
 
   const displayError = error ?? uploadError;
@@ -228,6 +272,115 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
                   )}
                 </View>
 
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.label, { color: theme.text }]}>
+                    Ngày sinh <Text style={{ color: theme.textMuted }}>(không bắt buộc)</Text>
+                  </Text>
+                  <Controller
+                    control={control}
+                    name="date_of_birth"
+                    render={({ field: { value, onChange, onBlur } }) => (
+                      <TextInput
+                        style={[
+                          styles.input,
+                          { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text },
+                          errors.date_of_birth && styles.inputError,
+                        ]}
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="15/04/1995"
+                        placeholderTextColor={theme.textMuted}
+                        keyboardType="numbers-and-punctuation"
+                        maxLength={10}
+                      />
+                    )}
+                  />
+                  {errors.date_of_birth && (
+                    <Text style={[styles.fieldError, { color: theme.error }]}>
+                      {errors.date_of_birth.message}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.label, { color: theme.text }]}>Giới tính</Text>
+                  <View style={styles.genderRow}>
+                    {GENDER_OPTIONS.map((option) => {
+                      const selected = gender === option.value;
+                      return (
+                        <TouchableOpacity
+                          key={option.value}
+                          style={[
+                            styles.genderOption,
+                            { borderColor: theme.border },
+                            selected && { backgroundColor: theme.primary, borderColor: theme.primary },
+                          ]}
+                          onPress={() => setGender(selected ? '' : option.value)}
+                        >
+                          <Text
+                            style={[
+                              styles.genderOptionText,
+                              { color: selected ? '#ffffff' : theme.text },
+                            ]}
+                          >
+                            {option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.label, { color: theme.text }]}>
+                    Quê quán <Text style={{ color: theme.textMuted }}>(không bắt buộc)</Text>
+                  </Text>
+                  <Controller
+                    control={control}
+                    name="hometown"
+                    render={({ field: { value, onChange, onBlur } }) => (
+                      <TextInput
+                        style={[
+                          styles.input,
+                          { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text },
+                        ]}
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="Nghệ An"
+                        placeholderTextColor={theme.textMuted}
+                      />
+                    )}
+                  />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.label, { color: theme.text }]}>
+                    Địa chỉ <Text style={{ color: theme.textMuted }}>(không bắt buộc)</Text>
+                  </Text>
+                  <Controller
+                    control={control}
+                    name="address"
+                    render={({ field: { value, onChange, onBlur } }) => (
+                      <TextInput
+                        style={[
+                          styles.input,
+                          styles.multilineInput,
+                          { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text },
+                        ]}
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
+                        placeholderTextColor={theme.textMuted}
+                        multiline
+                        numberOfLines={2}
+                      />
+                    )}
+                  />
+                </View>
+
                 <View style={[styles.readOnlyBox, { backgroundColor: theme.inputBg }]}>
                   <Text style={[styles.readOnlyLabel, { color: theme.textSecondary }]}>
                     Email (không thể thay đổi)
@@ -316,6 +469,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   inputError: { borderColor: '#EF4444' },
+  multilineInput: { minHeight: 64, textAlignVertical: 'top' },
+  genderRow: { flexDirection: 'row', gap: 8 },
+  genderOption: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  genderOptionText: { fontSize: 14, fontWeight: '600' },
   fieldError: { fontSize: 12 },
   readOnlyBox: { borderRadius: 12, padding: 12, gap: 4 },
   readOnlyLabel: { fontSize: 12 },

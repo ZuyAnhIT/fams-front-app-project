@@ -1,5 +1,5 @@
 import * as Device from 'expo-device';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useAuthStore } from '@/features/auth/store';
@@ -29,9 +29,36 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
   const { showToast } = useToast();
   const { isLocating, errorMessage: locationErrorMessage, requestLocation } = useGps();
   const openCheckinId = useCheckinStore((s) => s.openCheckinId);
+  const isHydratingCheckin = useCheckinStore((s) => s.isHydrating);
+  const setOpenCheckinId = useCheckinStore((s) => s.setOpenCheckinId);
   const clearOpenCheckinId = useCheckinStore((s) => s.clearOpenCheckinId);
   const queryClient = useQueryClient();
   const [isResolvingOpenCheckin, setIsResolvingOpenCheckin] = useState(false);
+
+  // Reconcile local state with the backend as soon as the screen opens. This
+  // prevents a stale/missing local key from enabling a second check-in while a
+  // server-side shift is still open.
+  useEffect(() => {
+    if (!tenantId || isHydratingCheckin || openCheckinId) return;
+
+    let cancelled = false;
+    setIsResolvingOpenCheckin(true);
+    void getCheckinHistory(tenantId, { size: 20, page: 0 })
+      .then(async (history) => {
+        const openRecord = history.content.find((record) => record.checkOutAt === null);
+        if (!cancelled && openRecord) {
+          await setOpenCheckinId(openRecord.id);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setIsResolvingOpenCheckin(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHydratingCheckin, openCheckinId, setOpenCheckinId, tenantId]);
 
   const mutation = useMutation({
     mutationFn: (payload: { checkinId: string; latitude: number; longitude: number; accuracy: number | null }) =>

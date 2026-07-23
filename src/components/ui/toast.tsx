@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { shadows } from '@/theme/tokens';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -55,6 +57,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {toast && (
         <Animated.View
           pointerEvents="none"
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
           style={[
             styles.container,
             { top: insets.top + 12, opacity, backgroundColor: TYPE_COLORS[toast.type] },
@@ -84,11 +88,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     zIndex: 9999,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    ...shadows.toast,
   },
   text: {
     color: '#ffffff',

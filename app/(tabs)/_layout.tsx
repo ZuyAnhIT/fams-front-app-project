@@ -1,24 +1,58 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { useAuthStore } from '@/features/auth/store';
 import { useUnreadCount } from '@/features/notification/hooks/useUnreadCount';
+import { palette } from '@/theme/tokens';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
 function tabIcon(outline: IoniconName, filled: IoniconName) {
-  return ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
-    <Ionicons name={focused ? filled : outline} size={size} color={color} />
-  );
+  return function TabBarIcon({
+    color,
+    size,
+    focused,
+  }: {
+    color: string;
+    size: number;
+    focused: boolean;
+  }) {
+    return <Ionicons name={focused ? filled : outline} size={size} color={color} />;
+  };
 }
 
 export default function TabLayout() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isHydrating = useAuthStore((state) => state.isHydrating);
   const { unreadCount } = useUnreadCount();
+
+  if (isHydrating) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
   const tabBarBadge =
     unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : undefined;
 
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: palette.primary,
+        tabBarInactiveTintColor: palette.textMuted,
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabBarLabel,
+      }}
+    >
       <Tabs.Screen
         name="home"
         options={{ title: 'Trang chủ', tabBarIcon: tabIcon('home-outline', 'home') }}
@@ -29,15 +63,15 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="random-check"
-        options={{ title: 'Kiểm tra', tabBarIcon: tabIcon('shuffle-outline', 'shuffle') }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="attendance"
-        options={{ title: 'Công', tabBarIcon: tabIcon('calendar-outline', 'calendar') }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="assignment"
-        options={{ title: 'Phân công', tabBarIcon: tabIcon('clipboard-outline', 'clipboard') }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="notifications"
@@ -57,8 +91,28 @@ export default function TabLayout() {
           "site" and "assignment" are nested Stack navigators (see their
           _layout.tsx) so list->detail keeps native swipe-back. */}
       <Tabs.Screen name="site" options={{ href: null }} />
-      <Tabs.Screen name="notification/index" options={{ href: null }} />
       <Tabs.Screen name="checkin-history" options={{ href: null }} />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  tabBar: {
+    backgroundColor: palette.surface,
+    borderTopColor: palette.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    minHeight: 62,
+    paddingTop: 6,
+    paddingBottom: 6,
+  },
+  tabBarLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+});

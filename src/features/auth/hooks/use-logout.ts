@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
+import { useCheckinStore } from '@/features/checkin/store/checkin.store';
 
 import { logoutAllDevices, logoutSingleDevice } from '../api';
 import { useAuthStore } from '../store';
@@ -27,6 +28,7 @@ export function useLogout(): UseLogoutResult {
 
   const resetAndRedirect = async (message: string) => {
     showToast(message, 'success');
+    useCheckinStore.getState().resetContext();
     await clearAuth();
     queryClient.clear();
     router.replace('/(auth)/login');

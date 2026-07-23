@@ -39,8 +39,14 @@ export async function getAvailableTenants(): Promise<AvailableTenant[]> {
 
   try {
     const { data } = await apiClient.get('/tenants');
-    const { content } = unwrapApiData<{ content: { id: string; name: string }[] }>(data);
-    return content.map((t) => ({ id: t.id, name: t.name }));
+    const payload = unwrapApiData<{
+      content?: { id: string; name: string }[];
+      items?: { id: string; name: string }[];
+    }>(data);
+    return (payload.content ?? payload.items ?? []).map((tenant) => ({
+      id: tenant.id,
+      name: tenant.name,
+    }));
   } catch {
     return [];
   }
