@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -7,10 +8,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { AppHeader } from '@/components/ui/app-header';
+import { FeedbackState } from '@/components/ui/feedback-state';
+import { palette, radius, spacing } from '@/theme/tokens';
 
 import { useAssignmentList, useSiteOptions, useSiteShiftNames, type AssignmentRow } from '../hooks/use-assignment';
 import type { AssignmentListParams, AssignmentRole, AssignmentStatus } from '../types/assignment.type';
@@ -57,13 +61,17 @@ function AssignmentListItem({
       </View>
 
       <View style={styles.metaRow}>
-        <Text style={styles.metaText} numberOfLines={1}>
-          🏗️ {siteName}
-        </Text>
+        <Ionicons name="business-outline" size={16} color={palette.textMuted} />
+        <Text style={styles.metaText} numberOfLines={1}>{siteName}</Text>
       </View>
-
-      <Text style={styles.metaText}>⏱️ {shiftName}</Text>
-      <Text style={styles.metaText}>👤 {ASSIGNMENT_ROLE_LABELS[assignment.role]}</Text>
+      <View style={styles.metaRow}>
+        <Ionicons name="time-outline" size={16} color={palette.textMuted} />
+        <Text style={styles.metaText}>{shiftName}</Text>
+      </View>
+      <View style={styles.metaRow}>
+        <Ionicons name="person-outline" size={16} color={palette.textMuted} />
+        <Text style={styles.metaText}>{ASSIGNMENT_ROLE_LABELS[assignment.role]}</Text>
+      </View>
       <Text style={styles.dateText}>
         {formatAssignmentDateRange(assignment.startDate, assignment.endDate)}
       </Text>
@@ -74,7 +82,6 @@ function AssignmentListItem({
 export function AssignmentListScreen() {
   const { sites, isLoading: isLoadingSites } = useSiteOptions();
   const [siteId, setSiteId] = useState<string | undefined>(undefined);
-  const [searchInput, setSearchInput] = useState('');
   const [status, setStatus] = useState<AssignmentStatus | 'all'>('all');
   const [role, setRole] = useState<AssignmentRole | 'all'>('all');
   const [page, setPage] = useState(0);
@@ -100,18 +107,6 @@ export function AssignmentListScreen() {
   const { rows, totalPages, isLoading, isRefetching, isError, isForbidden, error, refetch } =
     useAssignmentList(activeSiteId, params);
 
-  /**
-   * Backend không hỗ trợ query param tìm kiếm cho assignments (chỉ status,
-   * role, employeeId, shiftId — xem "Cần xác nhận thêm"). Tìm kiếm ở đây chỉ
-   * lọc trên tên nhân viên của trang dữ liệu đã tải, không phải tìm kiếm
-   * server-side trên toàn bộ danh sách.
-   */
-  const filteredRows = useMemo(() => {
-    if (!searchInput.trim()) return rows;
-    const q = searchInput.trim().toLowerCase();
-    return rows.filter((row) => (row.employeeName ?? '').toLowerCase().includes(q));
-  }, [rows, searchInput]);
-
   const activeSite = sites.find((s) => s.id === activeSiteId);
 
   const handleSiteSelect = useCallback((id: string) => {
@@ -126,23 +121,31 @@ export function AssignmentListScreen() {
 
   if (isLoadingSites) {
     return (
-      <SafeAreaView edges={['top']} style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563EB" />
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <AppHeader title="Phân công" />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#2563EB" />
+        </View>
       </SafeAreaView>
     );
   }
 
   if (sites.length === 0) {
     return (
-      <SafeAreaView edges={['top']} style={styles.centered}>
-        <Text style={styles.errorIcon}>🏗️</Text>
-        <Text style={styles.errorTitle}>Chưa có site nào để xem phân công</Text>
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <AppHeader title="Phân công" />
+        <FeedbackState
+          icon="business-outline"
+          title="Chưa có công trình để xem phân công"
+          description="Công trình và ca làm được giao sẽ xuất hiện tại đây."
+        />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
+      <AppHeader title="Phân công" subtitle={activeSite?.name} />
       <View style={styles.toolbar}>
         <ScrollView
           horizontal
@@ -156,6 +159,8 @@ export function AssignmentListScreen() {
                 key={site.id}
                 onPress={() => handleSiteSelect(site.id)}
                 style={[styles.filterChip, active && styles.filterChipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
               >
                 <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
                   {site.name}
@@ -164,13 +169,6 @@ export function AssignmentListScreen() {
             );
           })}
         </ScrollView>
-
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Tìm theo tên nhân viên (trong trang hiện tại)..."
-          value={searchInput}
-          onChangeText={setSearchInput}
-        />
 
         <ScrollView
           horizontal
@@ -187,6 +185,8 @@ export function AssignmentListScreen() {
                   setPage(0);
                 }}
                 style={[styles.filterChip, active && styles.filterChipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
               >
                 <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
                   {option.label}
@@ -204,6 +204,8 @@ export function AssignmentListScreen() {
                   setPage(0);
                 }}
                 style={[styles.filterChip, active && styles.filterChipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
               >
                 <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
                   {option.label}
@@ -229,26 +231,27 @@ export function AssignmentListScreen() {
       </View>
 
       {isForbidden ? (
-        <View style={styles.centered}>
-          <Text style={styles.errorIcon}>🔒</Text>
-          <Text style={styles.errorTitle}>Bạn không có quyền xem phân công của site này</Text>
-        </View>
+        <FeedbackState
+          icon="lock-closed-outline"
+          title="Bạn chưa được cấp quyền xem phân công"
+          description="Liên hệ quản trị viên nếu bạn cần truy cập thông tin này."
+        />
       ) : isLoading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={palette.primary} />
           <Text style={styles.loadingText}>Đang tải phân công...</Text>
         </View>
       ) : isError ? (
-        <View style={styles.centered}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>{parseAssignmentError(error)}</Text>
-          <Pressable style={styles.retryButton} onPress={refetch}>
-            <Text style={styles.retryButtonText}>Thử lại</Text>
-          </Pressable>
-        </View>
+        <FeedbackState
+          icon="cloud-offline-outline"
+          title="Không thể tải phân công"
+          description={parseAssignmentError(error)}
+          actionLabel="Thử lại"
+          onAction={refetch}
+        />
       ) : (
         <FlatList
-          data={filteredRows}
+          data={rows}
           keyExtractor={(item) => item.assignment.id}
           renderItem={({ item }) => (
             <AssignmentListItem
@@ -258,15 +261,15 @@ export function AssignmentListScreen() {
             />
           )}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#2563EB" />
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={palette.primary} />
           }
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>📋</Text>
-              <Text style={styles.emptyTitle}>Không tìm thấy phân công</Text>
-              <Text style={styles.emptyDesc}>Thử thay đổi site hoặc bộ lọc.</Text>
-            </View>
+            <FeedbackState
+              icon="clipboard-outline"
+              title="Không tìm thấy phân công"
+              description="Thử chọn công trình hoặc thay đổi bộ lọc."
+            />
           }
           ListFooterComponent={
             totalPages > 1 ? (
@@ -274,7 +277,10 @@ export function AssignmentListScreen() {
                 <Pressable
                   disabled={page === 0}
                   onPress={() => setPage((p) => Math.max(0, p - 1))}
-                  style={[styles.pageButton, page === 0 && styles.pageButtonDisabled]}
+                style={[styles.pageButton, page === 0 && styles.pageButtonDisabled]}
+                accessibilityRole="button"
+                accessibilityLabel="Trang trước"
+                accessibilityState={{ disabled: page === 0 }}
                 >
                   <Text style={styles.pageButtonText}>Trước</Text>
                 </Pressable>
@@ -284,7 +290,10 @@ export function AssignmentListScreen() {
                 <Pressable
                   disabled={page >= totalPages - 1}
                   onPress={() => setPage((p) => p + 1)}
-                  style={[styles.pageButton, page >= totalPages - 1 && styles.pageButtonDisabled]}
+                style={[styles.pageButton, page >= totalPages - 1 && styles.pageButtonDisabled]}
+                accessibilityRole="button"
+                accessibilityLabel="Trang sau"
+                accessibilityState={{ disabled: page >= totalPages - 1 }}
                 >
                   <Text style={styles.pageButtonText}>Sau</Text>
                 </Pressable>
@@ -300,24 +309,14 @@ export function AssignmentListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: palette.canvas,
   },
   toolbar: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: palette.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: palette.border,
     paddingBottom: 8,
     gap: 8,
-  },
-  searchInput: {
-    marginHorizontal: 16,
-    marginTop: 4,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
   },
   filterRow: {
     paddingHorizontal: 12,
@@ -327,45 +326,51 @@ const styles = StyleSheet.create({
   filterChip: {
     borderRadius: 20,
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    backgroundColor: '#F1F5F9',
+    minHeight: 40,
+    justifyContent: 'center',
+    backgroundColor: palette.surfaceMuted,
     marginRight: 8,
   },
   filterChipActive: {
-    backgroundColor: '#2563EB',
+    backgroundColor: palette.primary,
   },
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: palette.textSecondary,
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: palette.white,
   },
   sortButton: {
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: palette.surfaceBrand,
+    minHeight: 40,
+    justifyContent: 'center',
     marginRight: 8,
   },
   sortButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2563EB',
+    color: palette.primary,
   },
   listContent: {
-    paddingVertical: 8,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     marginHorizontal: 16,
     marginVertical: 6,
     gap: 4,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
   },
   headerRow: {
     flexDirection: 'row',
@@ -375,7 +380,7 @@ const styles = StyleSheet.create({
   employeeName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1E293B',
+    color: palette.text,
     flexShrink: 1,
   },
   badge: {
@@ -394,11 +399,12 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 13,
-    color: '#475569',
+    color: palette.textSecondary,
+    flex: 1,
   },
   dateText: {
     fontSize: 12,
-    color: '#64748B',
+    color: palette.textMuted,
   },
   pagination: {
     flexDirection: 'row',

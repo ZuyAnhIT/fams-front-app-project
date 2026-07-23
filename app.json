@@ -1,18 +1,20 @@
 {
   "expo": {
-    "name": "fams-front-app-project",
+    "name": "FAMS",
     "slug": "fams-front-app-project",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "famsfrontappproject",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.fams.mobile"
+      "bundleIdentifier": "com.fams.mobile",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "package": "com.fams.mobile",
+      "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -59,7 +61,9 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.1012796463723-coetgapvr0vul5tfr6p93kdg1s67c4pd"
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth"
     ],
     "experiments": {
       "typedRoutes": true,

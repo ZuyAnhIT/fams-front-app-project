@@ -88,6 +88,7 @@ export function RegisterForm() {
               placeholderTextColor="#94A3B8"
               autoCapitalize="words"
               returnKeyType="next"
+              accessibilityLabel="Họ và tên"
             />
           )}
         />
@@ -113,6 +114,7 @@ export function RegisterForm() {
               keyboardType="email-address"
               autoCapitalize="none"
               returnKeyType="next"
+              accessibilityLabel="Email"
             />
           )}
         />
@@ -140,6 +142,7 @@ export function RegisterForm() {
               placeholderTextColor="#94A3B8"
               keyboardType="phone-pad"
               returnKeyType="next"
+              accessibilityLabel="Số điện thoại, không bắt buộc"
             />
           )}
         />
@@ -166,11 +169,14 @@ export function RegisterForm() {
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 returnKeyType="next"
+                accessibilityLabel="Mật khẩu"
               />
               <TouchableOpacity
                 onPress={() => setShowPassword((v) => !v)}
                 style={styles.eyeBtn}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -205,11 +211,14 @@ export function RegisterForm() {
                 autoCapitalize="none"
                 returnKeyType="done"
                 onSubmitEditing={handleSubmit(onSubmit)}
+                accessibilityLabel="Xác nhận mật khẩu"
               />
               <TouchableOpacity
                 onPress={() => setShowConfirm((v) => !v)}
                 style={styles.eyeBtn}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={showConfirm ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}
               >
                 <Ionicons
                   name={showConfirm ? 'eye-off-outline' : 'eye-outline'}

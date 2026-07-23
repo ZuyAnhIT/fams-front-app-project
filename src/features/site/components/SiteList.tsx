@@ -13,6 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { AppHeader } from '@/components/ui/app-header';
+import { FeedbackState } from '@/components/ui/feedback-state';
+import { palette, spacing } from '@/theme/tokens';
+
 import { useSiteList } from '../hooks/use-site-list';
 import type { Site, SiteStatus } from '../types/Site';
 import { SITE_STATUS_FILTER_OPTIONS } from '../utils/site.utils';
@@ -59,6 +63,11 @@ export function SiteList() {
   const { sites, totalPages, isLoading, isRefetching, isError, isForbidden, refetch } =
     useSiteList(params);
 
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/profile');
+  };
+
   const handlePress = useCallback(
     (site: Site) => {
       router.push(
@@ -80,42 +89,55 @@ export function SiteList() {
 
   if (isForbidden) {
     return (
-      <SafeAreaView edges={['top']} style={styles.centered}>
-        <Text style={styles.errorIcon}>🔒</Text>
-        <Text style={styles.errorTitle}>Bạn không có quyền xem danh sách công trình</Text>
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <AppHeader title="Công trình" onBack={goBack} />
+        <FeedbackState
+          icon="lock-closed-outline"
+          title="Bạn chưa được cấp quyền xem công trình"
+          description="Liên hệ quản trị viên nếu bạn cần truy cập thông tin này."
+        />
       </SafeAreaView>
     );
   }
 
   if (isLoading) {
     return (
-      <SafeAreaView edges={['top']} style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={styles.loadingText}>Đang tải công trình...</Text>
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <AppHeader title="Công trình" onBack={goBack} />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={palette.primary} />
+          <Text style={styles.loadingText}>Đang tải công trình...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
   if (isError) {
     return (
-      <SafeAreaView edges={['top']} style={styles.centered}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorTitle}>Không thể tải danh sách công trình</Text>
-        <Pressable style={styles.retryButton} onPress={refetch}>
-          <Text style={styles.retryButtonText}>Thử lại</Text>
-        </Pressable>
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <AppHeader title="Công trình" onBack={goBack} />
+        <FeedbackState
+          icon="cloud-offline-outline"
+          title="Không thể tải danh sách công trình"
+          description="Kiểm tra kết nối mạng rồi thử lại."
+          actionLabel="Thử lại"
+          onAction={refetch}
+        />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
+      <AppHeader title="Công trình" subtitle={`${sites.length} kết quả trên trang này`} onBack={goBack} />
       <View style={styles.toolbar}>
         <TextInput
           style={styles.searchInput}
           placeholder="Tìm theo tên, mã, địa chỉ..."
+          placeholderTextColor={palette.textMuted}
           value={searchInput}
           onChangeText={handleSearchChange}
+          accessibilityLabel="Tìm kiếm công trình"
         />
         <ScrollView
           horizontal
@@ -132,6 +154,8 @@ export function SiteList() {
                   setPage(0);
                 }}
                 style={[styles.filterChip, active && styles.filterChipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
               >
                 <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
                   {option.label}
@@ -145,6 +169,8 @@ export function SiteList() {
               setPage(0);
             }}
             style={styles.sortButton}
+            accessibilityRole="button"
+            accessibilityLabel={`Sắp xếp tên ${sortDesc ? 'giảm dần' : 'tăng dần'}`}
           >
             <Text style={styles.sortButtonText}>Tên {sortDesc ? '↓' : '↑'}</Text>
           </Pressable>
@@ -156,15 +182,15 @@ export function SiteList() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <SiteListItem site={item} onPress={handlePress} />}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#2563EB" />
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={palette.primary} />
         }
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🏗️</Text>
-            <Text style={styles.emptyTitle}>Không tìm thấy công trình</Text>
-            <Text style={styles.emptyDesc}>Thử thay đổi từ khóa hoặc bộ lọc.</Text>
-          </View>
+          <FeedbackState
+            icon="business-outline"
+            title="Không tìm thấy công trình"
+            description="Thử thay đổi từ khóa hoặc bộ lọc."
+          />
         }
         ListFooterComponent={
           totalPages > 1 ? (
@@ -173,6 +199,9 @@ export function SiteList() {
                 disabled={page === 0}
                 onPress={() => setPage((p) => Math.max(0, p - 1))}
                 style={[styles.pageButton, page === 0 && styles.pageButtonDisabled]}
+                accessibilityRole="button"
+                accessibilityLabel="Trang trước"
+                accessibilityState={{ disabled: page === 0 }}
               >
                 <Text style={styles.pageButtonText}>Trước</Text>
               </Pressable>
@@ -183,6 +212,9 @@ export function SiteList() {
                 disabled={page >= totalPages - 1}
                 onPress={() => setPage((p) => p + 1)}
                 style={[styles.pageButton, page >= totalPages - 1 && styles.pageButtonDisabled]}
+                accessibilityRole="button"
+                accessibilityLabel="Trang sau"
+                accessibilityState={{ disabled: page >= totalPages - 1 }}
               >
                 <Text style={styles.pageButtonText}>Sau</Text>
               </Pressable>
@@ -197,12 +229,12 @@ export function SiteList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: palette.canvas,
   },
   toolbar: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: palette.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: palette.border,
     paddingBottom: 8,
     gap: 8,
   },
@@ -211,9 +243,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#CBD5E1',
+    borderColor: palette.borderStrong,
     paddingHorizontal: 12,
+    minHeight: 44,
     paddingVertical: 8,
+    color: palette.text,
     fontSize: 14,
   },
   filterRow: {
@@ -225,16 +259,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: palette.surfaceMuted,
+    minHeight: 40,
+    justifyContent: 'center',
     marginRight: 8,
   },
   filterChipActive: {
-    backgroundColor: '#2563EB',
+    backgroundColor: palette.primary,
   },
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: palette.textSecondary,
   },
   filterChipTextActive: {
     color: '#FFFFFF',
@@ -243,15 +279,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: palette.surfaceBrand,
+    minHeight: 40,
+    justifyContent: 'center',
   },
   sortButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2563EB',
+    color: palette.primary,
   },
   listContent: {
-    paddingVertical: 8,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
   },
   pagination: {
     flexDirection: 'row',

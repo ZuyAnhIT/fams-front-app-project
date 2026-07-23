@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RegisterForm } from '@/features/auth/components/RegisterForm';
+import { shadows } from '@/theme/tokens';
 
 /**
  * Registration screen.
@@ -75,6 +76,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 24,
     gap: 20,
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
   },
   backBtn: {
     alignSelf: 'flex-start',
@@ -101,11 +105,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 24,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    ...shadows.card,
   },
   loginRow: {
     flexDirection: 'row',

@@ -2,11 +2,13 @@ import type { NotificationItem } from '../types/Notification';
 
 /**
  * Nguồn xác định "đã đọc" tập trung một chỗ. Response backend có cả `read`
- * và `isRead` với giá trị có thể khác nhau (chưa xác nhận field nào đúng) —
- * tạm dùng `read`. Đổi ở đây nếu backend xác nhận `isRead` mới là đúng.
+ * và `isRead` với giá trị có thể khác nhau. `readAt` là bằng chứng mạnh nhất;
+ * nếu chưa có thì coi thông báo đã đọc khi một trong hai boolean là true.
  */
-export function isNotificationRead(notification: Pick<NotificationItem, 'read'>): boolean {
-  return notification.read;
+export function isNotificationRead(
+  notification: Pick<NotificationItem, 'read' | 'isRead' | 'readAt'>,
+): boolean {
+  return notification.readAt !== null || notification.read || notification.isRead;
 }
 
 /** Best-effort — Swagger không công bố danh sách eventType cố định. */
@@ -19,24 +21,10 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   attendance: 'Công',
 };
 
-const EVENT_TYPE_ICONS: Record<string, string> = {
-  random_check: '🎲',
-  violation: '⚠️',
-  system_alert: '🔔',
-  assignment: '📋',
-  checkin: '✅',
-  attendance: '📊',
-};
-
 const DEFAULT_LABEL = 'Thông báo';
-const DEFAULT_ICON = '🔔';
 
 export function getEventTypeLabel(eventType: string): string {
   return EVENT_TYPE_LABELS[eventType] ?? DEFAULT_LABEL;
-}
-
-export function getEventTypeIcon(eventType: string): string {
-  return EVENT_TYPE_ICONS[eventType] ?? DEFAULT_ICON;
 }
 
 export function formatNotificationTime(isoDate: string): string {

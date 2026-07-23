@@ -9,6 +9,7 @@ import {
 
 import { useAuthTheme } from '../theme';
 import { useGoogleLogin } from '../hooks/use-google-login';
+import { shadows } from '@/theme/tokens';
 
 interface GoogleSignInButtonProps {
   disabled?: boolean;
@@ -71,11 +72,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
+    ...shadows.subtle,
   },
   buttonDisabled: {
     opacity: 0.6,

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   ScrollView,
@@ -13,7 +14,6 @@ import { useAuthTheme } from '@/features/auth/theme';
 import { useFaceEnroll } from '@/features/face/hooks/use-face-enroll';
 import { FaceConsentSheet } from './FaceConsentSheet';
 import { FaceEnrollCamera } from './FaceEnrollCamera';
-import { FaceVerifyTest } from './FaceVerifyTest';
 
 export function FaceEnrollScreen() {
   const theme = useAuthTheme();
@@ -62,13 +62,13 @@ export function FaceEnrollScreen() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <View style={styles.doneWrap}>
-          <Text style={styles.doneIcon}>✅</Text>
+          <View style={[styles.doneIcon, { backgroundColor: theme.success + '18' }]}>
+            <Ionicons name="checkmark-circle-outline" size={48} color={theme.success} />
+          </View>
           <Text style={[styles.doneTitle, { color: theme.text }]}>Đăng ký Face ID thành công</Text>
           <Text style={[styles.doneDesc, { color: theme.textSecondary }]}>
             Bạn có thể sử dụng nhận diện khuôn mặt khi chấm công.
           </Text>
-
-          <FaceVerifyTest />
 
           <TouchableOpacity
             style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 72 },
   scroll: { padding: 16, paddingBottom: 32 },
   doneWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 12 },
-  doneIcon: { fontSize: 56 },
+  doneIcon: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   doneTitle: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
   doneDesc: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
   btnPrimary: { marginTop: 16, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 },

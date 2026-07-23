@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -13,9 +14,10 @@ import {
 } from 'react-native';
 import { z } from 'zod';
 
+import { ResponsiveContainer } from '@/components/ui/responsive-container';
+
 import { useCreateTenant } from '../hooks/use-create-tenant';
 import type {
-  AppLanguage,
   AppTimezone,
   SubscriptionPlan,
   TenantIndustry,
@@ -25,7 +27,6 @@ import { WIZARD_STEP_COUNT, WIZARD_STEP_LABELS } from '../types';
 import {
   DEFAULT_PLAN_DETAILS,
   INDUSTRY_LABELS,
-  LANGUAGE_LABELS,
   PLAN_COLORS,
   TIMEZONE_LABELS,
   formatEmployeeLimit,
@@ -102,6 +103,8 @@ function OptionPicker<T extends string>({
           style={[styles.optionChip, value === opt.value && styles.optionChipActive]}
           onPress={() => onChange(opt.value)}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityState={{ selected: value === opt.value }}
         >
           <Text
             style={[
@@ -137,6 +140,8 @@ function SwitchRow({
       <Switch
         value={value}
         onValueChange={onChange}
+        accessibilityLabel={label}
+        accessibilityHint={description}
         trackColor={{ false: '#CBD5E1', true: '#93C5FD' }}
         thumbColor={value ? '#2563EB' : '#94A3B8'}
       />
@@ -205,7 +210,6 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
     control: ctrl1,
     handleSubmit: submit1,
     setValue: setVal1,
-    watch: watch1,
     formState: { errors: err1 },
   } = useForm<Step1Data>({
     resolver: zodResolver(step1Schema),
@@ -217,9 +221,6 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
     },
   });
 
-  // Auto-generate slug from name
-  const nameValue = watch1('name');
-
   const handleNameChange = (text: string, onChange: (v: string) => void) => {
     onChange(text);
     // Only auto-fill slug if user hasn't manually edited it
@@ -230,7 +231,6 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
   const {
     control: ctrl2,
     handleSubmit: submit2,
-    watch: watch2,
     formState: { errors: err2 },
   } = useForm<Step2Data>({
     resolver: zodResolver(step2Schema),
@@ -243,11 +243,9 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
       checkin_early_minutes: 30,
       geofence_radius_meters: 200,
       require_face_id: false,
-      random_check_enabled: true,
+      random_check_enabled: false,
     },
   });
-
-  const brandColor = watch2('brand_color');
 
   const onStep1Submit = (data: Step1Data) => {
     setStep1Data(data);
@@ -374,26 +372,8 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Cài đặt hệ thống</Text>
       <Text style={styles.stepSubtitle}>
-        Tuỳ chỉnh ngôn ngữ, múi giờ và quy tắc chấm công cho công ty.
+        Thiết lập múi giờ và các quy tắc chấm công đang được hệ thống hỗ trợ.
       </Text>
-
-      {/* Language */}
-      <View style={styles.field}>
-        <FieldLabel text="Ngôn ngữ" />
-        <Controller
-          control={ctrl2}
-          name="language"
-          render={({ field: { value, onChange } }) => (
-            <OptionPicker<AppLanguage>
-              value={value}
-              onChange={onChange}
-              options={(Object.entries(LANGUAGE_LABELS) as [AppLanguage, string][]).map(
-                ([v, label]) => ({ value: v, label }),
-              )}
-            />
-          )}
-        />
-      </View>
 
       {/* Timezone */}
       <View style={styles.field}>
@@ -413,31 +393,6 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
         />
       </View>
 
-      {/* Brand color */}
-      <View style={styles.field}>
-        <FieldLabel text="Màu thương hiệu" />
-        <View style={styles.colorRow}>
-          <View style={[styles.colorPreview, { backgroundColor: brandColor }]} />
-          <Controller
-            control={ctrl2}
-            name="brand_color"
-            render={({ field: { value, onChange, onBlur } }) => (
-              <TextInput
-                style={[styles.colorInput, err2.brand_color && styles.inputError]}
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                placeholder="#2563EB"
-                placeholderTextColor="#94A3B8"
-                autoCapitalize="none"
-                maxLength={7}
-              />
-            )}
-          />
-        </View>
-        <ErrorText message={err2.brand_color?.message} />
-      </View>
-
       {/* Toggles */}
       <View style={styles.switchGroup}>
         <Controller
@@ -445,8 +400,8 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
           name="notifications_enabled"
           render={({ field: { value, onChange } }) => (
             <SwitchRow
-              label="Thông báo push"
-              description="Gửi thông báo về check-in, phân công và cập nhật"
+              label="Thông báo trong ứng dụng"
+              description="Hiển thị thông báo về chấm công, phân công và cập nhật"
               value={value}
               onChange={onChange}
             />
@@ -459,30 +414,6 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
             <SwitchRow
               label="Cảnh báo check-in trễ"
               description="Thông báo quản lý khi nhân viên check-in muộn"
-              value={value}
-              onChange={onChange}
-            />
-          )}
-        />
-        <Controller
-          control={ctrl2}
-          name="require_face_id"
-          render={({ field: { value, onChange } }) => (
-            <SwitchRow
-              label="Yêu cầu nhận diện khuôn mặt"
-              description="Bắt buộc xác minh Face ID khi check-in"
-              value={value}
-              onChange={onChange}
-            />
-          )}
-        />
-        <Controller
-          control={ctrl2}
-          name="random_check_enabled"
-          render={({ field: { value, onChange } }) => (
-            <SwitchRow
-              label="Kiểm tra ngẫu nhiên"
-              description="Cho phép gửi lệnh xác nhận vị trí bất ngờ"
               value={value}
               onChange={onChange}
             />
@@ -543,23 +474,17 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
 
       {/* Review summary */}
       <View style={styles.reviewCard}>
-        <Text style={styles.reviewSectionTitle}>📋 Thông tin công ty</Text>
+        <View style={styles.reviewTitleRow}>
+          <Ionicons name="business-outline" size={19} color="#2563EB" />
+          <Text style={styles.reviewSectionTitle}>Thông tin công ty</Text>
+        </View>
         <ReviewRow label="Tên công ty" value={step1Data?.name ?? ''} />
         <ReviewRow label="Domain" value={`fams.vn/${step1Data?.slug ?? ''}`} />
         <ReviewRow label="Ngành nghề" value={INDUSTRY_LABELS[step1Data?.industry ?? 'other']} />
         <ReviewRow
-          label="Ngôn ngữ"
-          value={LANGUAGE_LABELS[step2Data?.language ?? 'vi']}
-        />
-        <ReviewRow
           label="Múi giờ"
           value={TIMEZONE_LABELS[step2Data?.timezone ?? 'Asia/Ho_Chi_Minh']}
         />
-        <View style={styles.reviewColorRow}>
-          <Text style={styles.reviewLabel}>Màu thương hiệu</Text>
-          <View style={[styles.reviewColorDot, { backgroundColor: step2Data?.brand_color }]} />
-          <Text style={styles.reviewValue}>{step2Data?.brand_color}</Text>
-        </View>
       </View>
 
       {/* Plan selection */}
@@ -573,6 +498,9 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
             style={[styles.planCard, isSelected && { borderColor: color, borderWidth: 2 }]}
             onPress={() => setSelectedPlan(plan.plan)}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`Gói ${plan.label}, ${formatPlanPrice(plan.price_vnd_per_month)}`}
+            accessibilityState={{ selected: isSelected }}
           >
             <View style={styles.planHeader}>
               <View>
@@ -650,7 +578,7 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
           {isPending ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.submitButtonText}>🚀 Tạo công ty</Text>
+            <Text style={styles.submitButtonText}>Tạo công ty</Text>
           )}
         </TouchableOpacity>
       )}
@@ -666,9 +594,11 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {currentStep === 1 && renderStep1()}
-        {currentStep === 2 && renderStep2()}
-        {currentStep === 3 && renderStep3()}
+        <ResponsiveContainer wide style={styles.responsiveContent}>
+          {currentStep === 1 && renderStep1()}
+          {currentStep === 2 && renderStep2()}
+          {currentStep === 3 && renderStep3()}
+        </ResponsiveContainer>
       </ScrollView>
       {renderFooter()}
     </View>
@@ -700,6 +630,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 32,
   },
+  responsiveContent: { width: '100%' },
 
   // ── Step progress ──
   stepBar: {
@@ -846,7 +777,8 @@ const styles = StyleSheet.create({
   },
   optionChip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#CBD5E1',
@@ -946,6 +878,7 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: 4,
   },
+  reviewTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   reviewRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

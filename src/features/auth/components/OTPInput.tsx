@@ -26,7 +26,7 @@ export function OTPInput({
   hasError = false,
   autoFocus = false,
 }: OTPInputProps) {
-  const refs = useRef<Array<TextInput | null>>(Array(length).fill(null));
+  const refs = useRef<(TextInput | null)[]>(Array(length).fill(null));
 
   // Focus the first empty box when autoFocus is set
   useEffect(() => {
@@ -92,10 +92,14 @@ export function OTPInput({
           ]}
           maxLength={6}
           keyboardType="number-pad"
+          textContentType="oneTimeCode"
+          autoComplete="one-time-code"
           textAlign="center"
           editable={!disabled}
           selectTextOnFocus
           caretHidden
+          accessibilityLabel={`Chữ số OTP thứ ${i + 1}`}
+          accessibilityState={{ disabled }}
         />
       ))}
     </View>
@@ -107,12 +111,15 @@ export function OTPInput({
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     justifyContent: 'center',
+    width: '100%',
   },
   box: {
-    width: 48,
-    height: 56,
+    flex: 1,
+    minWidth: 36,
+    maxWidth: 48,
+    height: 54,
     borderWidth: 1.5,
     borderColor: '#CBD5E1',
     borderRadius: 12,

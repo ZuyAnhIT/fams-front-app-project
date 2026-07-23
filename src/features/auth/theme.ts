@@ -1,19 +1,21 @@
+import { palette } from '@/theme/tokens';
+
 export const authColors = {
   light: {
-    background: '#F8FAFC',
-    card: '#ffffff',
-    text: '#1E293B',
-    textSecondary: '#64748B',
-    textMuted: '#94A3B8',
-    border: '#E2E8F0',
-    borderLight: '#F1F5F9',
-    primary: '#2563EB',
+    background: palette.canvas,
+    card: palette.surface,
+    text: palette.text,
+    textSecondary: palette.textSecondary,
+    textMuted: palette.textMuted,
+    border: palette.border,
+    borderLight: palette.surfaceMuted,
+    primary: palette.primary,
     primaryDisabled: '#93B4F8',
-    error: '#DC2626',
-    errorBg: '#FEF2F2',
+    error: palette.danger,
+    errorBg: palette.dangerSoft,
     errorBorder: '#FECACA',
-    success: '#16A34A',
-    inputBg: '#F8FAFC',
+    success: palette.success,
+    inputBg: palette.canvas,
     overlay: 'rgba(0,0,0,0.5)',
   },
   dark: {

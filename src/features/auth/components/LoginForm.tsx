@@ -29,12 +29,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-interface LoginFormProps {
-  /** Called when the user taps the phone-login tab */
-  onSwitchToPhone?: () => void;
-}
-
-export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
+export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const theme = useAuthTheme();
   const { login, isPending, error, lockedUntil } = useLogin();
@@ -70,6 +65,7 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
+              accessibilityLabel="Email"
             />
           )}
         />
@@ -96,6 +92,7 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
                 secureTextEntry={!showPassword}
                 returnKeyType="done"
                 onSubmitEditing={handleSubmit(onSubmit)}
+                accessibilityLabel="Mật khẩu"
               />
             )}
           />
@@ -103,6 +100,8 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
             style={styles.eyeButton}
             onPress={() => setShowPassword((v) => !v)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
           >
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -163,14 +162,6 @@ export function LoginForm({ onSwitchToPhone }: LoginFormProps) {
       </View>
 
       <GoogleSignInButton disabled={isPending} />
-
-      {/* Switch to phone login */}
-      <TouchableOpacity onPress={onSwitchToPhone} style={styles.switchButton}>
-        <Text style={[styles.switchText, { color: theme.textSecondary }]}>
-          Đăng nhập bằng{' '}
-          <Text style={[styles.linkText, { color: theme.primary }]}>số điện thoại</Text>
-        </Text>
-      </TouchableOpacity>
 
       <View style={styles.RegisterRow}>
         <Text style={[styles.RegisterText, { color: theme.textSecondary }]}>
@@ -267,14 +258,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
-  },
-  switchButton: {
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  switchText: {
-    fontSize: 14,
-    color: '#64748B',
   },
   linkText: {
     fontSize: 14,

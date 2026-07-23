@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect } from "react";
 
 import { ToastProvider } from "@/components/ui/toast";
 import { setupAuthInterceptors } from "@/features/auth/api-interceptors";
 import { useAuthStore } from "@/features/auth/store";
-import { setupMockApi } from "@/features/auth/mock/setup-mock-api";
+import { useCheckinStore } from "@/features/checkin/store/checkin.store";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -33,14 +34,16 @@ function AppInit() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   useEffect(() => {
-    setupMockApi();
-    hydrateFromSecureStore();
-    setupAuthInterceptors(() => {
-      clearAuth();
+    void hydrateFromSecureStore();
+    const ejectInterceptors = setupAuthInterceptors(async () => {
+      await clearAuth();
+      useCheckinStore.getState().resetContext();
+      queryClient.clear();
+      router.replace('/(auth)/login');
     });
-    // Intentionally run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    return ejectInterceptors;
+  }, [clearAuth, hydrateFromSecureStore]);
 
   return null;
 }
@@ -49,6 +52,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
+        <StatusBar style="dark" />
         <AppInit />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="modal/checkin-result" options={{ presentation: 'modal' }} />

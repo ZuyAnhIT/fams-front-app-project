@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { getMyProfile, updateMyProfile } from '../api';
 import { useAuthStore } from '../store';
@@ -16,6 +17,7 @@ export const profileKeys = {
 export interface UseProfileResult {
   profile: UserProfile | undefined;
   isLoading: boolean;
+  isRefetching: boolean;
   isError: boolean;
   error: unknown;
   refetch: () => void;
@@ -34,18 +36,19 @@ export function useProfile(): UseProfileResult {
 
   const query = useQuery({
     queryKey: profileKeys.me(),
-    queryFn: async () => {
-      const profile = await getMyProfile(currentUser);
-      setUser(profile);
-      return profile;
-    },
+    queryFn: () => getMyProfile(currentUser),
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
   });
 
+  useEffect(() => {
+    if (query.data) setUser(query.data);
+  }, [query.data, setUser]);
+
   return {
     profile: query.data,
     isLoading: query.isLoading,
+    isRefetching: query.isRefetching,
     isError: query.isError,
     error: query.error,
     refetch: query.refetch,

@@ -19,6 +19,7 @@ import { z } from 'zod';
 
 import { useResetPassword } from '@/features/auth/hooks/use-reset-password';
 import { useAuthTheme } from '@/features/auth/theme';
+import { shadows } from '@/theme/tokens';
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 
@@ -153,11 +154,14 @@ export default function ResetPasswordScreen() {
                           autoCapitalize="none"
                           autoFocus
                           returnKeyType="next"
+                          accessibilityLabel="Mật khẩu mới"
                         />
                         <TouchableOpacity
                           onPress={() => setShowNew((v) => !v)}
                           style={styles.eyeBtn}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={showNew ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
                         >
                           <Ionicons
                             name={showNew ? 'eye-off-outline' : 'eye-outline'}
@@ -195,11 +199,14 @@ export default function ResetPasswordScreen() {
                           autoCapitalize="none"
                           returnKeyType="done"
                           onSubmitEditing={handleSubmit(onSubmit)}
+                          accessibilityLabel="Xác nhận mật khẩu mới"
                         />
                         <TouchableOpacity
                           onPress={() => setShowConfirm((v) => !v)}
                           style={styles.eyeBtn}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={showConfirm ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}
                         >
                           <Ionicons
                             name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
@@ -273,6 +280,9 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     gap: 16,
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
   },
   backBtn: {
     flexDirection: 'row',
@@ -310,11 +320,7 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    ...shadows.card,
   },
   fieldGroup: {
     gap: 6,

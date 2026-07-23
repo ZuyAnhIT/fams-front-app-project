@@ -35,6 +35,15 @@ interface BackendUserProfile {
   /** ISO 8601 – present when account is temporarily locked */
   lockedUntil?: string;
   locked_until?: string;
+  /** Issue #4 (docs/issues/ISSUES.md) */
+  dateOfBirth?: string;
+  date_of_birth?: string;
+  hometown?: string;
+  gender?: string;
+  address?: string;
+  /** Issue #7 (docs/issues/ISSUES.md) */
+  googleLinked?: boolean;
+  google_linked?: boolean;
 }
 
 interface BackendTotpSetupResponse {
@@ -80,6 +89,11 @@ export function mapUserProfile(
     employee_code: raw.employeeCode ?? raw.employee_code ?? existing?.employee_code,
     is_2fa_enabled: raw.totpEnabled ?? raw.is_2fa_enabled ?? existing?.is_2fa_enabled ?? false,
     locked_until: raw.lockedUntil ?? raw.locked_until,
+    date_of_birth: raw.dateOfBirth ?? raw.date_of_birth,
+    hometown: raw.hometown,
+    gender: raw.gender,
+    address: raw.address,
+    google_linked: raw.googleLinked ?? raw.google_linked ?? false,
   };
 }
 

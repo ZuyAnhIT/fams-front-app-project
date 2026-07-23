@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuthTheme } from '@/features/auth/theme';
 
 import { useCurrentEmployeeId } from '@/features/face/hooks/use-current-employee-id';
 import { useFaceIdRevoke, useFaceIdStatus } from '@/features/face/hooks/use-face-id';
-import { usePendingInvitations } from '../hooks/use-invitation';
 import { FaceStatusCard } from './FaceStatusCard';
-import { InvitationCard } from './InvitationCard';
 
 export function ProfileFaceSection() {
   const theme = useAuthTheme();
@@ -15,42 +15,14 @@ export function ProfileFaceSection() {
   const { employeeId, isLoading: isLoadingEmployeeId } = useCurrentEmployeeId();
   const { faceIdStatus, isLoading: isLoadingStatus } = useFaceIdStatus(employeeId);
   const { revoke, isPending: isDeleting } = useFaceIdRevoke(employeeId);
-  const { invitations, isLoading: invitationsLoading } = usePendingInvitations();
+  const [revokeConfirmationVisible, setRevokeConfirmationVisible] = useState(false);
 
   const handleEnroll = () => {
     router.push('/face/enroll');
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      'Thu hồi Face ID',
-      'Dữ liệu khuôn mặt sẽ bị xóa. Bạn cần đăng ký lại để sử dụng nhận diện khuôn mặt.',
-      [
-        { text: 'Huỷ', style: 'cancel' },
-        {
-          text: 'Xác nhận thu hồi',
-          style: 'destructive',
-          onPress: () => {
-            revoke();
-          },
-        },
-      ],
-    );
-  };
-
-  const pendingInvitations = invitations.filter((i) => i.status === 'pending');
-
   return (
     <View style={styles.wrap}>
-      {pendingInvitations.length > 0 && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Lời mời</Text>
-          {pendingInvitations.map((inv) => (
-            <InvitationCard key={inv.id} invitation={inv} />
-          ))}
-        </View>
-      )}
-
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Nhận diện khuôn mặt</Text>
         {!isLoadingEmployeeId && !employeeId ? (
@@ -60,13 +32,26 @@ export function ProfileFaceSection() {
         ) : (
           <FaceStatusCard
             faceStatus={faceIdStatus}
-            isLoading={isLoadingEmployeeId || isLoadingStatus || invitationsLoading}
+            isLoading={isLoadingEmployeeId || isLoadingStatus}
             onEnroll={handleEnroll}
-            onDelete={handleDelete}
+            onDelete={() => setRevokeConfirmationVisible(true)}
             isDeleting={isDeleting}
           />
         )}
       </View>
+      <ConfirmDialog
+        visible={revokeConfirmationVisible}
+        title="Thu hồi Face ID?"
+        description="Dữ liệu khuôn mặt đã đăng ký sẽ bị xóa. Bạn cần đăng ký lại trước khi sử dụng xác thực khuôn mặt."
+        confirmLabel="Thu hồi Face ID"
+        destructive
+        loading={isDeleting}
+        onCancel={() => setRevokeConfirmationVisible(false)}
+        onConfirm={() => {
+          revoke();
+          setRevokeConfirmationVisible(false);
+        }}
+      />
     </View>
   );
 }

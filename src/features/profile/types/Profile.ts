@@ -24,14 +24,3 @@ export interface TenantInvitationListResponse {
   first: boolean;
   last: boolean;
 }
-
-// ─── Profile store ──────────────────────────────────────────────────────────────
-
-export interface ProfileState {
-  pendingInvitations: TenantInvitation[];
-}
-
-export interface ProfileActions {
-  setPendingInvitations: (invitations: TenantInvitation[]) => void;
-  removeInvitation: (id: string) => void;
-}

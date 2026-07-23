@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useAuthTheme } from '@/features/auth/theme';
+import { shadows } from '@/theme/tokens';
 
 import type { FaceIdStatusDto } from '@/features/face/types/FaceId';
 import { formatFaceStatusLabel } from '@/features/face/utils/face-quality';
@@ -99,11 +100,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.card,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   texts: { flex: 1, gap: 6 },

@@ -34,6 +34,9 @@ export function ProfileSettingsRow({
       onPress={onPress}
       disabled={loading}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={sublabel ? `${label}. ${sublabel}` : label}
+      accessibilityState={{ disabled: loading, busy: loading }}
     >
       <View style={styles.rowLeft}>
         <View style={styles.rowIcon}>

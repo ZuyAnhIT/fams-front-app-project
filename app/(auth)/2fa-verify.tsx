@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OTPInput } from '@/features/auth/components/OTPInput';
 import { use2FAVerify } from '@/features/auth/hooks/use-2fa';
 import { useAuthTheme } from '@/features/auth/theme';
+import { shadows } from '@/theme/tokens';
 
 /**
  * 2FA verification screen – shown after email/phone login
@@ -37,7 +39,11 @@ export default function TwoFAVerifyScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {/* Back button */}
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={18} color={theme.primary} />
@@ -97,11 +103,10 @@ export default function TwoFAVerifyScreen() {
 
             {/* Backup code hint */}
             <Text style={styles.backupHint}>
-              Mất điện thoại?{' '}
-              <Text style={styles.backupHintAccent}>Dùng mã dự phòng</Text>
+              Không truy cập được ứng dụng xác thực? Liên hệ quản trị viên để được hỗ trợ.
             </Text>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -111,7 +116,7 @@ export default function TwoFAVerifyScreen() {
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: '#F8FAFC',
   },
   flex: {
@@ -119,6 +124,9 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
@@ -163,11 +171,7 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    ...shadows.card,
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',
@@ -201,9 +205,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
-  },
-  backupHintAccent: {
-    color: '#2563EB',
-    fontWeight: '600',
   },
 });

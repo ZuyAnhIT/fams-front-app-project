@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LoginForm } from '@/features/auth/components/LoginForm';
-import { MockDevBanner } from '@/features/auth/components/MockDevBanner';
+import { shadows } from '@/theme/tokens';
 
 type LoginTab = 'email' | 'phone';
 
@@ -102,12 +102,11 @@ export default function LoginScreen() {
 
             {/* Form – only shown for email tab */}
             {activeTab === 'email' && (
-              <LoginForm onSwitchToPhone={handleSwitchToPhone} />
+              <LoginForm />
             )}
           </View>
 
           {/* ── Footer ── */}
-          <MockDevBanner />
           <Text style={styles.footer}>© 2026 FAMS · v1.0.0</Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -130,6 +129,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
     gap: 24,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
   },
   brandArea: {
     alignItems: 'center',
@@ -142,11 +144,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    ...shadows.brand,
   },
   logoText: {
     fontSize: 36,
@@ -168,11 +166,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
     gap: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    ...shadows.card,
   },
   tabRow: {
     flexDirection: 'row',
@@ -195,11 +189,7 @@ const styles = StyleSheet.create({
   },
   tabActive: {
     backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    ...shadows.subtle,
   },
   tabText: {
     fontSize: 14,

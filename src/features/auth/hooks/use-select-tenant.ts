@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 
 import { getAvailableTenants, type AvailableTenant } from "@/features/rbac/api";
+import { useCheckinStore } from "@/features/checkin/store/checkin.store";
 
 import { useAuthStore } from "../store";
 
@@ -22,6 +23,7 @@ export interface UseSelectTenantResult {
  * from Profile to switch companies without signing out.
  */
 export function useSelectTenant(): UseSelectTenantResult {
+  const queryClient = useQueryClient();
   const setActiveTenantId = useAuthStore((s) => s.setActiveTenantId);
   const setUser = useAuthStore((s) => s.setUser);
   const user = useAuthStore((s) => s.user);
@@ -39,7 +41,12 @@ export function useSelectTenant(): UseSelectTenantResult {
     if (!selectedId) return;
     setIsConfirming(true);
     try {
+      useCheckinStore.getState().resetContext();
+      await queryClient.cancelQueries();
       await setActiveTenantId(selectedId);
+      queryClient.removeQueries({
+        predicate: (cachedQuery) => cachedQuery.queryKey[0] !== 'auth',
+      });
       if (user) setUser({ ...user, tenant_id: selectedId });
       if (router.canGoBack()) {
         router.back();

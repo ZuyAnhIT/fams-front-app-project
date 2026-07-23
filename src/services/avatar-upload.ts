@@ -1,5 +1,10 @@
 import * as Device from 'expo-device';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+
+import { API_BASE_URL, AVATAR_UPLOAD_URL } from '@/config/env';
+import { apiClient } from '@/services/api-client';
+import { unwrapApiData } from '@/services/api-response';
 
 export class AvatarUploadError extends Error {
   constructor(message: string) {
@@ -35,34 +40,74 @@ export async function pickAvatarImage(): Promise<string> {
   return result.assets[0].uri;
 }
 
-/**
- * Uploads a local image to a temporary public host and returns an HTTPS URL
- * suitable for PATCH /auth/me `avatarUrl`.
- */
+function normalizeAvatarUrl(rawUrl: string): string {
+  let resolved: URL;
+  try {
+    resolved = new URL(rawUrl, API_BASE_URL);
+  } catch {
+    throw new AvatarUploadError('Máy chủ upload trả về URL không hợp lệ');
+  }
+
+  if (resolved.protocol !== 'https:' && !(__DEV__ && resolved.protocol === 'http:')) {
+    throw new AvatarUploadError('Avatar phải được phục vụ qua HTTPS');
+  }
+  return resolved.toString();
+}
+
+function getUploadEndpoint(): string {
+  if (!AVATAR_UPLOAD_URL) {
+    throw new AvatarUploadError(
+      'Chưa cấu hình endpoint upload avatar. Vui lòng liên hệ quản trị hệ thống.',
+    );
+  }
+
+  try {
+    const apiOrigin = new URL(API_BASE_URL).origin;
+    const uploadUrl = new URL(AVATAR_UPLOAD_URL, API_BASE_URL);
+    if (uploadUrl.origin !== apiOrigin) {
+      throw new AvatarUploadError(
+        'Endpoint upload avatar phải cùng origin với API để tránh làm lộ access token.',
+      );
+    }
+    return AVATAR_UPLOAD_URL;
+  } catch (error) {
+    if (error instanceof AvatarUploadError) throw error;
+    throw new AvatarUploadError('Cấu hình endpoint upload avatar không hợp lệ');
+  }
+}
+
+/** Uploads an avatar through the configured authenticated backend endpoint. */
 export async function uploadAvatarImage(localUri: string): Promise<string> {
+  const uploadEndpoint = getUploadEndpoint();
+
+  const prepared = await manipulateAsync(localUri, [{ resize: { width: 1024 } }], {
+    compress: 0.8,
+    format: SaveFormat.JPEG,
+  });
+
   const formData = new FormData();
-  formData.append('reqtype', 'fileupload');
-  formData.append('fileToUpload', {
-    uri: localUri,
+  formData.append('file', {
+    uri: prepared.uri,
     name: 'avatar.jpg',
     type: 'image/jpeg',
   } as unknown as Blob);
 
-  const response = await fetch('https://catbox.moe/user/api.php', {
-    method: 'POST',
-    body: formData,
+  const { data } = await apiClient.post(uploadEndpoint, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
+  const payload = unwrapApiData<
+    | string
+    | { url?: string; avatarUrl?: string; avatar_url?: string }
+  >(data);
 
-  if (!response.ok) {
-    throw new AvatarUploadError('Không thể tải ảnh lên. Vui lòng thử lại.');
+  const rawUrl =
+    typeof payload === 'string'
+      ? payload
+      : payload.url ?? payload.avatarUrl ?? payload.avatar_url;
+  if (!rawUrl) {
+    throw new AvatarUploadError('Máy chủ upload không trả về URL avatar');
   }
-
-  const url = (await response.text()).trim();
-  if (!url.startsWith('https://')) {
-    throw new AvatarUploadError('Máy chủ lưu trữ trả về URL không hợp lệ');
-  }
-
-  return url;
+  return normalizeAvatarUrl(rawUrl.trim());
 }
 
 /** Stable device identifier sent with Google login */
