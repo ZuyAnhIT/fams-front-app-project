@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
-import { getTenantList } from '../api';
-import type { TenantListParams } from '../types';
+import { getTenantList } from '../services/tenant.service';
+import type { TenantListParams } from '../types/Tenant';
 import { tenantKeys } from './use-tenant';
 
 /**

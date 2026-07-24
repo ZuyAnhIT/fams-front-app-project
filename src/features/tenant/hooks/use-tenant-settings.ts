@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getTenantSettings, updateTenantSettings } from '../api';
-import type { UpdateTenantSettingsRequest } from '../types';
-import { parseTenantError } from '../utils';
+import { getTenantSettings, updateTenantSettings } from '../services/tenant.service';
+import type { UpdateTenantSettingsRequest } from '../types/Tenant';
+import { parseTenantError } from '../utils/tenant.utils';
 import { tenantKeys } from './use-tenant';
 
 // ─── useTenantSettings ────────────────────────────────────────────────────────

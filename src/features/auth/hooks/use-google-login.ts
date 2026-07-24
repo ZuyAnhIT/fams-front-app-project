@@ -15,11 +15,11 @@ import {
   getGoogleOAuthSetupHint,
   isExpoGo,
   isNativeGoogleSignInAvailable,
-} from '../google-sign-in-service';
-import { loginWithGoogle } from '../api';
-import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
-import { useAuthStore } from '../store';
-import { parseAuthError } from '../utils';
+} from '../services/google-sign-in-service';
+import { loginWithGoogle } from '../services/auth.service';
+import { navigateAfterAuth, resolveAuthenticatedSession } from '../utils/session';
+import { useAuthStore } from '../store/auth.store';
+import { parseAuthError } from '../utils/auth.utils';
 import { getDeviceId } from '@/services/avatar-upload';
 
 WebBrowser.maybeCompleteAuthSession();

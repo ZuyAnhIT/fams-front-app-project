@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { useAuthTheme } from '@/features/auth/theme';
+import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
 
 import { useCurrentEmployeeId } from '@/features/face/hooks/use-current-employee-id';
 import { useFaceIdRevoke, useFaceIdStatus } from '@/features/face/hooks/use-face-id';

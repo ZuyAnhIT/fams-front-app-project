@@ -20,8 +20,8 @@ import { ProfileForm } from '@/features/auth/components/ProfileForm';
 import { TwoFASetupModal } from '@/features/auth/components/TwoFASetupModal';
 import { useLogout } from '@/features/auth/hooks/use-logout';
 import { useProfile } from '@/features/auth/hooks/use-profile';
-import { useAuthTheme } from '@/features/auth/theme';
-import type { UserProfile } from '@/features/auth/types';
+import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
+import type { UserProfile } from '@/features/auth/types/Auth';
 import { shadows } from '@/theme/tokens';
 
 import { ProfileFaceSection } from './ProfileFaceSection';

@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 
-import { useAuthTheme } from '../theme';
+import { useAuthTheme } from '../hooks/use-auth-theme';
 import { useGoogleLogin } from '../hooks/use-google-login';
 import { shadows } from '@/theme/tokens';
 

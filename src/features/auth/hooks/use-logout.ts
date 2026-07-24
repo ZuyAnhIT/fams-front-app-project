@@ -4,8 +4,8 @@ import { router } from 'expo-router';
 import { useToast } from '@/components/ui/toast';
 import { useCheckinStore } from '@/features/checkin/store/checkin.store';
 
-import { logoutAllDevices, logoutSingleDevice } from '../api';
-import { useAuthStore } from '../store';
+import { logoutAllDevices, logoutSingleDevice } from '../services/auth.service';
+import { useAuthStore } from '../store/auth.store';
 
 interface UseLogoutResult {
   /** Logs out the current device only */

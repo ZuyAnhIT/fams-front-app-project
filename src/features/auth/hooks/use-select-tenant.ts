@@ -2,10 +2,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 
-import { getAvailableTenants, type AvailableTenant } from "@/features/rbac/api";
+import { getAvailableTenants, type AvailableTenant } from "@/features/rbac/services/rbac.service";
 import { useCheckinStore } from "@/features/checkin/store/checkin.store";
 
-import { useAuthStore } from "../store";
+import { useAuthStore } from "../store/auth.store";
 
 export interface UseSelectTenantResult {
   tenants: AvailableTenant[];

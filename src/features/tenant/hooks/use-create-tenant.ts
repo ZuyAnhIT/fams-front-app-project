@@ -3,9 +3,9 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { createTenant } from '../api';
-import type { CreateTenantRequest } from '../types';
-import { parseTenantError } from '../utils';
+import { createTenant } from '../services/tenant.service';
+import type { CreateTenantRequest } from '../types/Tenant';
+import { parseTenantError } from '../utils/tenant.utils';
 import { tenantKeys } from './use-tenant';
 
 export interface UseCreateTenantResult {

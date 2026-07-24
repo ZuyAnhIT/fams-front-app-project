@@ -2,9 +2,9 @@ import { useMutation } from '@tanstack/react-query';
 
 import { useToast } from '@/components/ui/toast';
 
-import { forgotPassword } from '../api';
-import type { ForgotPasswordRequest } from '../types';
-import { parseAuthError } from '../utils';
+import { forgotPassword } from '../services/auth.service';
+import type { ForgotPasswordRequest } from '../types/Auth';
+import { parseAuthError } from '../utils/auth.utils';
 
 export interface UseForgotPasswordResult {
   submit: (body: ForgotPasswordRequest) => void;

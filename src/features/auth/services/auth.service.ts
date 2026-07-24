@@ -2,8 +2,8 @@ import { apiClient } from '@/services/api-client';
 import { getDeviceId } from '@/services/avatar-upload';
 import { unwrapApiData } from '@/services/api-response';
 
-import { mapLoginResponse, mapTotpSetupResponse, mapUserProfile } from './api-mappers';
-import { normalizePhoneForBackend } from './utils';
+import { mapLoginResponse, mapTotpSetupResponse, mapUserProfile } from '../utils/api-mappers';
+import { normalizePhoneForBackend } from '../utils/auth.utils';
 import type {
   ChangePasswordRequest,
   ForgotPasswordRequest,
@@ -20,7 +20,7 @@ import type {
   UpdateProfileRequest,
   UserProfile,
   VerifyOTPRequest,
-} from './types';
+} from '../types/Auth';
 
 const BASE = '/auth';
 

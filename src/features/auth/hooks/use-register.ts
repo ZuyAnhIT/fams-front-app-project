@@ -3,11 +3,11 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { registerUser } from '../api';
-import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
-import { useAuthStore } from '../store';
-import type { RegisterRequest } from '../types';
-import { parseAuthError } from '../utils';
+import { registerUser } from '../services/auth.service';
+import { navigateAfterAuth, resolveAuthenticatedSession } from '../utils/session';
+import { useAuthStore } from '../store/auth.store';
+import type { RegisterRequest } from '../types/Auth';
+import { parseAuthError } from '../utils/auth.utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

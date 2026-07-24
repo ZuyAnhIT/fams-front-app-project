@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSelectTenant } from '@/features/auth/hooks/use-select-tenant';
-import { useAuthTheme } from '@/features/auth/theme';
+import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
 
 /**
  * Tenant picker. Reached two ways: right after login when the account can

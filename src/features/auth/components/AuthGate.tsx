@@ -2,7 +2,7 @@ import { Redirect } from 'expo-router';
 import type { PropsWithChildren } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 /**
  * Protects standalone routes that do not live under the authenticated tab or

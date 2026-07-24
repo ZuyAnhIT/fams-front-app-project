@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 
 import { pickAvatarImage, uploadAvatarImage } from '@/services/avatar-upload';
 
-import { parseAuthError } from '../utils';
+import { parseAuthError } from '../utils/auth.utils';
 
 export function useAvatarUpload() {
   const mutation = useMutation({

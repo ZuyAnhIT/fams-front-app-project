@@ -3,11 +3,11 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { loginWithEmail } from '../api';
-import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
-import { useAuthStore } from '../store';
-import type { LoginRequest } from '../types';
-import { getLockedUntil, isAccountLockedError, parseAuthError } from '../utils';
+import { loginWithEmail } from '../services/auth.service';
+import { navigateAfterAuth, resolveAuthenticatedSession } from '../utils/session';
+import { useAuthStore } from '../store/auth.store';
+import type { LoginRequest } from '../types/Auth';
+import { getLockedUntil, isAccountLockedError, parseAuthError } from '../utils/auth.utils';
 
 export interface UseLoginResult {
   login: (credentials: LoginRequest) => void;

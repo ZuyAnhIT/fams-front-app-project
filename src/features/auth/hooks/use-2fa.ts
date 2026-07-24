@@ -2,12 +2,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useToast } from '@/components/ui/toast';
 
-import { confirmTotpSetup, disable2FA, getMyProfile, setup2FA, verifyLoginTotp } from '../api';
+import { confirmTotpSetup, disable2FA, getMyProfile, setup2FA, verifyLoginTotp } from '../services/auth.service';
 import { profileKeys } from './use-profile';
-import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
-import { useAuthStore } from '../store';
-import type { TwoFAConfirmSetupRequest } from '../types';
-import { parseAuthError } from '../utils';
+import { navigateAfterAuth, resolveAuthenticatedSession } from '../utils/session';
+import { useAuthStore } from '../store/auth.store';
+import type { TwoFAConfirmSetupRequest } from '../types/Auth';
+import { parseAuthError } from '../utils/auth.utils';
 
 // ─── Setup (generates QR code) ────────────────────────────────────────────────
 

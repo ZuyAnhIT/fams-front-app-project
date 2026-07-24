@@ -17,8 +17,8 @@ import { KeyboardAwareModalSheet } from '@/components/ui/keyboard-aware-sheet';
 import { useToast } from '@/components/ui/toast';
 
 import { use2FAConfirmSetup, use2FADisable, use2FASetup } from '../hooks/use-2fa';
-import { useAuthTheme } from '../theme';
-import { parseAuthError } from '../utils';
+import { useAuthTheme } from '../hooks/use-auth-theme';
+import { parseAuthError } from '../utils/auth.utils';
 import { OTPInput } from './OTPInput';
 
 interface TwoFASetupModalProps {

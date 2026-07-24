@@ -21,8 +21,8 @@ import { useToast } from '@/components/ui/toast';
 
 import { useAvatarUpload } from '../hooks/use-avatar-upload';
 import { useUpdateProfile } from '../hooks/use-profile';
-import { useAuthTheme } from '../theme';
-import type { UserProfile } from '../types';
+import { useAuthTheme } from '../hooks/use-auth-theme';
+import type { UserProfile } from '../types/Auth';
 
 // Issue #4 (docs/issues/ISSUES.md): dd/mm/yyyy text input — no native date-picker dependency
 // is installed in this project yet, so a validated text field avoids adding a new native

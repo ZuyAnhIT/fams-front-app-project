@@ -13,7 +13,7 @@ import {
 import { z } from 'zod';
 
 import { useRegister } from '../hooks/use-register';
-import { useAuthTheme } from '../theme';
+import { useAuthTheme } from '../hooks/use-auth-theme';
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 

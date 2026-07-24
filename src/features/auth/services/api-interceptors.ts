@@ -1,7 +1,7 @@
 import { apiClient } from '@/services/api-client';
 
-import { refreshAccessToken } from './api';
-import { useAuthStore } from './store';
+import { refreshAccessToken } from './auth.service';
+import { useAuthStore } from '../store/auth.store';
 
 /** Tracks whether a token refresh is already in-flight */
 let isRefreshing = false;

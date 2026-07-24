@@ -1,8 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { changePassword } from '../api';
-import type { ChangePasswordRequest } from '../types';
-import { parseAuthError } from '../utils';
+import { changePassword } from '../services/auth.service';
+import type { ChangePasswordRequest } from '../types/Auth';
+import { parseAuthError } from '../utils/auth.utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

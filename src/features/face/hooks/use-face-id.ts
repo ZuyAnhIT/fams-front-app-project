@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useToast } from '@/components/ui/toast';
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 import { enrollFaceId, getFaceIdStatus, revokeFaceId, saveFaceIdConsent } from '../services/face.service';
 import type { FaceIdStatusDto, FaceImagePayload } from '../types/FaceId';

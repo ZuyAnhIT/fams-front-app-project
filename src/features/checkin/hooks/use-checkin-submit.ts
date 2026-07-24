@@ -1,7 +1,7 @@
 import * as Device from 'expo-device';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useToast } from '@/components/ui/toast';
 import { useGps } from '@/features/gps/hooks/use-gps';
 

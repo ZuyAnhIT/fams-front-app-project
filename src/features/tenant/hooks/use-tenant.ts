@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
-import { getMyTenant, getTenant } from '../api';
+import { getMyTenant, getTenant } from '../services/tenant.service';
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 

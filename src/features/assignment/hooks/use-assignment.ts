@@ -1,7 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 import { getSiteDetail } from '@/features/site/services/site.service';
 
 import { getAssignments, getEmployee, getSitesForFilter } from '../services/assignment.service';

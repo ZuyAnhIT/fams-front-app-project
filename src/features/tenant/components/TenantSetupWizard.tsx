@@ -22,8 +22,8 @@ import type {
   SubscriptionPlan,
   TenantIndustry,
   WizardStep,
-} from '../types';
-import { WIZARD_STEP_COUNT, WIZARD_STEP_LABELS } from '../types';
+} from '../types/Tenant';
+import { WIZARD_STEP_COUNT, WIZARD_STEP_LABELS } from '../types/Tenant';
 import {
   DEFAULT_PLAN_DETAILS,
   INDUSTRY_LABELS,
@@ -33,7 +33,7 @@ import {
   formatPlanPrice,
   formatStorageLimit,
   generateSlug,
-} from '../utils';
+} from '../utils/tenant.utils';
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 

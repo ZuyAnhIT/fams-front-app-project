@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import type { CameraView as CameraViewType } from 'expo-camera';
 
-import { useAuthTheme } from '@/features/auth/theme';
+import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
 
 import { useFaceEnrollStore } from '@/features/face/store/face-enroll.store';
 import {

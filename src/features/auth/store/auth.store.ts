@@ -1,7 +1,7 @@
-import * as SecureStore from './secure-storage';
+import * as SecureStore from '../services/secure-storage';
 import { create } from 'zustand';
 
-import type { AuthActions, AuthState, UserProfile } from './types';
+import type { AuthActions, AuthState, UserProfile } from '../types/Auth';
 
 const KEY_ACCESS = 'fams_access_token';
 const KEY_REFRESH = 'fams_refresh_token';

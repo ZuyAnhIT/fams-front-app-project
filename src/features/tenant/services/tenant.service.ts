@@ -11,7 +11,7 @@ import type {
   TenantSettings,
   UpdateTenantRequest,
   UpdateTenantSettingsRequest,
-} from './types';
+} from '../types/Tenant';
 
 const BASE = '/tenants';
 
