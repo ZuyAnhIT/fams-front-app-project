@@ -1,4 +1,11 @@
-import type { LoginResponse, TwoFASetupResponse, UserProfile, UserRole } from './types';
+import type {
+  LoginResponse,
+  RegisterResponse,
+  TwoFASetupResponse,
+  TwoFAConfirmSetupResponse,
+  UserProfile,
+  UserRole,
+} from './types';
 
 /** Backend login payload (camelCase keys from Spring Boot). */
 interface BackendLoginResponse {
@@ -10,11 +17,20 @@ interface BackendLoginResponse {
   pendingToken?: string;
 }
 
+interface BackendRegisterResponse {
+  userId?: string | number;
+  emailVerificationRequired?: boolean;
+  phoneVerified?: boolean;
+  message?: string;
+}
+
 /** Backend `/auth/me` and `/auth/register` user payload. */
 interface BackendUserProfile {
   id: string | number;
   email?: string;
+  emailVerified?: boolean;
   phone?: string;
+  phoneVerified?: boolean;
   /** Display name returned by Spring Boot backend */
   displayName?: string;
   /** Some backends return full_name directly */
@@ -44,12 +60,19 @@ interface BackendUserProfile {
   /** Issue #7 (docs/issues/ISSUES.md) */
   googleLinked?: boolean;
   google_linked?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  active?: boolean;
 }
 
 interface BackendTotpSetupResponse {
   setupToken?: string;
   qrCodeUrl?: string;
   manualEntryKey?: string;
+}
+
+interface BackendTotpEnableResponse {
+  backupCodes?: string[];
 }
 
 const VALID_ROLES: UserRole[] = ['employee', 'manager', 'admin', 'hr'];
@@ -70,14 +93,28 @@ export function mapLoginResponse(raw: BackendLoginResponse): LoginResponse {
   };
 }
 
+export function mapRegisterResponse(raw: BackendRegisterResponse): RegisterResponse {
+  return {
+    user_id: String(raw.userId ?? ''),
+    email_verification_required: raw.emailVerificationRequired ?? false,
+    phone_verified: raw.phoneVerified ?? false,
+    message: raw.message ?? 'Đăng ký thành công',
+  };
+}
+
 export function mapUserProfile(
   raw: BackendUserProfile,
-  existing?: Pick<UserProfile, 'is_2fa_enabled' | 'role' | 'tenant_id' | 'department' | 'employee_code'>,
+  existing?: Pick<
+    UserProfile,
+    'is_2fa_enabled' | 'role' | 'tenant_id' | 'department' | 'employee_code'
+  >,
 ): UserProfile {
   return {
     id: String(raw.id),
-    email: raw.email ?? '',
+    email: raw.email || undefined,
+    email_verified: raw.emailVerified ?? false,
     phone: raw.phone,
+    phone_verified: raw.phoneVerified ?? false,
     full_name: raw.displayName ?? raw.full_name ?? '',
     avatar_url: raw.avatarUrl ?? raw.avatar_url,
     role:
@@ -94,6 +131,9 @@ export function mapUserProfile(
     gender: raw.gender,
     address: raw.address,
     google_linked: raw.googleLinked ?? raw.google_linked ?? false,
+    created_at: raw.createdAt,
+    updated_at: raw.updatedAt,
+    active: raw.active ?? true,
   };
 }
 
@@ -103,4 +143,10 @@ export function mapTotpSetupResponse(raw: BackendTotpSetupResponse): TwoFASetupR
     qr_code_url: raw.qrCodeUrl ?? '',
     secret: raw.manualEntryKey ?? '',
   };
+}
+
+export function mapTotpEnableResponse(
+  raw: BackendTotpEnableResponse,
+): TwoFAConfirmSetupResponse {
+  return { backup_codes: raw.backupCodes ?? [] };
 }

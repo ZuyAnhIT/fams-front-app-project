@@ -3,18 +3,19 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { registerUser } from '../api';
-import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
-import { useAuthStore } from '../store';
-import type { RegisterRequest } from '../types';
+import { registerUser, sendRegistrationOTP } from '../api';
+import type { RegisterRequest, SendRegistrationOTPRequest } from '../types';
 import { parseAuthError } from '../utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface UseRegisterResult {
   register: (data: RegisterRequest) => void;
+  sendPhoneOTP: (data: SendRegistrationOTPRequest) => Promise<void>;
   isPending: boolean;
+  isSendingOTP: boolean;
   error: string | null;
+  otpError: string | null;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -22,41 +23,41 @@ export interface UseRegisterResult {
 /**
  * Handles new account registration.
  *
- * On success:
- * - If server requires 2FA → stores temp_token and pushes to 2fa-verify screen.
- * - If server returns tokens (auto-login) → persists tokens and navigates to app.
- * - Otherwise (e.g. email verification required) → redirects to login.
+ * Registration never returns auth tokens. Email registrations move to the
+ * verification waiting screen; phone registrations move back to password login.
  */
 export function useRegister(): UseRegisterResult {
-  const { setTokens, setUser, set2FARequired } = useAuthStore();
   const { showToast } = useToast();
+
+  const otpMutation = useMutation({
+    mutationFn: (body: SendRegistrationOTPRequest) => sendRegistrationOTP(body),
+  });
 
   const mutation = useMutation({
     mutationFn: (body: RegisterRequest) => registerUser(body),
-    onSuccess: async (data) => {
-      if (data.requires_2fa && data.temp_token) {
-        set2FARequired(true, data.temp_token);
-        showToast('Vui lòng xác thực mã 2 lớp', 'info');
-        router.push('/(auth)/2fa-verify' as never);
+    onSuccess: (data, variables) => {
+      showToast(data.message, 'success');
+      if ('email' in variables && data.email_verification_required) {
+        router.replace({
+          pathname: '/(auth)/email-verification' as never,
+          params: { email: variables.email },
+        });
         return;
       }
-      if (data.access_token) {
-        await setTokens(data.access_token, data.refresh_token);
-        const session = await resolveAuthenticatedSession(data.user);
-        setUser(session.user);
-        showToast('Đăng ký thành công', 'success');
-        navigateAfterAuth(session);
-        return;
-      }
-      // Server may require email verification before login
-      showToast('Đăng ký thành công — vui lòng đăng nhập', 'success');
-      router.replace('/(auth)/login');
+      const identifier = 'phone' in variables ? variables.phone : variables.email;
+      router.replace({
+        pathname: '/(auth)/login' as never,
+        params: { identifier },
+      });
     },
   });
 
   return {
     register: mutation.mutate,
+    sendPhoneOTP: otpMutation.mutateAsync,
     isPending: mutation.isPending,
+    isSendingOTP: otpMutation.isPending,
     error: mutation.isError ? parseAuthError(mutation.error) : null,
+    otpError: otpMutation.isError ? parseAuthError(otpMutation.error) : null,
   };
 }

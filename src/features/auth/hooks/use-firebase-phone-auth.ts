@@ -1,5 +1,18 @@
 import { useRef, useState } from 'react';
-import auth, { type FirebaseAuthTypes } from '@react-native-firebase/auth';
+import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
+
+import { isExpoGo } from '../runtime';
+
+async function getFirebaseAuth() {
+  if (isExpoGo()) {
+    throw new Error(
+      'Expo Go không hỗ trợ Firebase Phone Auth. Hãy mở bằng FAMS Development Build.',
+    );
+  }
+
+  const { default: auth } = await import('@react-native-firebase/auth');
+  return auth();
+}
 
 /**
  * Drives the client-side half of Firebase Phone Auth (send SMS code, confirm
@@ -16,7 +29,8 @@ export function useFirebasePhoneAuth() {
   async function sendCode(phoneE164: string): Promise<void> {
     setIsSending(true);
     try {
-      confirmationRef.current = await auth().signInWithPhoneNumber(phoneE164);
+      const auth = await getFirebaseAuth();
+      confirmationRef.current = await auth.signInWithPhoneNumber(phoneE164);
     } finally {
       setIsSending(false);
     }

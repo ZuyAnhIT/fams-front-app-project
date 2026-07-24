@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -37,23 +38,34 @@ export function TwoFASetupModal({
   const theme = useAuthTheme();
   const { showToast } = useToast();
   const [code, setCode] = useState('');
-  const [step, setStep] = useState<'init' | 'scan' | 'confirm'>('init');
+  const [step, setStep] = useState<'init' | 'scan' | 'confirm' | 'backup'>('init');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [disableMethod, setDisableMethod] = useState<'password' | 'code' | 'backup'>('password');
+  const [disableProof, setDisableProof] = useState('');
 
   const setup2FAMutation = use2FASetup();
   const { confirm, isPending: confirming, error: confirmError, reset: resetConfirm } =
     use2FAConfirmSetup();
-  const { disable, isPending: disabling, isSuccess: disableSuccess, error: disableError } =
+  const { disable, isPending: disabling, isSuccess: disableSuccess, error: disableError, reset: resetDisable } =
     use2FADisable();
 
   const setupData = setup2FAMutation.data;
   const setupError = setup2FAMutation.error;
   const error = setupError ?? confirmError ?? disableError;
 
-  const handleClose = () => {
+  const handleClose = (force = false) => {
+    if (step === 'backup' && !force) {
+      showToast('Hãy lưu mã dự phòng trước khi đóng', 'error');
+      return;
+    }
     setCode('');
+    setBackupCodes([]);
+    setDisableProof('');
+    setDisableMethod('password');
     setStep('init');
     setup2FAMutation.reset();
     resetConfirm();
+    resetDisable();
     onClose();
   };
 
@@ -69,10 +81,10 @@ export function TwoFASetupModal({
     confirm(
       { setup_token: setupData.setup_token, code },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
           showToast('Đã bật xác thực 2 lớp', 'success');
-          onSuccess();
-          handleClose();
+          setBackupCodes(data.backup_codes);
+          setStep('backup');
         },
         onError: (err) => showToast(parseAuthError(err), 'error'),
       },
@@ -80,18 +92,30 @@ export function TwoFASetupModal({
   };
 
   const handleDisable = () => {
-    disable(undefined, {
+    const proof = disableProof.trim();
+    if (!proof) {
+      showToast('Vui lòng nhập thông tin xác nhận', 'error');
+      return;
+    }
+    disable(
+      disableMethod === 'password'
+        ? { password: proof }
+        : disableMethod === 'code'
+          ? { code: proof }
+          : { backup_code: proof },
+      {
       onSuccess: () => {
         showToast('Đã tắt xác thực 2 lớp', 'success');
         onSuccess();
         handleClose();
       },
       onError: (err) => showToast(parseAuthError(err), 'error'),
-    });
+      },
+    );
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={() => handleClose()}>
       <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
         <KeyboardAwareModalSheet>
           <View style={[styles.sheet, { backgroundColor: theme.card }]}>
@@ -99,7 +123,7 @@ export function TwoFASetupModal({
             <Text style={[styles.title, { color: theme.text }]}>
               {isEnabled ? 'Tắt xác thực 2 lớp' : 'Bật xác thực 2 lớp'}
             </Text>
-            <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={() => handleClose()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="close" size={22} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -112,8 +136,41 @@ export function TwoFASetupModal({
             {isEnabled && (
               <View style={styles.body}>
                 <Text style={[styles.description, { color: theme.textSecondary }]}>
-                  Xác nhận tắt xác thực 2 lớp (TOTP) cho tài khoản của bạn.
+                  Xác nhận bằng mật khẩu, mã TOTP hoặc một mã dự phòng.
                 </Text>
+                <View style={styles.methodRow}>
+                  {([
+                    ['password', 'Mật khẩu'],
+                    ['code', 'Mã TOTP'],
+                    ['backup', 'Mã dự phòng'],
+                  ] as const).map(([value, label]) => (
+                    <TouchableOpacity
+                      key={value}
+                      style={[
+                        styles.methodButton,
+                        { borderColor: theme.border },
+                        disableMethod === value && { backgroundColor: theme.primary, borderColor: theme.primary },
+                      ]}
+                      onPress={() => {
+                        setDisableMethod(value);
+                        setDisableProof('');
+                      }}
+                    >
+                      <Text style={{ color: disableMethod === value ? '#fff' : theme.text, fontSize: 12, fontWeight: '600' }}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TextInput
+                  value={disableProof}
+                  onChangeText={setDisableProof}
+                  secureTextEntry={disableMethod === 'password'}
+                  keyboardType={disableMethod === 'code' ? 'number-pad' : 'default'}
+                  maxLength={disableMethod === 'code' ? 6 : undefined}
+                  autoCapitalize="none"
+                  placeholder={disableMethod === 'password' ? 'Nhập mật khẩu' : disableMethod === 'code' ? 'Nhập mã 6 số' : 'Nhập mã dự phòng'}
+                  placeholderTextColor={theme.textMuted}
+                  style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.border }]}
+                />
                 {error && <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>}
                 {disableSuccess && (
                   <Text style={[styles.successText, { color: theme.success }]}>
@@ -127,7 +184,7 @@ export function TwoFASetupModal({
                     disabling && { backgroundColor: theme.primaryDisabled },
                   ]}
                   onPress={handleDisable}
-                  disabled={disabling}
+                  disabled={disabling || !disableProof.trim()}
                 >
                   {disabling ? (
                     <ActivityIndicator color="#fff" size="small" />
@@ -179,14 +236,17 @@ export function TwoFASetupModal({
             {!isEnabled && step === 'scan' && setupData && (
               <View style={styles.body}>
                 <Text style={[styles.description, { color: theme.textSecondary }]}>
-                  Quét mã QR bằng ứng dụng xác thực của bạn.
+                  Mở mã QR để quét từ thiết bị khác, hoặc dùng khóa thủ công bên dưới
+                  khi ứng dụng xác thực nằm trên chính điện thoại này.
                 </Text>
                 <View style={[styles.qrWrapper, { backgroundColor: theme.inputBg }]}>
-                  <Image
-                    source={{ uri: setupData.qr_code_url }}
-                    style={styles.qrImage}
-                    contentFit="contain"
-                  />
+                  <Ionicons name="qr-code-outline" size={72} color={theme.primary} />
+                  <TouchableOpacity
+                    style={[styles.qrButton, { borderColor: theme.primary }]}
+                    onPress={() => void WebBrowser.openBrowserAsync(setupData.qr_code_url)}
+                  >
+                    <Text style={[styles.qrButtonText, { color: theme.primary }]}>Mở trang mã QR</Text>
+                  </TouchableOpacity>
                 </View>
                 <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
                   Hoặc nhập thủ công:
@@ -231,6 +291,29 @@ export function TwoFASetupModal({
                   <Text style={[styles.backButtonText, { color: theme.textSecondary }]}>
                     ← Quay lại
                   </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {!isEnabled && step === 'backup' && (
+              <View style={styles.body}>
+                <Ionicons name="checkmark-circle-outline" size={48} color={theme.success} style={{ alignSelf: 'center' }} />
+                <Text style={[styles.description, { color: theme.textSecondary, textAlign: 'center' }]}>
+                  Lưu các mã dự phòng này ở nơi an toàn. Mỗi mã chỉ dùng được một lần và sẽ không hiển thị lại.
+                </Text>
+                <View style={[styles.backupBox, { backgroundColor: theme.inputBg }]}>
+                  {backupCodes.map((backupCode) => (
+                    <Text key={backupCode} selectable style={[styles.backupCode, { color: theme.text }]}>{backupCode}</Text>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+                  onPress={() => {
+                    onSuccess();
+                    handleClose(true);
+                  }}
+                >
+                  <Text style={styles.primaryButtonText}>Tôi đã lưu các mã này</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -287,10 +370,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
   },
-  qrImage: {
-    width: 200,
-    height: 200,
-  },
+  qrButton: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
+  qrButtonText: { fontSize: 14, fontWeight: '700' },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '600',
@@ -305,6 +386,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 2,
   },
+  input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15 },
+  methodRow: { flexDirection: 'row', gap: 8 },
+  methodButton: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  backupBox: { borderRadius: 12, padding: 16, gap: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  backupCode: { width: '47%', fontFamily: 'monospace', fontSize: 14, letterSpacing: 1, textAlign: 'center' },
   errorText: {
     fontSize: 13,
     textAlign: 'center',

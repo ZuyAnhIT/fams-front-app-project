@@ -1,8 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { useToast } from '@/components/ui/toast';
@@ -20,12 +18,11 @@ import { loginWithGoogle } from '../api';
 import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
 import { useAuthStore } from '../store';
 import { parseAuthError } from '../utils';
-import { getDeviceId } from '@/services/avatar-upload';
-
-WebBrowser.maybeCompleteAuthSession();
 
 export interface UseGoogleLoginResult {
   signInWithGoogle: () => void;
+  /** Dùng bởi Google Identity Services trên web (`response.credential`). */
+  signInWithGoogleIdToken: (idToken: string) => void;
   isReady: boolean;
   isPending: boolean;
   error: string | null;
@@ -37,19 +34,10 @@ export function useGoogleLogin(): UseGoogleLoginResult {
   const { setTokens, setUser, set2FARequired } = useAuthStore();
   const { showToast } = useToast();
   const [sessionError, setSessionError] = useState<string | null>(null);
-  const useAuthSession = Platform.OS === 'web' || isExpoGo();
-
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest(
-    {
-      clientId: GOOGLE_WEB_CLIENT_ID,
-      redirectUri: GOOGLE_OAUTH_REDIRECT_URI,
-    },
-    { scheme: 'famsfrontappproject' },
-  );
 
   const mutation = useMutation({
     mutationFn: (idToken: string) =>
-      loginWithGoogle({ id_token: idToken, device_id: getDeviceId() }),
+      loginWithGoogle({ id_token: idToken }),
     onSuccess: async (data) => {
       if (data.requires_2fa && data.temp_token) {
         set2FARequired(true, data.temp_token);
@@ -73,26 +61,6 @@ export function useGoogleLogin(): UseGoogleLoginResult {
     [mutation],
   );
 
-  useEffect(() => {
-    if (!useAuthSession || response?.type !== 'success') return;
-    const idToken = response.params.id_token;
-    if (idToken) {
-      exchangeIdToken(idToken);
-    }
-  }, [response, useAuthSession, exchangeIdToken]);
-
-  useEffect(() => {
-    if (!useAuthSession || !response) return;
-    if (response.type === 'error') {
-      const msg = response.error?.message ?? response.params?.error ?? '';
-      if (msg.includes('invalid_request') || response.params?.error === 'invalid_request') {
-        setSessionError(getGoogleOAuthSetupHint());
-      } else {
-        setSessionError(msg || 'Đăng nhập Google thất bại');
-      }
-    }
-  }, [response, useAuthSession]);
-
   const signInWithGoogle = async () => {
     if (!GOOGLE_WEB_CLIENT_ID) return;
 
@@ -114,21 +82,24 @@ export function useGoogleLogin(): UseGoogleLoginResult {
       return;
     }
 
-    await promptAsync();
+    setSessionError(
+      Platform.OS === 'web'
+        ? 'Google Sign-In trên web sử dụng nút Google Identity Services.'
+        : 'Google Sign-In native chưa sẵn sàng.',
+    );
   };
 
   const configError = !GOOGLE_WEB_CLIENT_ID
     ? 'Chưa cấu hình EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID'
     : null;
 
-  const isReady = useAuthSession
-    ? !!request && !!GOOGLE_WEB_CLIENT_ID
-    : !!GOOGLE_WEB_CLIENT_ID;
+  const isReady = !!GOOGLE_WEB_CLIENT_ID;
 
   return {
     signInWithGoogle: () => {
       void signInWithGoogle();
     },
+    signInWithGoogleIdToken: exchangeIdToken,
     isReady,
     isPending: mutation.isPending,
     error:

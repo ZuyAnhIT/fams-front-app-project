@@ -17,8 +17,11 @@ const REFRESH_EXCLUDED_PATHS = new Set([
   '/auth/login/google',
   '/auth/login/totp',
   '/auth/register',
+  '/auth/register/send-otp',
+  '/auth/resend-verification',
+  '/auth/verify-email',
   '/auth/otp/verify',
-  '/auth/refresh',
+  '/auth/refresh-token',
   '/auth/forgot-password',
   '/auth/reset-password',
 ]);
@@ -34,6 +37,26 @@ function getRequestPath(url: string | undefined): string {
 
 function shouldSkipRefresh(url: string | undefined): boolean {
   return REFRESH_EXCLUDED_PATHS.has(getRequestPath(url));
+}
+
+/** Refresh-token rotation happens before a retried logout request. Keep the
+ * logout body aligned with the newly stored token so the backend revokes the
+ * actual current session instead of receiving the now-invalid previous token. */
+function syncLogoutRefreshToken(config: { url?: string; data?: unknown }): void {
+  if (getRequestPath(config.url) !== '/auth/logout') return;
+  const refreshToken = useAuthStore.getState().refreshToken;
+  if (!refreshToken) return;
+
+  try {
+    const current =
+      typeof config.data === 'string'
+        ? (JSON.parse(config.data) as Record<string, unknown>)
+        : ((config.data ?? {}) as Record<string, unknown>);
+    const next = { ...current, refreshToken };
+    config.data = typeof config.data === 'string' ? JSON.stringify(next) : next;
+  } catch {
+    config.data = JSON.stringify({ refreshToken });
+  }
 }
 
 function flushQueue(error: unknown, token: string | null = null) {
@@ -93,6 +116,7 @@ export function setupAuthInterceptors(
           failedQueue.push({ resolve, reject });
         }).then((newToken) => {
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          syncLogoutRefreshToken(originalRequest);
           return apiClient(originalRequest);
         });
       }
@@ -110,6 +134,7 @@ export function setupAuthInterceptors(
 
         flushQueue(null, tokens.access_token);
         originalRequest.headers.Authorization = `Bearer ${tokens.access_token}`;
+        syncLogoutRefreshToken(originalRequest);
         return apiClient(originalRequest);
       } catch (refreshError) {
         flushQueue(refreshError);

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Platform,
   ScrollView,
@@ -31,11 +32,6 @@ const DOB_REGEX = /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/(19|20)\d{2}$/;
 
 const schema = z.object({
   full_name: z.string().min(2, 'Họ tên ít nhất 2 ký tự').max(100, 'Họ tên quá dài'),
-  phone: z
-    .string()
-    .regex(/^(0|\+84)[0-9]{9}$/, 'Số điện thoại không hợp lệ')
-    .optional()
-    .or(z.literal('')),
   date_of_birth: z
     .string()
     .regex(DOB_REGEX, 'Định dạng ngày/tháng/năm không hợp lệ (VD: 15/04/1995)')
@@ -79,7 +75,12 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? '');
   const [gender, setGender] = useState(profile.gender ?? '');
   const { update, isPending, isSuccess, error, reset: resetMutation } = useUpdateProfile();
-  const { pickAndUploadAsync, isPending: isUploading, error: uploadError } = useAvatarUpload();
+  const {
+    pickAndUploadAsync,
+    deleteAvatarAsync,
+    isPending: isUploading,
+    error: uploadError,
+  } = useAvatarUpload();
 
   const {
     control,
@@ -90,7 +91,6 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
     resolver: zodResolver(schema),
     defaultValues: {
       full_name: profile.full_name,
-      phone: profile.phone ?? '',
       date_of_birth: isoToDob(profile.date_of_birth),
       hometown: profile.hometown ?? '',
       address: profile.address ?? '',
@@ -101,7 +101,6 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
     if (visible) {
       resetForm({
         full_name: profile.full_name,
-        phone: profile.phone ?? '',
         date_of_birth: isoToDob(profile.date_of_birth),
         hometown: profile.hometown ?? '',
         address: profile.address ?? '',
@@ -141,8 +140,8 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
 
   const handlePickAvatar = async () => {
     try {
-      const url = await pickAndUploadAsync();
-      setAvatarUrl(url);
+      const updatedProfile = await pickAndUploadAsync();
+      setAvatarUrl(updatedProfile.avatar_url ?? '');
       showToast('Đã tải ảnh lên', 'success');
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Không thể tải ảnh lên';
@@ -150,11 +149,31 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
     }
   };
 
-  const onSubmit = ({ full_name, phone, date_of_birth, hometown, address }: FormData) =>
+  const handleDeleteAvatar = async () => {
+    try {
+      await deleteAvatarAsync();
+      setAvatarUrl('');
+      showToast('Đã xóa ảnh đại diện', 'success');
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Không thể xóa ảnh đại diện';
+      showToast(message, 'error');
+    }
+  };
+
+  const requestDeleteAvatar = () => {
+    Alert.alert(
+      'Xóa ảnh đại diện?',
+      'Ảnh hiện tại sẽ bị xóa khỏi hồ sơ của bạn.',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        { text: 'Xóa', style: 'destructive', onPress: () => void handleDeleteAvatar() },
+      ],
+    );
+  };
+
+  const onSubmit = ({ full_name, date_of_birth, hometown, address }: FormData) =>
     update({
       full_name,
-      phone: phone || undefined,
-      avatar_url: avatarUrl,
       date_of_birth: date_of_birth ? dobToIso(date_of_birth) : undefined,
       hometown: hometown || undefined,
       gender: gender || undefined,
@@ -212,6 +231,15 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
                       </Text>
                     )}
                   </TouchableOpacity>
+                  {avatarUrl && (
+                    <TouchableOpacity
+                      style={styles.deleteAvatarButton}
+                      onPress={requestDeleteAvatar}
+                      disabled={isUploading}
+                    >
+                      <Text style={[styles.deleteAvatarText, { color: theme.error }]}>Xóa ảnh</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 <View style={styles.fieldGroup}>
@@ -238,36 +266,6 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
                   {errors.full_name && (
                     <Text style={[styles.fieldError, { color: theme.error }]}>
                       {errors.full_name.message}
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={[styles.label, { color: theme.text }]}>
-                    Số điện thoại <Text style={{ color: theme.textMuted }}>(không bắt buộc)</Text>
-                  </Text>
-                  <Controller
-                    control={control}
-                    name="phone"
-                    render={({ field: { value, onChange, onBlur } }) => (
-                      <TextInput
-                        style={[
-                          styles.input,
-                          { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text },
-                          errors.phone && styles.inputError,
-                        ]}
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        placeholder="0901234567"
-                        placeholderTextColor={theme.textMuted}
-                        keyboardType="phone-pad"
-                      />
-                    )}
-                  />
-                  {errors.phone && (
-                    <Text style={[styles.fieldError, { color: theme.error }]}>
-                      {errors.phone.message}
                     </Text>
                   )}
                 </View>
@@ -381,13 +379,6 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
                   />
                 </View>
 
-                <View style={[styles.readOnlyBox, { backgroundColor: theme.inputBg }]}>
-                  <Text style={[styles.readOnlyLabel, { color: theme.textSecondary }]}>
-                    Email (không thể thay đổi)
-                  </Text>
-                  <Text style={[styles.readOnlyValue, { color: theme.text }]}>{profile.email}</Text>
-                </View>
-
                 {displayError && (
                   <View
                     style={[
@@ -459,6 +450,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   avatarButtonText: { fontSize: 14, fontWeight: '600' },
+  deleteAvatarButton: { paddingHorizontal: 12, paddingVertical: 4 },
+  deleteAvatarText: { fontSize: 13, fontWeight: '600' },
   fieldGroup: { gap: 6 },
   label: { fontSize: 14, fontWeight: '600' },
   input: {
@@ -480,9 +473,6 @@ const styles = StyleSheet.create({
   },
   genderOptionText: { fontSize: 14, fontWeight: '600' },
   fieldError: { fontSize: 12 },
-  readOnlyBox: { borderRadius: 12, padding: 12, gap: 4 },
-  readOnlyLabel: { fontSize: 12 },
-  readOnlyValue: { fontSize: 14, fontWeight: '500' },
   errorBanner: { borderWidth: 1, borderRadius: 10, padding: 12 },
   errorText: { fontSize: 13 },
   primaryButton: { borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginTop: 4 },

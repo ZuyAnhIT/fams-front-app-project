@@ -1,27 +1,25 @@
-import { makeRedirectUri } from 'expo-auth-session';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 import { GOOGLE_WEB_CLIENT_ID } from '@/config/google';
+import {
+  isExpoGo,
+  isNativeDevelopmentOrProductionBuild,
+} from './runtime';
 
 const ANDROID_PACKAGE =
   Constants.expoConfig?.android?.package ?? 'com.fams.mobile';
 
-/** Redirect URI gửi lên Google OAuth — đăng ký trong Google Cloud Console */
-export const GOOGLE_OAUTH_REDIRECT_URI = makeRedirectUri({
-  scheme: 'famsfrontappproject',
-  path: 'oauthredirect',
-});
-
-/** true khi chạy trong Expo Go (không phải EAS dev build) */
-export function isExpoGo(): boolean {
-  return Constants.appOwnership === 'expo';
-}
+/** Debug value kept for Google Console guidance; native sign-in uses the SDK. */
+export const GOOGLE_OAUTH_REDIRECT_URI =
+  'famsfrontappproject://oauthredirect';
 
 /** Native Google Sign-In (EAS dev build / production) — không dùng exp:// redirect */
 export function isNativeGoogleSignInAvailable(): boolean {
-  return Platform.OS !== 'web' && !isExpoGo();
+  return isNativeDevelopmentOrProductionBuild();
 }
+
+export { isExpoGo };
 
 export class GoogleSignInCancelledError extends Error {
   constructor() {
@@ -87,6 +85,7 @@ export async function getGoogleIdTokenNative(): Promise<string> {
 
     return idToken;
   } catch (e) {
+    if (e instanceof GoogleSignInCancelledError) throw e;
     throw new Error(formatGoogleSignInError(e));
   }
 }
@@ -95,9 +94,8 @@ export async function getGoogleIdTokenNative(): Promise<string> {
 export function getGoogleOAuthSetupHint(): string {
   if (isExpoGo()) {
     return (
-      'Expo Go dùng redirect exp:// — Google không chấp nhận mặc định. ' +
-      'Hãy build app bằng EAS (development build) hoặc thêm redirect URI sau vào Google Console → Web client → Authorized redirect URIs:\n' +
-      GOOGLE_OAUTH_REDIRECT_URI
+      'Expo Go không chứa native module Google Sign-In của FAMS. ' +
+      'Hãy cài FAMS Development Build rồi mở Metro bằng `npm run start:dev-client:lan`.'
     );
   }
   return (

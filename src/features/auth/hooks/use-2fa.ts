@@ -6,7 +6,7 @@ import { confirmTotpSetup, disable2FA, getMyProfile, setup2FA, verifyLoginTotp }
 import { profileKeys } from './use-profile';
 import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
 import { useAuthStore } from '../store';
-import type { TwoFAConfirmSetupRequest } from '../types';
+import type { TwoFAConfirmSetupRequest, TwoFADisableRequest, TwoFAVerifyRequest } from '../types';
 import { parseAuthError } from '../utils';
 
 // ─── Setup (generates QR code) ────────────────────────────────────────────────
@@ -50,7 +50,7 @@ export function use2FAConfirmSetup() {
 // ─── Verify (login 2FA step) ──────────────────────────────────────────────────
 
 export interface Use2FAVerifyResult {
-  verify: (code: string) => void;
+  verify: (body: Omit<TwoFAVerifyRequest, 'temp_token'>) => void;
   isPending: boolean;
   error: string | null;
 }
@@ -60,8 +60,8 @@ export function use2FAVerify(): Use2FAVerifyResult {
   const { showToast } = useToast();
 
   const mutation = useMutation({
-    mutationFn: (code: string) =>
-      verifyLoginTotp({ code, temp_token: tempToken ?? undefined }),
+    mutationFn: (body: Omit<TwoFAVerifyRequest, 'temp_token'>) =>
+      verifyLoginTotp({ ...body, temp_token: tempToken ?? undefined }),
     onSuccess: async (data) => {
       set2FARequired(false, null);
       await setTokens(data.access_token, data.refresh_token);
@@ -89,7 +89,7 @@ export function use2FADisable() {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: () => disable2FA(),
+    mutationFn: (body: TwoFADisableRequest) => disable2FA(body),
     onSuccess: async () => {
       const user = await getMyProfile(useAuthStore.getState().user);
       const updated = { ...user, is_2fa_enabled: false };
@@ -103,5 +103,6 @@ export function use2FADisable() {
     isPending: mutation.isPending,
     isSuccess: mutation.isSuccess,
     error: mutation.isError ? parseAuthError(mutation.error) : null,
+    reset: mutation.reset,
   };
 }

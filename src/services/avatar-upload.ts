@@ -1,6 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 
 import { API_BASE_URL, AVATAR_UPLOAD_URL } from '@/config/env';
 import { apiClient } from '@/services/api-client';
@@ -40,44 +42,26 @@ export async function pickAvatarImage(): Promise<string> {
   return result.assets[0].uri;
 }
 
-function normalizeAvatarUrl(rawUrl: string): string {
-  let resolved: URL;
-  try {
-    resolved = new URL(rawUrl, API_BASE_URL);
-  } catch {
-    throw new AvatarUploadError('Máy chủ upload trả về URL không hợp lệ');
-  }
-
-  if (resolved.protocol !== 'https:' && !(__DEV__ && resolved.protocol === 'http:')) {
-    throw new AvatarUploadError('Avatar phải được phục vụ qua HTTPS');
-  }
-  return resolved.toString();
-}
-
 function getUploadEndpoint(): string {
-  if (!AVATAR_UPLOAD_URL) {
-    throw new AvatarUploadError(
-      'Chưa cấu hình endpoint upload avatar. Vui lòng liên hệ quản trị hệ thống.',
-    );
-  }
+  const configuredEndpoint = AVATAR_UPLOAD_URL || '/auth/profile/avatar';
 
   try {
     const apiOrigin = new URL(API_BASE_URL).origin;
-    const uploadUrl = new URL(AVATAR_UPLOAD_URL, API_BASE_URL);
+    const uploadUrl = new URL(configuredEndpoint, API_BASE_URL);
     if (uploadUrl.origin !== apiOrigin) {
       throw new AvatarUploadError(
         'Endpoint upload avatar phải cùng origin với API để tránh làm lộ access token.',
       );
     }
-    return AVATAR_UPLOAD_URL;
+    return configuredEndpoint;
   } catch (error) {
     if (error instanceof AvatarUploadError) throw error;
     throw new AvatarUploadError('Cấu hình endpoint upload avatar không hợp lệ');
   }
 }
 
-/** Uploads an avatar through the configured authenticated backend endpoint. */
-export async function uploadAvatarImage(localUri: string): Promise<string> {
+/** Uploads an avatar and returns the raw UserProfileResponse payload. */
+export async function uploadAvatarImage(localUri: string): Promise<unknown> {
   const uploadEndpoint = getUploadEndpoint();
 
   const prepared = await manipulateAsync(localUri, [{ resize: { width: 1024 } }], {
@@ -95,22 +79,41 @@ export async function uploadAvatarImage(localUri: string): Promise<string> {
   const { data } = await apiClient.post(uploadEndpoint, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-  const payload = unwrapApiData<
-    | string
-    | { url?: string; avatarUrl?: string; avatar_url?: string }
-  >(data);
-
-  const rawUrl =
-    typeof payload === 'string'
-      ? payload
-      : payload.url ?? payload.avatarUrl ?? payload.avatar_url;
-  if (!rawUrl) {
-    throw new AvatarUploadError('Máy chủ upload không trả về URL avatar');
-  }
-  return normalizeAvatarUrl(rawUrl.trim());
+  return unwrapApiData(data);
 }
 
-/** Stable device identifier sent with Google login */
-export function getDeviceId(): string {
-  return Device.osBuildId ?? Device.modelId ?? Device.modelName ?? 'fams-mobile';
+/** Deletes the current avatar and returns the raw updated profile payload. */
+export async function deleteAvatarImage(): Promise<unknown> {
+  const { data } = await apiClient.delete(getUploadEndpoint());
+  return unwrapApiData(data);
+}
+
+const DEVICE_ID_STORAGE_KEY = 'fams_device_id_v1';
+let deviceIdPromise: Promise<string> | null = null;
+
+function createDeviceId(): string {
+  const model = (Device.modelName ?? Device.modelId ?? 'device')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 28);
+  const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  return `${Platform.OS}-${model || 'device'}-${suffix}`;
+}
+
+/** Stable, installation-scoped identifier shown in the session-management UI. */
+export function getDeviceId(): Promise<string> {
+  if (!deviceIdPromise) {
+    deviceIdPromise = (async () => {
+      const existing = await AsyncStorage.getItem(DEVICE_ID_STORAGE_KEY);
+      if (existing) return existing;
+      const created = createDeviceId();
+      await AsyncStorage.setItem(DEVICE_ID_STORAGE_KEY, created);
+      return created;
+    })().catch((error) => {
+      deviceIdPromise = null;
+      throw error;
+    });
+  }
+  return deviceIdPromise;
 }

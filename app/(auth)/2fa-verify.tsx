@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -27,10 +28,13 @@ import { shadows } from '@/theme/tokens';
 export default function TwoFAVerifyScreen() {
   const theme = useAuthTheme();
   const [code, setCode] = useState('');
+  const [method, setMethod] = useState<'totp' | 'backup'>('totp');
+  const [backupCode, setBackupCode] = useState('');
   const { verify, isPending, error } = use2FAVerify();
 
   const handleSubmit = () => {
-    if (code.length === 6) verify(code);
+    if (method === 'totp' && code.length === 6) verify({ code });
+    if (method === 'backup' && backupCode.trim()) verify({ backup_code: backupCode.trim() });
   };
 
   return (
@@ -58,17 +62,39 @@ export default function TwoFAVerifyScreen() {
           {/* Title */}
           <Text style={styles.title}>Xác thực 2 lớp</Text>
           <Text style={styles.subtitle}>
-            Nhập mã 6 chữ số từ ứng dụng{'\n'}xác thực của bạn
+            Nhập mã từ ứng dụng xác thực hoặc dùng mã dự phòng
           </Text>
 
           {/* Card */}
           <View style={styles.card}>
-            <OTPInput
-              value={code}
-              onChange={setCode}
-              hasError={!!error}
-              autoFocus
-            />
+            <View style={styles.methodRow}>
+              <TouchableOpacity
+                style={[styles.methodButton, method === 'totp' && { backgroundColor: theme.primary }]}
+                onPress={() => setMethod('totp')}
+              >
+                <Text style={[styles.methodText, method === 'totp' && styles.methodTextActive]}>Mã TOTP</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.methodButton, method === 'backup' && { backgroundColor: theme.primary }]}
+                onPress={() => setMethod('backup')}
+              >
+                <Text style={[styles.methodText, method === 'backup' && styles.methodTextActive]}>Mã dự phòng</Text>
+              </TouchableOpacity>
+            </View>
+
+            {method === 'totp' ? (
+              <OTPInput value={code} onChange={setCode} hasError={!!error} autoFocus />
+            ) : (
+              <TextInput
+                value={backupCode}
+                onChangeText={setBackupCode}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="Nhập mã dự phòng"
+                placeholderTextColor="#94A3B8"
+                style={styles.backupInput}
+              />
+            )}
 
             {/* Error message */}
             {error && (
@@ -79,8 +105,9 @@ export default function TwoFAVerifyScreen() {
 
             {/* Help text */}
             <Text style={styles.helpText}>
-              Mở ứng dụng Google Authenticator, Authy hoặc ứng dụng tương tự
-              để lấy mã.
+              {method === 'totp'
+                ? 'Mở Google Authenticator, Authy hoặc ứng dụng tương tự để lấy mã.'
+                : 'Mỗi mã dự phòng chỉ có thể sử dụng một lần.'}
             </Text>
 
             {/* Submit button */}
@@ -88,10 +115,10 @@ export default function TwoFAVerifyScreen() {
               style={[
                 styles.primaryButton,
                 { backgroundColor: theme.primary },
-                (isPending || code.length < 6) && { backgroundColor: theme.primaryDisabled },
+                (isPending || (method === 'totp' ? code.length < 6 : !backupCode.trim())) && { backgroundColor: theme.primaryDisabled },
               ]}
               onPress={handleSubmit}
-              disabled={isPending || code.length < 6}
+              disabled={isPending || (method === 'totp' ? code.length < 6 : !backupCode.trim())}
               activeOpacity={0.85}
             >
               {isPending ? (
@@ -103,7 +130,7 @@ export default function TwoFAVerifyScreen() {
 
             {/* Backup code hint */}
             <Text style={styles.backupHint}>
-              Không truy cập được ứng dụng xác thực? Liên hệ quản trị viên để được hỗ trợ.
+              Không truy cập được ứng dụng xác thực? Dùng một mã dự phòng đã lưu khi bật 2FA.
             </Text>
           </View>
         </ScrollView>
@@ -173,6 +200,11 @@ const styles = StyleSheet.create({
     gap: 16,
     ...shadows.card,
   },
+  methodRow: { flexDirection: 'row', gap: 8 },
+  methodButton: { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: '#F1F5F9' },
+  methodText: { color: '#475569', fontSize: 13, fontWeight: '700' },
+  methodTextActive: { color: '#FFFFFF' },
+  backupInput: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, color: '#1E293B' },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,

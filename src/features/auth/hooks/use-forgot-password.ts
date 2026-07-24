@@ -13,12 +13,7 @@ export interface UseForgotPasswordResult {
   error: string | null;
 }
 
-/**
- * Skeleton – Forgot Password flow (Sprint 2).
- *
- * Sends a password-reset link to the user's email.
- * Full OTP verification + new-password screen is out of scope for Sprint 1.
- */
+/** Sends a password-reset link without revealing whether the email exists. */
 export function useForgotPassword(): UseForgotPasswordResult {
   const { showToast } = useToast();
 

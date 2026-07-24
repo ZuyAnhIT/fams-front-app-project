@@ -1,15 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import * as WebBrowser from "expo-web-browser";
 import { useEffect } from "react";
 
 import { ToastProvider } from "@/components/ui/toast";
 import { setupAuthInterceptors } from "@/features/auth/api-interceptors";
 import { useAuthStore } from "@/features/auth/store";
 import { useCheckinStore } from "@/features/checkin/store/checkin.store";
-
-WebBrowser.maybeCompleteAuthSession();
 
 /** Shared QueryClient instance – lives for the lifetime of the app */
 const queryClient = new QueryClient({

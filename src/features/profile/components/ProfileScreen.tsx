@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,7 +19,9 @@ import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { PasswordChangeForm } from '@/features/auth/components/PasswordChangeForm';
 import { ProfileForm } from '@/features/auth/components/ProfileForm';
 import { TwoFASetupModal } from '@/features/auth/components/TwoFASetupModal';
+import { AccountIdentifierModal } from '@/features/auth/components/AccountIdentifierModal';
 import { useLogout } from '@/features/auth/hooks/use-logout';
+import { useGoogleAccountLink } from '@/features/auth/hooks/use-google-account-link';
 import { useProfile } from '@/features/auth/hooks/use-profile';
 import { useAuthTheme } from '@/features/auth/theme';
 import type { UserProfile } from '@/features/auth/types';
@@ -62,10 +65,26 @@ export function ProfileScreen() {
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [twoFAVisible, setTwoFAVisible] = useState(false);
+  const [identifierMethod, setIdentifierMethod] = useState<'email' | 'phone' | null>(null);
   const [logoutConfirmation, setLogoutConfirmation] = useState<'current' | 'all' | null>(null);
+  const [unlinkGoogleConfirmation, setUnlinkGoogleConfirmation] = useState(false);
 
   const { profile, isLoading, isError, refetch } = useProfile();
   const { logout, logoutAll, isPending: isLoggingOut } = useLogout();
+  const {
+    link: linkGoogle,
+    unlink: unlinkGoogle,
+    isReady: isGoogleReady,
+    isPending: isGooglePending,
+    error: googleError,
+  } = useGoogleAccountLink();
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refetch();
+    });
+    return () => subscription.remove();
+  }, [refetch]);
 
   if (isLoading) {
     return (
@@ -132,7 +151,9 @@ export function ProfileScreen() {
 
           <View style={styles.identityTexts}>
             <Text style={[styles.fullName, { color: theme.text }]}>{profile.full_name}</Text>
-            <Text style={[styles.email, { color: theme.textSecondary }]}>{profile.email}</Text>
+            <Text style={[styles.email, { color: theme.textSecondary }]}>
+              {profile.email ?? profile.phone ?? 'Chưa có thông tin đăng nhập'}
+            </Text>
             <View style={[styles.roleBadge, { backgroundColor: `${roleColor}18` }]}>
               <Text style={[styles.roleBadgeText, { color: roleColor }]}>
                 {ROLE_LABEL[profile.role]}
@@ -247,8 +268,26 @@ export function ProfileScreen() {
           <ProfileSettingsRow
             icon="create-outline"
             label="Chỉnh sửa hồ sơ"
-            sublabel="Tên, ảnh đại diện, số điện thoại"
+            sublabel="Tên, ảnh đại diện và thông tin cá nhân"
             onPress={() => setEditProfileVisible(true)}
+            theme={theme}
+          />
+          <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+
+          <ProfileSettingsRow
+            icon="mail-outline"
+            label="Email"
+            sublabel={`${profile.email ?? 'Chưa thiết lập'} · ${profile.email_verified ? 'Đã xác minh' : 'Chưa xác minh'}`}
+            onPress={() => setIdentifierMethod('email')}
+            theme={theme}
+          />
+          <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+
+          <ProfileSettingsRow
+            icon="call-outline"
+            label="Số điện thoại"
+            sublabel={`${profile.phone ?? 'Chưa thiết lập'} · ${profile.phone_verified ? 'Đã xác minh' : 'Chưa xác minh'}`}
+            onPress={() => setIdentifierMethod('phone')}
             theme={theme}
           />
           <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
@@ -272,6 +311,28 @@ export function ProfileScreen() {
             onPress={() => setTwoFAVisible(true)}
             theme={theme}
           />
+          <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+
+          <ProfileSettingsRow
+            icon={profile.google_linked ? 'logo-google' : 'link-outline'}
+            label={profile.google_linked ? 'Google · Đã liên kết' : 'Liên kết tài khoản Google'}
+            sublabel={
+              profile.google_linked
+                ? 'Nhấn để gỡ liên kết'
+                : isGoogleReady
+                  ? 'Đăng nhập nhanh và đồng bộ theo email'
+                  : 'Google Sign-In chưa sẵn sàng'
+            }
+            onPress={() => {
+              if (profile.google_linked) setUnlinkGoogleConfirmation(true);
+              else linkGoogle();
+            }}
+            loading={isGooglePending}
+            theme={theme}
+          />
+          {googleError && (
+            <Text style={[styles.googleError, { color: theme.error }]}>{googleError}</Text>
+          )}
         </View>
 
         <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
@@ -284,6 +345,15 @@ export function ProfileScreen() {
             onPress={() => setLogoutConfirmation('current')}
             destructive
             loading={isLoggingOut}
+            theme={theme}
+          />
+          <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+
+          <ProfileSettingsRow
+            icon="phone-portrait-outline"
+            label="Thiết bị đang đăng nhập"
+            sublabel="Xem và thu hồi từng phiên đăng nhập"
+            onPress={() => router.push('/sessions' as never)}
             theme={theme}
           />
           <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
@@ -314,6 +384,13 @@ export function ProfileScreen() {
         onClose={() => setChangePasswordVisible(false)}
       />
 
+      <AccountIdentifierModal
+        visible={identifierMethod !== null}
+        method={identifierMethod ?? 'email'}
+        profile={profile}
+        onClose={() => setIdentifierMethod(null)}
+      />
+
       <TwoFASetupModal
         visible={twoFAVisible}
         isEnabled={profile.is_2fa_enabled}
@@ -339,6 +416,20 @@ export function ProfileScreen() {
         onConfirm={() => {
           if (logoutConfirmation === 'all') logoutAll();
           else logout();
+        }}
+      />
+
+      <ConfirmDialog
+        visible={unlinkGoogleConfirmation}
+        title="Gỡ liên kết Google?"
+        description="Bạn sẽ không thể đăng nhập bằng Google cho đến khi liên kết lại. Tài khoản cần có mật khẩu để thực hiện thao tác này."
+        confirmLabel="Gỡ liên kết"
+        destructive
+        loading={isGooglePending}
+        onCancel={() => setUnlinkGoogleConfirmation(false)}
+        onConfirm={() => {
+          unlinkGoogle();
+          setUnlinkGoogleConfirmation(false);
         }}
       />
     </SafeAreaView>
@@ -419,6 +510,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
+  },
+  googleError: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    fontSize: 12,
+    lineHeight: 18,
   },
   separator: { height: 1, marginLeft: 56 },
   loadingContainer: {

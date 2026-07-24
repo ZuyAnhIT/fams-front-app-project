@@ -19,6 +19,7 @@ import { z } from 'zod';
 
 import { useResetPassword } from '@/features/auth/hooks/use-reset-password';
 import { useAuthTheme } from '@/features/auth/theme';
+import { getAuthLinkToken } from '@/features/auth/deep-link';
 import { shadows } from '@/theme/tokens';
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ const schema = z
       .string()
       .min(8, 'Mật khẩu ít nhất 8 ký tự')
       .regex(/[A-Z]/, 'Phải có ít nhất 1 chữ hoa')
+      .regex(/[a-z]/, 'Phải có ít nhất 1 chữ thường')
       .regex(/[0-9]/, 'Phải có ít nhất 1 chữ số'),
     confirm_password: z.string().min(1, 'Vui lòng xác nhận mật khẩu'),
   })
@@ -45,14 +47,18 @@ type FormData = z.infer<typeof schema>;
  * Reset Password screen.
  *
  * Reached via a deep-link from the reset-password email:
- *   fams://reset-password?token=<jwt>
+ *   famsfrontappproject://reset-password?token=<token>
+ *   https://<app-domain>/reset-password?token=<token>
  *
  * The `token` query-param is forwarded to the API.
- * On success the user is automatically redirected to login after 2 s.
+ * On success local auth/cache is cleared and the user returns to login.
  */
 export default function ResetPasswordScreen() {
   const theme = useAuthTheme();
-  const { token } = useLocalSearchParams<{ token?: string }>();
+  const { token: rawToken } = useLocalSearchParams<{
+    token?: string | string[];
+  }>();
+  const token = getAuthLinkToken(rawToken);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -127,6 +133,7 @@ export default function ResetPasswordScreen() {
                 <Ionicons name="checkmark-circle-outline" size={48} color={theme.success} />
                 <Text style={styles.successTitle}>Đặt lại thành công!</Text>
                 <Text style={styles.successText}>
+                  Nếu tài khoản đang bị khóa, tài khoản đã được mở khóa ngay.
                   Đang chuyển về màn hình đăng nhập...
                 </Text>
               </View>
@@ -148,7 +155,7 @@ export default function ResetPasswordScreen() {
                           value={value}
                           onChangeText={onChange}
                           onBlur={onBlur}
-                          placeholder="Ít nhất 8 ký tự, 1 chữ hoa, 1 số"
+                          placeholder="Ít nhất 8 ký tự, đủ hoa/thường và số"
                           placeholderTextColor="#94A3B8"
                           secureTextEntry={!showNew}
                           autoCapitalize="none"
@@ -229,6 +236,7 @@ export default function ResetPasswordScreen() {
                   <Text style={styles.hintTitle}>Yêu cầu mật khẩu:</Text>
                   <Text style={styles.hintItem}>• Tối thiểu 8 ký tự</Text>
                   <Text style={styles.hintItem}>• Ít nhất 1 chữ hoa (A–Z)</Text>
+                  <Text style={styles.hintItem}>• Ít nhất 1 chữ thường (a–z)</Text>
                   <Text style={styles.hintItem}>• Ít nhất 1 chữ số (0–9)</Text>
                 </View>
 

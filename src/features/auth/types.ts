@@ -1,16 +1,42 @@
 // ─── Request Types ────────────────────────────────────────────────────────────
 
 export interface LoginRequest {
-  email: string;
+  /** Email hoặc số điện thoại; backend yêu cầu tên field JSON là `identifier`. */
+  identifier: string;
   password: string;
   device_id?: string;
 }
 
-export interface RegisterRequest {
+export interface EmailRegisterRequest {
   email: string;
   password: string;
   full_name: string;
-  phone?: string;
+  device_id?: string;
+}
+
+export interface PhoneRegisterRequest {
+  phone: string;
+  password: string;
+  full_name: string;
+  otp_code: string;
+  device_id?: string;
+}
+
+export type RegisterRequest = EmailRegisterRequest | PhoneRegisterRequest;
+
+export interface RegisterResponse {
+  user_id: string;
+  email_verification_required: boolean;
+  phone_verified: boolean;
+  message: string;
+}
+
+export interface SendRegistrationOTPRequest {
+  phone: string;
+}
+
+export interface ResendVerificationRequest {
+  email: string;
 }
 
 /** Đăng nhập bằng số điện thoại — backend chỉ verify Firebase ID token đã có sẵn
@@ -48,14 +74,22 @@ export interface ChangePasswordRequest {
 
 export interface UpdateProfileRequest {
   full_name?: string;
-  phone?: string;
-  avatar_url?: string;
-  department?: string;
-  /** Issue #4 (docs/issues/ISSUES.md) */
   date_of_birth?: string;
   hometown?: string;
   gender?: string;
   address?: string;
+}
+
+export interface RequestEmailChangeRequest {
+  email: string;
+}
+
+export interface RequestPhoneChangeRequest {
+  phone: string;
+}
+
+export interface ConfirmPhoneChangeRequest extends RequestPhoneChangeRequest {
+  otp_code: string;
 }
 
 // ─── Response Types ───────────────────────────────────────────────────────────
@@ -100,16 +134,24 @@ export interface TwoFAConfirmSetupRequest {
   code: string;
 }
 
+export interface TwoFAConfirmSetupResponse {
+  /** One-time recovery codes. Backend only returns them once. */
+  backup_codes: string[];
+}
+
 export interface TwoFAVerifyRequest {
-  /** 6-digit TOTP code from authenticator app */
-  code: string;
+  /** Provide exactly one of code or backup_code. */
+  code?: string;
+  backup_code?: string;
   /** Provided when completing 2FA after login */
   temp_token?: string;
 }
 
-/** Backend disables TOTP without a code — kept for optional UI confirmation step */
 export interface TwoFADisableRequest {
+  /** Provide exactly one proof value. */
+  password?: string;
   code?: string;
+  backup_code?: string;
 }
 
 // ─── User ─────────────────────────────────────────────────────────────────────
@@ -118,8 +160,10 @@ export type UserRole = 'employee' | 'manager' | 'admin' | 'hr';
 
 export interface UserProfile {
   id: string;
-  email: string;
+  email?: string;
+  email_verified: boolean;
   phone?: string;
+  phone_verified: boolean;
   full_name: string;
   avatar_url?: string;
   role: UserRole;
@@ -136,6 +180,20 @@ export interface UserProfile {
   address?: string;
   /** Issue #7 (docs/issues/ISSUES.md): whether a Google account is linked for one-click login. */
   google_linked?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  active: boolean;
+}
+
+export interface AuthSession {
+  id: string;
+  device_id: string;
+  user_agent?: string;
+  ip_address?: string;
+  created_at?: string;
+  last_used_at?: string;
+  expires_at?: string;
+  current: boolean;
 }
 
 // ─── Auth Store ───────────────────────────────────────────────────────────────

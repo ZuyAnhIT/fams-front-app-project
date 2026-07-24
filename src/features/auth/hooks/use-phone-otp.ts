@@ -7,7 +7,11 @@ import { verifyPhoneOTP } from '../api';
 import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
 import { useAuthStore } from '../store';
 import type { VerifyOTPRequest } from '../types';
-import { parseAuthError } from '../utils';
+import {
+  getLockedUntil,
+  isAccountLockedError,
+  parseAuthError,
+} from '../utils';
 
 // ─── Verify OTP ──────────────────────────────────────────────────────────────
 // Sending the SMS code itself is handled by useFirebasePhoneAuth (Firebase
@@ -16,8 +20,11 @@ import { parseAuthError } from '../utils';
 
 export interface UseVerifyOTPResult {
   verifyOTP: (body: VerifyOTPRequest) => void;
+  clearError: () => void;
   isPending: boolean;
   error: string | null;
+  isAccountLocked: boolean;
+  lockedUntil: string | undefined;
 }
 
 /**
@@ -51,9 +58,17 @@ export function useVerifyOTP(): UseVerifyOTPResult {
     },
   });
 
+  const isAccountLocked =
+    mutation.isError && isAccountLockedError(mutation.error);
+
   return {
     verifyOTP: mutation.mutate,
+    clearError: mutation.reset,
     isPending: mutation.isPending,
     error: mutation.isError ? parseAuthError(mutation.error) : null,
+    isAccountLocked,
+    lockedUntil: isAccountLocked
+      ? getLockedUntil(mutation.error)
+      : undefined,
   };
 }

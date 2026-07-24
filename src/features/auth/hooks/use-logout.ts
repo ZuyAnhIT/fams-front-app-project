@@ -22,7 +22,7 @@ interface UseLogoutResult {
  * succeeds, so the user is never stuck in an authenticated state.
  */
 export function useLogout(): UseLogoutResult {
-  const { clearAuth } = useAuthStore();
+  const { clearAuth, refreshToken } = useAuthStore();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -37,7 +37,7 @@ export function useLogout(): UseLogoutResult {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       try {
-        await logoutSingleDevice();
+        if (refreshToken) await logoutSingleDevice(refreshToken);
       } finally {
         await resetAndRedirect('Đã đăng xuất');
       }

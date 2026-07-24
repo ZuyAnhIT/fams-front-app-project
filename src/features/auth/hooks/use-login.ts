@@ -3,17 +3,25 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { loginWithEmail } from '../api';
+import { loginWithPassword } from '../api';
 import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
 import { useAuthStore } from '../store';
 import type { LoginRequest } from '../types';
-import { getLockedUntil, isAccountLockedError, parseAuthError } from '../utils';
+import {
+  getAuthErrorCode,
+  getLockedUntil,
+  isAccountLockedError,
+  parseAuthError,
+} from '../utils';
 
 export interface UseLoginResult {
   login: (credentials: LoginRequest) => void;
+  clearError: () => void;
   isPending: boolean;
   error: string | null;
+  isAccountLocked: boolean;
   lockedUntil: string | undefined;
+  emailVerificationRequired: boolean;
 }
 
 export function useLogin(): UseLoginResult {
@@ -21,7 +29,7 @@ export function useLogin(): UseLoginResult {
   const { showToast } = useToast();
 
   const mutation = useMutation({
-    mutationFn: (credentials: LoginRequest) => loginWithEmail(credentials),
+    mutationFn: (credentials: LoginRequest) => loginWithPassword(credentials),
     onSuccess: async (data) => {
       if (data.requires_2fa && data.temp_token) {
         set2FARequired(true, data.temp_token);
@@ -37,15 +45,21 @@ export function useLogin(): UseLoginResult {
     },
   });
 
+  const isAccountLocked =
+    mutation.isError && isAccountLockedError(mutation.error);
   const lockedUntil =
-    mutation.isError && isAccountLockedError(mutation.error)
+    isAccountLocked
       ? getLockedUntil(mutation.error)
       : undefined;
 
   return {
     login: mutation.mutate,
+    clearError: mutation.reset,
     isPending: mutation.isPending,
     error: mutation.isError ? parseAuthError(mutation.error) : null,
+    isAccountLocked,
     lockedUntil,
+    emailVerificationRequired:
+      mutation.isError && getAuthErrorCode(mutation.error) === 'EMAIL_NOT_VERIFIED',
   };
 }

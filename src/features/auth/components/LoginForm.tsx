@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
@@ -21,8 +21,15 @@ import { useAuthTheme } from '../theme';
 // ─── Validation Schema ────────────────────────────────────────────────────────
 
 const loginSchema = z.object({
-  email: z.string().min(1, 'Vui lòng nhập email').email('Email không hợp lệ'),
-  password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
+  identifier: z
+    .string()
+    .trim()
+    .min(1, 'Vui lòng nhập email hoặc số điện thoại')
+    .refine((value) => {
+      if (value.includes('@')) return z.string().email().safeParse(value).success;
+      return /^\+?[0-9]{8,15}$/.test(value.replace(/[\s().-]/g, ''));
+    }, 'Email hoặc số điện thoại không hợp lệ'),
+  password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -31,46 +38,71 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const params = useLocalSearchParams<{ identifier?: string }>();
   const theme = useAuthTheme();
-  const { login, isPending, error, lockedUntil } = useLogin();
+  const {
+    login,
+    clearError,
+    isPending,
+    error,
+    isAccountLocked,
+    lockedUntil,
+    emailVerificationRequired,
+  } = useLogin();
 
   const {
     control,
+    getValues,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { identifier: params.identifier ?? '', password: '' },
   });
 
   const onSubmit = (data: LoginFormData) => login(data);
+  const openAccountUnlock = () => {
+    const identifier = getValues('identifier').trim();
+    router.push({
+      pathname: '/(auth)/forgot-password' as never,
+      params: {
+        reason: 'account-locked',
+        ...(identifier.includes('@')
+          ? { email: identifier.toLowerCase() }
+          : {}),
+      },
+    });
+  };
 
   return (
     <View style={styles.container}>
-      {/* Email input */}
+      {/* Email / phone identifier */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Email</Text>
+        <Text style={styles.label}>Email hoặc số điện thoại</Text>
         <Controller
           control={control}
-          name="email"
+          name="identifier"
           render={({ field: { value, onChange, onBlur } }) => (
             <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
+              style={[styles.input, errors.identifier && styles.inputError]}
               value={value}
-              onChangeText={onChange}
+              onChangeText={(nextValue) => {
+                clearError();
+                onChange(nextValue);
+              }}
               onBlur={onBlur}
-              placeholder="nguyen.van.a@company.com"
+              placeholder="email@company.com hoặc 0912345678"
               placeholderTextColor="#94A3B8"
-              keyboardType="email-address"
+              keyboardType="default"
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
-              accessibilityLabel="Email"
+              accessibilityLabel="Email hoặc số điện thoại"
             />
           )}
         />
-        {errors.email && (
-          <Text style={styles.fieldError}>{errors.email.message}</Text>
+        {errors.identifier && (
+          <Text style={styles.fieldError}>{errors.identifier.message}</Text>
         )}
       </View>
 
@@ -85,7 +117,10 @@ export function LoginForm() {
               <TextInput
                 style={[styles.passwordInput, errors.password && styles.inputError]}
                 value={value}
-                onChangeText={onChange}
+                onChangeText={(nextValue) => {
+                  clearError();
+                  onChange(nextValue);
+                }}
                 onBlur={onBlur}
                 placeholder="••••••••"
                 placeholderTextColor="#94A3B8"
@@ -124,8 +159,12 @@ export function LoginForm() {
       </TouchableOpacity>
 
       {/* API error banner */}
-      {error && lockedUntil ? (
-        <AccountLockedBanner lockedUntil={lockedUntil} message={error} />
+      {error && isAccountLocked ? (
+        <AccountLockedBanner
+          lockedUntil={lockedUntil}
+          message={error}
+          onResetPassword={openAccountUnlock}
+        />
       ) : error ? (
         <View
           style={[
@@ -136,6 +175,18 @@ export function LoginForm() {
           <Text style={[styles.errorBannerText, { color: theme.error }]}>{error}</Text>
         </View>
       ) : null}
+
+      {emailVerificationRequired && (
+        <TouchableOpacity
+          style={styles.verifyEmailButton}
+          onPress={() => router.push({
+            pathname: '/(auth)/email-verification' as never,
+            params: { email: getValues('identifier') },
+          })}
+        >
+          <Text style={[styles.verifyEmailText, { color: theme.primary }]}>Gửi lại email xác thực</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Submit button */}
       <TouchableOpacity
@@ -247,6 +298,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#DC2626',
     lineHeight: 18,
+  },
+  verifyEmailButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+  },
+  verifyEmailText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   submitButton: {
     borderRadius: 12,

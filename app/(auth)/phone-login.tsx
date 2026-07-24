@@ -14,9 +14,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AccountLockedBanner } from '@/features/auth/components/AccountLockedBanner';
 import { OTPInput } from '@/features/auth/components/OTPInput';
 import { useFirebasePhoneAuth } from '@/features/auth/hooks/use-firebase-phone-auth';
 import { useVerifyOTP } from '@/features/auth/hooks/use-phone-otp';
+import { isExpoGo } from '@/features/auth/runtime';
 import { useAuthTheme } from '@/features/auth/theme';
 import { formatCountdown, mapFirebasePhoneError, normalizePhoneForBackend } from '@/features/auth/utils';
 import { shadows } from '@/theme/tokens';
@@ -46,7 +48,15 @@ export default function PhoneLoginScreen() {
   const phoneInputRef = useRef<TextInput>(null);
 
   const { sendCode, confirmCode, isSending: sending } = useFirebasePhoneAuth();
-  const { verifyOTP, isPending: verifying, error: verifyError } = useVerifyOTP();
+  const {
+    verifyOTP,
+    clearError: clearVerifyError,
+    isPending: verifying,
+    error: verifyError,
+    isAccountLocked,
+    lockedUntil,
+  } = useVerifyOTP();
+  const requiresDevelopmentBuild = isExpoGo();
 
   const startCountdown = () => {
     if (countdownRef.current) clearInterval(countdownRef.current);
@@ -70,7 +80,14 @@ export default function PhoneLoginScreen() {
 
   const handleSendOTP = async () => {
     if (!phone.trim()) return;
+    if (requiresDevelopmentBuild) {
+      setSendError(
+        'Expo Go không hỗ trợ Firebase Phone Auth. Hãy mở bằng FAMS Development Build.',
+      );
+      return;
+    }
     setSendError(null);
+    clearVerifyError();
     try {
       await sendCode(normalizePhoneForBackend(phone));
       setOtp('');
@@ -126,6 +143,14 @@ export default function PhoneLoginScreen() {
 
           {/* ── Card ── */}
           <View style={styles.card}>
+            {requiresDevelopmentBuild && (
+              <View style={styles.developmentBuildBanner}>
+                <Ionicons name="construct-outline" size={20} color="#9A3412" />
+                <Text style={styles.developmentBuildText}>
+                  OTP điện thoại cần FAMS Development Build; tính năng này không chạy trong Expo Go.
+                </Text>
+              </View>
+            )}
             {/* ── Step 1: Phone input ── */}
             {step === 'enter-phone' && (
               <View style={styles.body}>
@@ -159,10 +184,12 @@ export default function PhoneLoginScreen() {
                   style={[
                     styles.primaryButton,
                     { backgroundColor: theme.primary },
-                    (sending || !phone.trim()) && { backgroundColor: theme.primaryDisabled },
+                    (sending || requiresDevelopmentBuild || !phone.trim()) && {
+                      backgroundColor: theme.primaryDisabled,
+                    },
                   ]}
                   onPress={handleSendOTP}
-                  disabled={sending || !phone.trim()}
+                  disabled={sending || requiresDevelopmentBuild || !phone.trim()}
                   activeOpacity={0.85}
                 >
                   {sending ? (
@@ -203,11 +230,22 @@ export default function PhoneLoginScreen() {
                   )}
                 </View>
 
-                {verifyError && (
+                {verifyError && isAccountLocked ? (
+                  <AccountLockedBanner
+                    lockedUntil={lockedUntil}
+                    message={verifyError}
+                    onResetPassword={() =>
+                      router.push({
+                        pathname: '/(auth)/forgot-password' as never,
+                        params: { reason: 'account-locked' },
+                      })
+                    }
+                  />
+                ) : verifyError ? (
                   <View style={styles.errorBanner}>
                     <Text style={styles.errorText}>{verifyError}</Text>
                   </View>
-                )}
+                ) : null}
 
                 {sendError && (
                   <View style={styles.warningBanner}>
@@ -234,7 +272,12 @@ export default function PhoneLoginScreen() {
 
                 {/* Change phone */}
                 <TouchableOpacity
-                  onPress={() => { setStep('enter-phone'); setOtp(''); }}
+                  onPress={() => {
+                    clearVerifyError();
+                    setSendError(null);
+                    setStep('enter-phone');
+                    setOtp('');
+                  }}
                   style={styles.changePhoneBtn}
                 >
                   <Text style={styles.changePhoneText}>
@@ -297,6 +340,23 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     ...shadows.card,
     overflow: 'hidden',
+  },
+  developmentBuildBanner: {
+    flexDirection: 'row',
+    gap: 10,
+    margin: 20,
+    marginBottom: 0,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    borderRadius: 12,
+    backgroundColor: '#FFF7ED',
+  },
+  developmentBuildText: {
+    flex: 1,
+    color: '#9A3412',
+    fontSize: 13,
+    lineHeight: 19,
   },
   body: {
     padding: 24,

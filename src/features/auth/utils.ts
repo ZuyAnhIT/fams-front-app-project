@@ -60,13 +60,17 @@ export function parseAuthError(error: unknown): string {
   // Account locked – HTTP 423 or message pattern from Spring Boot
   if (
     status === 423 ||
-    data?.error_code === 'ACCOUNT_LOCKED' ||
+    getAuthErrorCode(error) === 'ACCOUNT_LOCKED' ||
     /account locked/i.test(serverMessage)
   ) {
     const lockedUntil =
+      (data?.lockedUntil as string | undefined) ??
       (data?.locked_until as string | undefined) ??
       parseLockedUntilFromMessage(serverMessage);
 
+    if (userMessage) {
+      return userMessage;
+    }
     if (lockedUntil) {
       const time = new Date(lockedUntil).toLocaleTimeString('vi-VN', {
         hour: '2-digit',
@@ -75,9 +79,9 @@ export function parseAuthError(error: unknown): string {
         month: '2-digit',
       });
       const remaining = formatLockRemaining(lockedUntil);
-      return `Tài khoản tạm khóa đến ${time} (còn ${remaining}). Vui lòng thử lại sau hoặc liên hệ quản trị viên.`;
+      return `Tài khoản tạm khóa đến ${time} (còn ${remaining}). Bạn có thể đặt lại mật khẩu để mở khóa ngay.`;
     }
-    return 'Tài khoản tạm bị khóa do đăng nhập sai nhiều lần. Vui lòng đợi 15 phút rồi thử lại.';
+    return 'Tài khoản tạm bị khóa trong 1 giờ do đăng nhập sai nhiều lần. Bạn có thể đặt lại mật khẩu để mở khóa ngay.';
   }
 
   // Validation field errors from Spring Boot
@@ -123,6 +127,14 @@ export function parseAuthError(error: unknown): string {
   }
 }
 
+/** Stable backend business error code (`errorCode` is the current contract). */
+export function getAuthErrorCode(error: unknown): string | undefined {
+  if (!isAxiosError(error)) return undefined;
+  const data = error.response?.data as Record<string, unknown> | undefined;
+  const code = data?.errorCode ?? data?.error_code;
+  return typeof code === 'string' ? code : undefined;
+}
+
 /** Converts VN local phone (0xxxxxxxxx) to E.164 (+84xxxxxxxxx) for the backend. */
 export function normalizePhoneForBackend(phone: string): string {
   const digits = phone.trim().replace(/[^\d+]/g, '');
@@ -144,7 +156,11 @@ export function isAccountLockedError(error: unknown): boolean {
   if (!isAxiosError(error)) return false;
   const data = error.response?.data as Record<string, unknown> | undefined;
   const message = typeof data?.message === 'string' ? data.message : '';
-  return error.response?.status === 423 || /account locked/i.test(message);
+  return (
+    error.response?.status === 423 ||
+    getAuthErrorCode(error) === 'ACCOUNT_LOCKED' ||
+    /account locked/i.test(message)
+  );
 }
 
 /** Extract locked_until ISO string from a locked-account error, if present */
@@ -153,6 +169,8 @@ export function getLockedUntil(error: unknown): string | undefined {
   const data = error.response?.data as Record<string, unknown> | undefined;
   const message = typeof data?.message === 'string' ? data.message : '';
   return (
-    (data?.locked_until as string | undefined) ?? parseLockedUntilFromMessage(message)
+    (data?.lockedUntil as string | undefined) ??
+    (data?.locked_until as string | undefined) ??
+    parseLockedUntilFromMessage(message)
   );
 }

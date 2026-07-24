@@ -30,6 +30,7 @@ const schema = z
       .string()
       .min(8, 'Mật khẩu mới ít nhất 8 ký tự')
       .regex(/[A-Z]/, 'Phải có ít nhất 1 chữ hoa')
+      .regex(/[a-z]/, 'Phải có ít nhất 1 chữ thường')
       .regex(/[0-9]/, 'Phải có ít nhất 1 chữ số'),
     confirm_password: z.string().min(1, 'Vui lòng xác nhận mật khẩu mới'),
   })
@@ -64,7 +65,7 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const { submit, isPending, isSuccess, error, reset: resetMutation } = useChangePassword();
+  const { submit, isPending, error, reset: resetMutation } = useChangePassword();
 
   const {
     control,
@@ -88,15 +89,6 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
     setShowConfirm(false);
     onClose();
   };
-
-  useEffect(() => {
-    if (isSuccess) {
-      showToast('Đổi mật khẩu thành công', 'success');
-      const t = setTimeout(handleClose, 1500);
-      return () => clearTimeout(t);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuccess]);
 
   useEffect(() => {
     if (error) {
@@ -134,14 +126,7 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
             showsVerticalScrollIndicator={false}
             automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
           >
-            {isSuccess ? (
-              <View style={styles.successBox}>
-                <Ionicons name="checkmark-circle-outline" size={48} color={theme.success} />
-                <Text style={styles.successTitle}>Đổi mật khẩu thành công!</Text>
-                <Text style={styles.successSub}>Cửa sổ sẽ tự đóng...</Text>
-              </View>
-            ) : (
-              <>
+            <>
                 {/* Current password */}
                 <View style={styles.fieldGroup}>
                   <Text style={styles.label}>Mật khẩu hiện tại</Text>
@@ -201,7 +186,7 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
                           value={value}
                           onChangeText={onChange}
                           onBlur={onBlur}
-                          placeholder="Ít nhất 8 ký tự, 1 chữ hoa, 1 số"
+                          placeholder="Ít nhất 8 ký tự, đủ hoa/thường và số"
                           placeholderTextColor="#94A3B8"
                           secureTextEntry={!showNew}
                           autoCapitalize="none"
@@ -296,8 +281,7 @@ export function PasswordChangeForm({ visible, onClose }: PasswordChangeFormProps
                     <Text style={styles.primaryButtonText}>Đổi mật khẩu</Text>
                   )}
                 </TouchableOpacity>
-              </>
-            )}
+            </>
           </ScrollView>
           </View>
         </KeyboardAwareModalSheet>
@@ -395,19 +379,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
-  },
-  successBox: {
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 24,
-  },
-  successTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#16A34A',
-  },
-  successSub: {
-    fontSize: 13,
-    color: '#64748B',
   },
 });

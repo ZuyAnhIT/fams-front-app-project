@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
@@ -26,12 +26,14 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-/**
- * Forgot Password – Sprint 1 skeleton.
- * Full OTP reset flow will be added in Sprint 2.
- */
+/** Sends a neutral reset-link request; the email route completes the flow. */
 export default function ForgotPasswordScreen() {
   const theme = useAuthTheme();
+  const params = useLocalSearchParams<{
+    email?: string;
+    reason?: string;
+  }>();
+  const isAccountUnlock = params.reason === 'account-locked';
   const { submit, isPending, isSuccess, error } = useForgotPassword();
 
   const {
@@ -40,7 +42,7 @@ export default function ForgotPasswordScreen() {
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { email: '' },
+    defaultValues: { email: params.email ?? '' },
   });
 
   const onSubmit = ({ email }: FormData) => submit({ email });
@@ -61,9 +63,13 @@ export default function ForgotPasswordScreen() {
             <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>
 
-          <Text style={styles.title}>Quên mật khẩu</Text>
+          <Text style={styles.title}>
+            {isAccountUnlock ? 'Mở khóa tài khoản' : 'Quên mật khẩu'}
+          </Text>
           <Text style={styles.subtitle}>
-            Nhập email đã đăng ký. Chúng tôi sẽ gửi link đặt lại mật khẩu.
+            {isAccountUnlock
+              ? 'Đặt lại mật khẩu qua email để mở khóa ngay, không cần chờ hết thời gian khóa.'
+              : 'Nhập email đã đăng ký. Chúng tôi sẽ gửi link đặt lại mật khẩu.'}
           </Text>
 
           <View style={styles.card}>
@@ -72,7 +78,9 @@ export default function ForgotPasswordScreen() {
                 <Ionicons name="mail-open-outline" size={48} color={theme.primary} />
                 <Text style={styles.successTitle}>Đã gửi email!</Text>
                 <Text style={styles.successText}>
-                  Kiểm tra hộp thư và làm theo hướng dẫn để đặt lại mật khẩu.
+                  {isAccountUnlock
+                    ? 'Kiểm tra hộp thư và đặt mật khẩu mới. Sau khi hoàn tất, tài khoản sẽ được mở khóa ngay.'
+                    : 'Kiểm tra hộp thư và làm theo hướng dẫn để đặt lại mật khẩu.'}
                 </Text>
                 <TouchableOpacity
                   style={[styles.primaryButton, { backgroundColor: theme.primary }]}
@@ -83,6 +91,15 @@ export default function ForgotPasswordScreen() {
               </View>
             ) : (
               <>
+                {isAccountUnlock && (
+                  <View style={styles.unlockInfo}>
+                    <Ionicons name="information-circle-outline" size={20} color="#9A3412" />
+                    <Text style={styles.unlockInfoText}>
+                      Backend sẽ tự xóa trạng thái khóa và bộ đếm đăng nhập sai
+                      ngay khi bạn đặt lại mật khẩu thành công.
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.fieldGroup}>
                   <Text style={styles.label}>Email</Text>
                   <Controller
@@ -163,6 +180,21 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   fieldGroup: { gap: 6 },
+  unlockInfo: {
+    flexDirection: 'row',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    backgroundColor: '#FFF7ED',
+    borderRadius: 12,
+    padding: 12,
+  },
+  unlockInfoText: {
+    flex: 1,
+    color: '#9A3412',
+    fontSize: 13,
+    lineHeight: 19,
+  },
   label: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
   input: {
     borderWidth: 1,

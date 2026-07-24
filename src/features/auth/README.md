@@ -1,6 +1,6 @@
 # Feature: `auth`
 
-Quản lý xác thực người dùng: đăng ký, đăng nhập (email/password, Google, số điện thoại qua Firebase OTP), 2FA (TOTP), quên/đổi mật khẩu, hồ sơ cá nhân, refresh token, và khởi tạo phiên đăng nhập (chọn tenant hoạt động). Đây là feature module đầy đủ nhất trong dự án.
+Quản lý xác thực người dùng: đăng ký email/phone OTP, đăng nhập password bằng email hoặc phone, Google, số điện thoại qua Firebase OTP, 2FA (TOTP), quên/đổi mật khẩu, hồ sơ cá nhân, refresh token, và khởi tạo phiên đăng nhập (chọn tenant hoạt động).
 
 ## Cấu trúc
 
@@ -12,7 +12,7 @@ auth/
 ├── session.ts                # resolveAuthenticatedSession() + navigateAfterAuth() — dùng sau MỌI luồng login thành công
 ├── store.ts                  # useAuthStore (Zustand) — nguồn sự thật duy nhất cho token/user/activeTenantId
 ├── secure-storage.ts / .web.ts  # Re-export expo-secure-store (native) / fallback (web)
-├── google-sign-in-service.ts # Native Google Sign-In (EAS build) + AuthSession fallback (Expo Go/web)
+├── google-sign-in-service.ts # Native Google Sign-In (dev/prod build); Expo Go reports unsupported
 ├── theme.ts                  # Màu sắc riêng cho màn hình auth
 ├── types.ts                  # Request/Response DTO + AuthState/AuthActions
 ├── utils.ts                  # parseAuthError, isAccountLockedError, getLockedUntil, normalizePhoneForBackend
@@ -35,13 +35,17 @@ Các file scaffold auth rỗng và mock adapter cũ đã được xóa; nguồn 
 
 | Method | Path | Request | Response | Hook |
 |---|---|---|---|---|
-| POST | `/auth/register` | `{ email, password, displayName, phone? }` | `LoginResponse` | `use-register.ts` |
-| POST | `/auth/login` | `{ email, password, deviceId }` | `LoginResponse` | `use-login.ts` |
+| POST | `/auth/register/send-otp` | `{ phone }` | `void` | `use-register.ts` |
+| POST | `/auth/register` | Email `{ email,password,displayName }` hoặc phone `{ phone,password,displayName,otpCode }` | `RegisterResponse` (không có token) | `use-register.ts` |
+| GET | `/auth/verify-email?token=...` | Query token | `void` | route `verify-email.tsx` |
+| POST | `/auth/resend-verification` | `{ email }` | `void` | route `email-verification.tsx` |
+| POST | `/auth/login` | `{ identifier, password, deviceId }` | `LoginResponse` | `use-login.ts` |
 | POST | `/auth/login/google` | `{ idToken, deviceId }` | `LoginResponse` | `use-google-login.ts` |
+| POST | `/auth/link-google`, `/auth/unlink-google` | `{ idToken }` / không body | `void` | `use-google-account-link.ts` |
 | POST | `/auth/otp/verify` | `{ firebaseIdToken, deviceId }` | `LoginResponse` | `use-phone-otp.ts` |
 | POST | `/auth/login/totp` | `{ pendingToken, code }` | `LoginResponse` | `use-2fa.ts` (`use2FAVerify`) |
-| POST | `/auth/refresh` | `{ refresh_token }` | `RefreshTokenResponse` | `api-interceptors.ts` (tự động khi 401) |
-| POST | `/auth/logout`, `/auth/logout/all` | — | `void` | `use-logout.ts` |
+| POST | `/auth/refresh-token` | `{ refreshToken }` | `RefreshTokenResponse` | `api-interceptors.ts` (tự động khi 401) |
+| POST | `/auth/logout`, `/auth/logout/all` | `{ refreshToken }` / không body | `void` | `use-logout.ts` |
 | POST | `/auth/totp/setup` | — | `{ setup_token, qr_code_url, secret }` | `use2FASetup` |
 | POST | `/auth/totp/verify` | `{ setupToken, code }` | `void` | `use2FAConfirmSetup` |
 | POST | `/auth/totp/disable` | — | `{ message }` | `use2FADisable` |
@@ -57,10 +61,10 @@ Các file scaffold auth rỗng và mock adapter cũ đã được xóa; nguồn 
 
 ## Luồng chính
 
-### 1. Đăng nhập (email/password) — pattern giống cho Google & Phone OTP
+### 1. Đăng nhập (email hoặc phone + password) — pattern giống cho Google & Phone OTP
 
 ```
-LoginForm → useLogin().login({email,password})
+LoginForm → useLogin().login({identifier,password})
   → loginWithEmail() → POST /auth/login
   → nếu requires_2fa: set2FARequired(true, temp_token) → router.push('/(auth)/2fa-verify')
   → else: setTokens() → resolveAuthenticatedSession() → setUser() → navigateAfterAuth()
@@ -74,7 +78,11 @@ LoginForm → useLogin().login({email,password})
 - Response interceptor: khi 401 ở endpoint được bảo vệ và request chưa retry → nếu đã có 1 refresh đang chạy thì **xếp hàng** (`failedQueue`) chờ; nếu chưa, tự gọi `POST /auth/refresh`, cập nhật token và replay request. Chỉ các endpoint credential công khai như login/register/refresh bị loại; `/auth/me` vẫn được refresh. Refresh thất bại → clear auth/check-in/query cache và replace về login.
 - `setupAuthInterceptors()` trả cleanup function để eject request/response interceptor khi root layout unmount/hot reload.
 
-### 3. Đăng nhập số điện thoại (Firebase, không qua backend cho bước OTP)
+### 3. Đăng ký phone và đăng nhập phone OTP là hai flow khác nhau
+
+Phone registration dùng OTP do backend quản lý: `/register/send-otp` rồi `/register` với `otpCode`. Flow này không dùng Firebase.
+
+Đăng nhập số điện thoại bằng OTP vẫn dùng Firebase như dưới đây.
 
 `useFirebasePhoneAuth` gọi thẳng `@react-native-firebase/auth` (`signInWithPhoneNumber` → `confirm(code)` → `getIdToken()`) — **backend không bao giờ thấy số điện thoại hay mã OTP**, chỉ nhận `firebaseIdToken` cuối cùng qua `POST /auth/otp/verify`.
 
