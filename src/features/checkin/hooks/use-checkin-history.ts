@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 import { getCheckinHistory } from '../services/checkin.service';
 import type { CheckinHistoryParams } from '../types/checkin.type';

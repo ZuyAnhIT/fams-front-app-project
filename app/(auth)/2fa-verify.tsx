@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OTPInput } from '@/features/auth/components/OTPInput';
 import { use2FAVerify } from '@/features/auth/hooks/use-2fa';
-import { useAuthTheme } from '@/features/auth/theme';
+import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
 import { shadows } from '@/theme/tokens';
 
 /**

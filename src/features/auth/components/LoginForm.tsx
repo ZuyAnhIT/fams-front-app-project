@@ -16,7 +16,7 @@ import { z } from 'zod';
 import { useLogin } from '../hooks/use-login';
 import { AccountLockedBanner } from './AccountLockedBanner';
 import { GoogleSignInButton } from './GoogleSignInButton';
-import { useAuthTheme } from '../theme';
+import { useAuthTheme } from '../hooks/use-auth-theme';
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 

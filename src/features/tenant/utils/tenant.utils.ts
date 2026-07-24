@@ -1,6 +1,6 @@
 import { isAxiosError } from 'axios';
 
-import type { PlanDetail, SubscriptionPlan, TenantIndustry, AppLanguage, AppTimezone } from './types';
+import type { PlanDetail, SubscriptionPlan, TenantIndustry, AppLanguage, AppTimezone } from '../types/Tenant';
 
 // ─── Error Parsing ────────────────────────────────────────────────────────────
 

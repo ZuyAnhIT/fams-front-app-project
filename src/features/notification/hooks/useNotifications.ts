@@ -4,7 +4,7 @@ import {
   type UseInfiniteQueryResult,
 } from '@tanstack/react-query';
 
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 import { getNotifications } from '../services/notification.service';
 import type { NotificationItem, NotificationListResponse } from '../types/Notification';

@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { refreshAccessToken } from '../api';
-import { useAuthStore } from '../store';
+import { refreshAccessToken } from '../services/auth.service';
+import { useAuthStore } from '../store/auth.store';
 
 /**
  * Manual token refresh hook.

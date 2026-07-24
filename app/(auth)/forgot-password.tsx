@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { useForgotPassword } from '@/features/auth/hooks/use-forgot-password';
-import { useAuthTheme } from '@/features/auth/theme';
+import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
 import { shadows } from '@/theme/tokens';
 
 const schema = z.object({

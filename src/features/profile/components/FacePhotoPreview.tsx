@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { useAuthTheme } from '@/features/auth/theme';
+import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
 
 import type { CapturedFacePhoto } from '@/features/face/types/FaceId';
 

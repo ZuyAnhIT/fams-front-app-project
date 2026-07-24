@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 import { getAvailableSites } from '../services/checkin.service';
 import { checkinKeys } from './use-checkin';

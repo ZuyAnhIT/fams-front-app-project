@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { formatLockRemaining } from '../utils';
-import { useAuthTheme } from '../theme';
+import { formatLockRemaining } from '../utils/auth.utils';
+import { useAuthTheme } from '../hooks/use-auth-theme';
 
 interface AccountLockedBannerProps {
   lockedUntil?: string;

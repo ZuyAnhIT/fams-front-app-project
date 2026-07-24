@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 
-import type { AuthTheme } from '@/features/auth/theme';
+import type { AuthTheme } from '@/features/auth/hooks/use-auth-theme';
 
 interface ProfileSettingsRowProps {
   icon: keyof typeof Ionicons.glyphMap;

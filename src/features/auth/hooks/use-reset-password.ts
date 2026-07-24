@@ -3,9 +3,9 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { resetPassword } from '../api';
-import type { ResetPasswordRequest } from '../types';
-import { parseAuthError } from '../utils';
+import { resetPassword } from '../services/auth.service';
+import type { ResetPasswordRequest } from '../types/Auth';
+import { parseAuthError } from '../utils/auth.utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useToast } from '@/components/ui/toast';
 
 import {

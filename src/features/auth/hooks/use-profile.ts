@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { getMyProfile, updateMyProfile } from '../api';
-import { useAuthStore } from '../store';
-import type { UpdateProfileRequest, UserProfile } from '../types';
-import { parseAuthError } from '../utils';
+import { getMyProfile, updateMyProfile } from '../services/auth.service';
+import { useAuthStore } from '../store/auth.store';
+import type { UpdateProfileRequest, UserProfile } from '../types/Auth';
+import { parseAuthError } from '../utils/auth.utils';
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 

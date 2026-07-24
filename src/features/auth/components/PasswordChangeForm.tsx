@@ -19,7 +19,7 @@ import { KeyboardAwareModalSheet } from '@/components/ui/keyboard-aware-sheet';
 import { useToast } from '@/components/ui/toast';
 
 import { useChangePassword } from '../hooks/use-change-password';
-import { useAuthTheme } from '../theme';
+import { useAuthTheme } from '../hooks/use-auth-theme';
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 

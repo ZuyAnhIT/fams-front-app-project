@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { useProfile } from '@/features/auth/hooks/use-profile';
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 import { palette, radius, shadows, spacing } from '@/theme/tokens';
 
 import { useAvailableSites } from '../hooks/use-available-sites';

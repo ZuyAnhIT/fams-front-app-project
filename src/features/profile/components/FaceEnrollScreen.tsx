@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAuthTheme } from '@/features/auth/theme';
+import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
 
 import { useFaceEnroll } from '@/features/face/hooks/use-face-enroll';
 import { FaceConsentSheet } from './FaceConsentSheet';

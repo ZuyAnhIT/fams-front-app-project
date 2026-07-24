@@ -3,11 +3,11 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 
-import { verifyPhoneOTP } from '../api';
-import { navigateAfterAuth, resolveAuthenticatedSession } from '../session';
-import { useAuthStore } from '../store';
-import type { VerifyOTPRequest } from '../types';
-import { parseAuthError } from '../utils';
+import { verifyPhoneOTP } from '../services/auth.service';
+import { navigateAfterAuth, resolveAuthenticatedSession } from '../utils/session';
+import { useAuthStore } from '../store/auth.store';
+import type { VerifyOTPRequest } from '../types/Auth';
+import { parseAuthError } from '../utils/auth.utils';
 
 // ─── Verify OTP ──────────────────────────────────────────────────────────────
 // Sending the SMS code itself is handled by useFirebasePhoneAuth (Firebase

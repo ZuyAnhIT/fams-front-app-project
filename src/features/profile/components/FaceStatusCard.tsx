@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { useAuthTheme } from '@/features/auth/theme';
+import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
 import { shadows } from '@/theme/tokens';
 
 import type { FaceIdStatusDto } from '@/features/face/types/FaceId';

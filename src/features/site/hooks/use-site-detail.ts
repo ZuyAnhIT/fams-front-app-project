@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 import { getSiteDetail } from '../services/site.service';
 import type { SiteDetailResponse } from '../types/Site';

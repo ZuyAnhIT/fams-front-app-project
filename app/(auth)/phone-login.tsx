@@ -17,8 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OTPInput } from '@/features/auth/components/OTPInput';
 import { useFirebasePhoneAuth } from '@/features/auth/hooks/use-firebase-phone-auth';
 import { useVerifyOTP } from '@/features/auth/hooks/use-phone-otp';
-import { useAuthTheme } from '@/features/auth/theme';
-import { formatCountdown, mapFirebasePhoneError, normalizePhoneForBackend } from '@/features/auth/utils';
+import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
+import { formatCountdown, mapFirebasePhoneError, normalizePhoneForBackend } from '@/features/auth/utils/auth.utils';
 import { shadows } from '@/theme/tokens';
 
 const OTP_EXPIRY_SECONDS = 120;

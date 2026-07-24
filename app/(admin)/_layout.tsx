@@ -2,7 +2,7 @@ import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useProfile } from '@/features/auth/hooks/use-profile';
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 /** Stack navigator for admin-only screens */
 export default function AdminLayout() {

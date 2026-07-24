@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 
 import { useToast } from '@/components/ui/toast';
-import { useAuthStore } from '@/features/auth/store';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 import { getFaceVerifyResult, submitFaceVerify } from '../services/face.service';
 import type { FaceVerifyResultDto } from '../types/FaceId';

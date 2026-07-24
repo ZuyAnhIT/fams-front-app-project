@@ -1,4 +1,4 @@
-import type { LoginResponse, TwoFASetupResponse, UserProfile, UserRole } from './types';
+import type { LoginResponse, TwoFASetupResponse, UserProfile, UserRole } from '../types/Auth';
 
 /** Backend login payload (camelCase keys from Spring Boot). */
 interface BackendLoginResponse {

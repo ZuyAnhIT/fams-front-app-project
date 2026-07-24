@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
 
-import { getAvailableTenants, type AvailableTenant } from '../rbac/api';
-import { getMyProfile } from './api';
-import { useAuthStore } from './store';
-import type { UserProfile } from './types';
+import { getAvailableTenants, type AvailableTenant } from '@/features/rbac/services/rbac.service';
+import { getMyProfile } from '../services/auth.service';
+import { useAuthStore } from '../store/auth.store';
+import type { UserProfile } from '../types/Auth';
 
 export interface AuthenticatedSession {
   user: UserProfile;
