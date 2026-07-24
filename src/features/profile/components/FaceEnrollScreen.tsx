@@ -14,6 +14,7 @@ import { useAuthTheme } from '@/features/auth/hooks/use-auth-theme';
 import { useFaceEnroll } from '@/features/face/hooks/use-face-enroll';
 import { FaceConsentSheet } from './FaceConsentSheet';
 import { FaceEnrollCamera } from './FaceEnrollCamera';
+import { FaceVerifyTest } from './FaceVerifyTest';
 
 export function FaceEnrollScreen() {
   const theme = useAuthTheme();
@@ -69,6 +70,8 @@ export function FaceEnrollScreen() {
           <Text style={[styles.doneDesc, { color: theme.textSecondary }]}>
             Bạn có thể sử dụng nhận diện khuôn mặt khi chấm công.
           </Text>
+
+          <FaceVerifyTest />
 
           <TouchableOpacity
             style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
