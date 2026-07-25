@@ -24,8 +24,10 @@ import { useLogout } from '@/features/auth/hooks/use-logout';
 import { useGoogleAccountLink } from '@/features/auth/hooks/use-google-account-link';
 import { useProfile } from '@/features/auth/hooks/use-profile';
 import { useAuthTheme } from '@/features/auth/theme';
+import { useAuthStore } from '@/features/auth/store';
 import type { UserProfile } from '@/features/auth/types';
 import { shadows } from '@/theme/tokens';
+import { useMyRoles } from '@/features/rbac/use-my-roles';
 
 import { ProfileFaceSection } from './ProfileFaceSection';
 import { ProfileSettingsRow } from './ProfileSettingsRow';
@@ -70,6 +72,8 @@ export function ProfileScreen() {
   const [unlinkGoogleConfirmation, setUnlinkGoogleConfirmation] = useState(false);
 
   const { profile, isLoading, isError, refetch } = useProfile();
+  const activeTenantId = useAuthStore((state) => state.activeTenantId);
+  const rolesQuery = useMyRoles();
   const { logout, logoutAll, isPending: isLoggingOut } = useLogout();
   const {
     link: linkGoogle,
@@ -120,6 +124,12 @@ export function ProfileScreen() {
   }
 
   const roleColor = ROLE_COLOR[profile.role];
+  const visibleRoles =
+    rolesQuery.data?.filter(
+      (assignment) =>
+        assignment.tenantId === null ||
+        assignment.tenantId === (activeTenantId || profile.tenant_id),
+    ) ?? [];
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -159,6 +169,20 @@ export function ProfileScreen() {
                 {ROLE_LABEL[profile.role]}
               </Text>
             </View>
+            {visibleRoles.length > 0 && (
+              <View style={styles.roleList}>
+                {visibleRoles.map((assignment) => (
+                  <View
+                    key={assignment.id}
+                    style={[styles.roleChip, { borderColor: `${theme.primary}55` }]}
+                  >
+                    <Text style={[styles.roleChipText, { color: theme.primary }]}>
+                      {assignment.roleName}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         </View>
 
@@ -240,6 +264,41 @@ export function ProfileScreen() {
         <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
           <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Công việc</Text>
 
+          {rolesQuery.isLoading ? (
+            <View style={styles.roleLoading}>
+              <ActivityIndicator size="small" color={theme.primary} />
+              <Text style={{ color: theme.textSecondary }}>Đang tải vai trò...</Text>
+            </View>
+          ) : rolesQuery.data?.length ? (
+            rolesQuery.data.map((assignment, index) => (
+              <View key={assignment.id}>
+                <View style={styles.roleAssignment}>
+                  <View style={styles.roleAssignmentCopy}>
+                    <Text style={[styles.roleAssignmentName, { color: theme.text }]}>
+                      {assignment.roleName}
+                    </Text>
+                    <Text style={[styles.roleAssignmentMeta, { color: theme.textSecondary }]}>
+                      {assignment.tenantName ?? 'Phạm vi công ty'}
+                      {assignment.sites?.length
+                        ? ` · ${assignment.sites.map((site) => site.name).join(', ')}`
+                        : ' · Toàn công ty'}
+                    </Text>
+                  </View>
+                  <Ionicons name="shield-checkmark-outline" size={22} color={theme.primary} />
+                </View>
+                {index < rolesQuery.data.length - 1 && (
+                  <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+                )}
+              </View>
+            ))
+          ) : (
+            <Text style={[styles.emptyRoleText, { color: theme.textSecondary }]}>
+              Chưa có vai trò công việc trong công ty.
+            </Text>
+          )}
+
+          <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+
           <ProfileSettingsRow
             icon="business-outline"
             label="Công trình"
@@ -249,6 +308,15 @@ export function ProfileScreen() {
               // một lần để regenerate `.expo/types`; cast tạm thời cho đến khi đó.
               router.push('/site' as unknown as Parameters<typeof router.push>[0])
             }
+            theme={theme}
+          />
+          <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+
+          <ProfileSettingsRow
+            icon="calendar-outline"
+            label="Phân công của tôi"
+            sublabel="Ca làm, công trường và thời hạn hiệu lực"
+            onPress={() => router.push('/assignment' as never)}
             theme={theme}
           />
           <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
@@ -469,6 +537,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   roleBadgeText: { fontSize: 12, fontWeight: '700' },
+  roleList: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  roleChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  roleChipText: { fontSize: 10, fontWeight: '700' },
   detailCard: {
     borderRadius: 20,
     padding: 16,
@@ -517,6 +593,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
+  roleLoading: {
+    minHeight: 54,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  roleAssignment: {
+    minHeight: 58,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  roleAssignmentCopy: { flex: 1, gap: 3 },
+  roleAssignmentName: { fontSize: 14, fontWeight: '700' },
+  roleAssignmentMeta: { fontSize: 12, lineHeight: 17 },
+  emptyRoleText: { paddingHorizontal: 16, paddingVertical: 14, fontSize: 13 },
   separator: { height: 1, marginLeft: 56 },
   loadingContainer: {
     flex: 1,
