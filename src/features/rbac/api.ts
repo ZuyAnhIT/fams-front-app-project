@@ -6,7 +6,10 @@ export interface MyRoleAssignment {
   userId: string;
   roleId: string;
   roleName: string;
-  tenantId: string;
+  tenantId: string | null;
+  tenantName?: string;
+  siteIds?: string[];
+  sites?: { id: string; name: string }[];
   assignedAt: string;
   permissions: string[];
 }
@@ -32,7 +35,13 @@ export async function getMyRoles(): Promise<MyRoleAssignment[]> {
  */
 export async function getAvailableTenants(): Promise<AvailableTenant[]> {
   const roles = await getMyRoles();
-  const roleTenantIds = [...new Set(roles.map((r) => r.tenantId))];
+  const roleTenantIds = [
+    ...new Set(
+      roles
+        .map((role) => role.tenantId)
+        .filter((tenantId): tenantId is string => Boolean(tenantId)),
+    ),
+  ];
   if (roleTenantIds.length > 0) {
     return roleTenantIds.map((id) => ({ id }));
   }

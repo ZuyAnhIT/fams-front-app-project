@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-const AUTH_LINK_PATHS = ['/reset-password', '/verify-email'] as const;
+const AUTH_LINK_PATHS = ['/reset-password', '/verify-email', '/accept-invite'] as const;
 
 function getPublicLinkHost(): string | null {
   const value = process.env.EXPO_PUBLIC_APP_URL?.trim();
