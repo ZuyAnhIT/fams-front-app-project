@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/features/auth/store';
 import { useToast } from '@/components/ui/toast';
 import { useGps } from '@/features/gps/hooks/use-gps';
+import { getFaceIdErrorCode } from '@/features/face/utils/face-id.utils';
 
 import { submitCheckin } from '../services/checkin.service';
 import { useCheckinStore } from '../store/checkin.store';
@@ -11,8 +12,15 @@ import type { CheckinResponse } from '../types/checkin.type';
 import { parseCheckinError } from '../utils/available-site';
 import { checkinKeys } from './use-checkin';
 
+export type CheckinFaceRequirement = 'required' | 'not_enrolled';
+
+export interface CheckinAttempt {
+  result: CheckinResponse | null;
+  faceRequirement: CheckinFaceRequirement | null;
+}
+
 export interface UseCheckinSubmitResult {
-  checkIn: (siteId: string) => Promise<CheckinResponse | null>;
+  checkIn: (siteId: string, livenessChallengeId?: string) => Promise<CheckinAttempt>;
   isLocating: boolean;
   isSubmitting: boolean;
   locationErrorMessage: string | null;
@@ -27,13 +35,20 @@ export function useCheckinSubmit(): UseCheckinSubmitResult {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (payload: { siteId: string; latitude: number; longitude: number; accuracy: number | null }) =>
+    mutationFn: (payload: {
+      siteId: string;
+      latitude: number;
+      longitude: number;
+      accuracy: number | null;
+      livenessChallengeId?: string;
+    }) =>
       submitCheckin(tenantId!, {
         siteId: payload.siteId,
         latitude: payload.latitude,
         longitude: payload.longitude,
         gpsAccuracy: payload.accuracy ?? undefined,
         deviceId: Device.osInternalBuildId ?? Device.modelId ?? undefined,
+        livenessChallengeId: payload.livenessChallengeId,
       }),
     onSuccess: async (result) => {
       await setOpenCheckinId(result.id);
@@ -41,25 +56,41 @@ export function useCheckinSubmit(): UseCheckinSubmitResult {
       showToast(result.message, result.status === 'valid' ? 'success' : 'info');
     },
     onError: (error) => {
+      const errorCode = getFaceIdErrorCode(error);
+      if (errorCode === 'FACE_ID_REQUIRED' || errorCode === 'FACE_ID_NOT_ENROLLED') {
+        return;
+      }
       showToast(parseCheckinError(error, 'Check-in thất bại, vui lòng thử lại.'), 'error');
     },
   });
 
-  const checkIn = async (siteId: string): Promise<CheckinResponse | null> => {
-    if (!tenantId) return null;
+  const checkIn = async (
+    siteId: string,
+    livenessChallengeId?: string,
+  ): Promise<CheckinAttempt> => {
+    if (!tenantId) return { result: null, faceRequirement: null };
     const coords = await requestLocation();
-    if (!coords) return null;
+    if (!coords) return { result: null, faceRequirement: null };
     try {
-      return await mutation.mutateAsync({
+      const result = await mutation.mutateAsync({
         siteId,
         latitude: coords.latitude,
         longitude: coords.longitude,
         accuracy: coords.accuracy,
+        livenessChallengeId,
       });
-    } catch {
+      return { result, faceRequirement: null };
+    } catch (error) {
+      const errorCode = getFaceIdErrorCode(error);
+      if (errorCode === 'FACE_ID_REQUIRED') {
+        return { result: null, faceRequirement: 'required' };
+      }
+      if (errorCode === 'FACE_ID_NOT_ENROLLED') {
+        return { result: null, faceRequirement: 'not_enrolled' };
+      }
       // `onError` already presents the backend business message. Returning
       // null keeps a rejected mutateAsync promise from reaching the press handler.
-      return null;
+      return { result: null, faceRequirement: null };
     }
   };
 

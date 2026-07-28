@@ -17,6 +17,8 @@ export interface CheckinSiteInfo {
   latitude: number | null;
   longitude: number | null;
   timezone: string | null;
+  /** Backend contract: proactively opens active-liveness before check-in. */
+  requireFaceIdCheckin: boolean;
 }
 
 export interface CheckinShiftInfo {
@@ -59,6 +61,7 @@ export interface SubmitCheckinRequest {
   longitude: number;
   gpsAccuracy?: number;
   deviceId?: string;
+  livenessChallengeId?: string;
 }
 
 export interface SubmitCheckoutRequest {

@@ -1,4 +1,5 @@
-export type FaceIdStatus = 'not_enrolled' | 'pending' | 'enrolled' | 'revoked';
+export type FaceIdStatus = 'not_enrolled' | 'enrolled' | 'revoked';
+export type FaceIdReviewStatus = 'none' | 'pending' | 'rejected';
 
 export interface FaceIdStatusDto {
   status: FaceIdStatus;
@@ -6,6 +7,11 @@ export interface FaceIdStatusDto {
   consentGivenAt: string | null;
   enrolledAt: string | null;
   revokedAt: string | null;
+  reviewStatus: FaceIdReviewStatus;
+  pendingPhotoCount: number | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
 }
 
 export interface FaceImagePayload {
@@ -44,6 +50,37 @@ export interface FaceEnrollActions {
   removeLastPhoto: () => void;
   setConsentAccepted: (accepted: boolean) => void;
   clearEnrollSession: () => void;
+}
+
+// ─── Active liveness ─────────────────────────────────────────────────────────
+
+export type FaceLivenessPurpose = 'enroll' | 'checkin';
+export type FaceLivenessAction =
+  | 'center'
+  | 'turn_left'
+  | 'turn_right'
+  | 'look_up'
+  | 'look_down'
+  | 'blink';
+
+export interface FaceLivenessChallengeDto {
+  challengeId: string;
+  actions: FaceLivenessAction[];
+  expiresAt: string;
+}
+
+export interface FaceLivenessStepResult {
+  action: FaceLivenessAction | 'anti_spoof_check';
+  passed: boolean;
+  reason?: string;
+  detected?: string[];
+  score?: number;
+}
+
+export interface FaceLivenessResultDto {
+  status: 'passed' | 'failed';
+  reason: string | null;
+  steps: FaceLivenessStepResult[];
 }
 
 // ─── Face Verify ──────────────────────────────────────────────────────────────

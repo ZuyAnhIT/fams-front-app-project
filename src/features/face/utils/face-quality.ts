@@ -65,8 +65,6 @@ export function formatFaceStatusLabel(status: string): string {
   switch (status) {
     case 'enrolled':
       return 'Đã đăng ký';
-    case 'pending':
-      return 'Chờ hoàn tất đăng ký';
     case 'revoked':
       return 'Đã thu hồi';
     default:

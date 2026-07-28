@@ -173,8 +173,31 @@ export function CheckinHome() {
 
   const handleCheckin = async () => {
     if (!selectedSite || isCheckingState) return;
-    const result = await checkIn(selectedSite.site.id);
-    if (result) goToResult(result.id);
+    if (selectedSite.site.requireFaceIdCheckin) {
+      router.push({
+        pathname: '/face/checkin',
+        params: {
+          siteId: selectedSite.site.id,
+          siteName: selectedSite.site.name,
+        },
+      } as never);
+      return;
+    }
+
+    const attempt = await checkIn(selectedSite.site.id);
+    if (attempt.result) {
+      goToResult(attempt.result.id);
+    } else if (attempt.faceRequirement === 'required') {
+      router.push({
+        pathname: '/face/checkin',
+        params: {
+          siteId: selectedSite.site.id,
+          siteName: selectedSite.site.name,
+        },
+      } as never);
+    } else if (attempt.faceRequirement === 'not_enrolled') {
+      router.push('/face/enroll');
+    }
   };
 
   const handleCheckout = async () => {
@@ -412,6 +435,18 @@ export function CheckinHome() {
                                 <Text style={styles.siteMetaMuted}>Không giới hạn vùng GPS</Text>
                               </View>
                             )}
+                            {item.site.requireFaceIdCheckin && (
+                              <View style={styles.siteMeta}>
+                                <Ionicons
+                                  name="person-circle-outline"
+                                  size={14}
+                                  color={palette.warning}
+                                />
+                                <Text style={styles.faceRequiredText}>
+                                  Bắt buộc Face ID
+                                </Text>
+                              </View>
+                            )}
                           </View>
                         </View>
                       </Pressable>
@@ -609,6 +644,7 @@ const styles = StyleSheet.create({
   siteMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   siteMetaText: { color: palette.primary, fontSize: 11, lineHeight: 16, fontWeight: '600' },
   siteMetaMuted: { color: palette.textMuted, fontSize: 11, lineHeight: 16, fontWeight: '600' },
+  faceRequiredText: { color: palette.warning, fontSize: 11, lineHeight: 16, fontWeight: '700' },
   locationError: {
     marginTop: spacing.lg,
     borderRadius: radius.md,
