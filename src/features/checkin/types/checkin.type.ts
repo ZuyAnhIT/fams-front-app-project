@@ -1,6 +1,11 @@
 import type { PageResponse } from '@/features/site/types/Site';
 
 export type CheckinStatus = 'valid' | 'pending_review' | 'rejected';
+export type CheckinAvailabilityStatus =
+  | 'unrestricted'
+  | 'upcoming'
+  | 'open'
+  | 'closed';
 
 // ─── available-sites ───────────────────────────────────────────────────────────
 
@@ -37,6 +42,13 @@ export interface AvailableSite {
   site: CheckinSiteInfo;
   shift: CheckinShiftInfo | null;
   geofence: CheckinGeofenceInfo | null;
+  /** Current time resolved by backend in this site's timezone. */
+  serverNow: string;
+  /** Concrete instants for this occurrence; null when no shift is linked. */
+  checkinAllowedFrom: string | null;
+  checkinAllowedUntil: string | null;
+  /** UX hint only; submitCheckin remains the source of truth. */
+  availabilityStatus: CheckinAvailabilityStatus;
 }
 
 // ─── submit checkin / checkout ─────────────────────────────────────────────────

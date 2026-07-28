@@ -4,6 +4,7 @@ import { isAxiosError } from 'axios';
 import { useAuthStore } from '@/features/auth/store';
 
 import { getAvailableSites } from '../services/checkin.service';
+import { sortAvailableSites } from '../utils/available-site';
 import { checkinKeys } from './use-checkin';
 
 /** US1: site nhân viên được phép check-in hôm nay, theo assignment đang active. */
@@ -15,6 +16,7 @@ export function useAvailableSites() {
     queryFn: () => getAvailableSites(tenantId!),
     enabled: !!tenantId,
     staleTime: 30 * 1000,
+    select: sortAvailableSites,
   });
 
   const isForbidden = isAxiosError(query.error) && query.error.response?.status === 403;
@@ -26,6 +28,7 @@ export function useAvailableSites() {
     isError: query.isError,
     isForbidden,
     error: query.error,
+    dataUpdatedAt: query.dataUpdatedAt,
     refetch: () => {
       void query.refetch();
     },

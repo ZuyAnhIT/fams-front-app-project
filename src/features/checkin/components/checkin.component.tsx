@@ -1,7 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/components/ui/app-button';
@@ -16,7 +24,45 @@ import { useAvailableSites } from '../hooks/use-available-sites';
 import { useCheckinSubmit } from '../hooks/use-checkin-submit';
 import { useCheckoutSubmit } from '../hooks/use-checkout-submit';
 import { useCheckinStore } from '../store/checkin.store';
-import type { AvailableSite } from '../types/checkin.type';
+import type {
+  AvailableSite,
+  CheckinAvailabilityStatus,
+} from '../types/checkin.type';
+import {
+  ASSIGNMENT_ROLE_LABELS,
+  AVAILABILITY_LABELS,
+  canCheckinAtSite,
+  formatAvailableSiteSchedule,
+  getAvailabilityDescription,
+  getEffectiveAvailabilityStatus,
+  parseCheckinError,
+} from '../utils/available-site';
+
+const AVAILABILITY_COLORS: Record<
+  CheckinAvailabilityStatus,
+  { background: string; text: string; border: string }
+> = {
+  unrestricted: {
+    background: palette.primarySoft,
+    text: palette.primary,
+    border: '#BFDBFE',
+  },
+  upcoming: {
+    background: palette.warningSoft,
+    text: palette.warning,
+    border: '#FDE68A',
+  },
+  open: {
+    background: palette.successSoft,
+    text: palette.success,
+    border: '#BBF7D0',
+  },
+  closed: {
+    background: palette.surfaceMuted,
+    text: palette.textMuted,
+    border: palette.border,
+  },
+};
 
 function currentTimeLabel(now: Date): string {
   return now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
@@ -36,7 +82,16 @@ export function CheckinHome() {
   const router = useRouter();
   const tenantId = useAuthStore((state) => state.activeTenantId);
   const { profile, isLoading: isLoadingProfile, isError: isProfileError } = useProfile();
-  const { sites, isLoading, isError, isForbidden, refetch } = useAvailableSites();
+  const {
+    sites,
+    isLoading,
+    isRefetching,
+    isError,
+    isForbidden,
+    error,
+    dataUpdatedAt,
+    refetch,
+  } = useAvailableSites();
   const {
     checkIn,
     isLocating: isLocatingIn,
@@ -54,7 +109,7 @@ export function CheckinHome() {
 
   const hydrate = useCheckinStore((state) => state.hydrate);
   const isHydrating = useCheckinStore((state) => state.isHydrating);
-  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [checkoutConfirmVisible, setCheckoutConfirmVisible] = useState(false);
 
@@ -70,21 +125,43 @@ export function CheckinHome() {
   }, []);
 
   useEffect(() => {
-    if (sites.length === 1 && !selectedSiteId) {
-      setSelectedSiteId(sites[0].site.id);
+    if (selectedAssignmentId) return;
+
+    const actionableSites = sites.filter((site) =>
+      canCheckinAtSite(
+        getEffectiveAvailabilityStatus(site, now.getTime(), dataUpdatedAt),
+      ),
+    );
+    if (actionableSites.length === 1) {
+      setSelectedAssignmentId(actionableSites[0].assignmentId);
+    } else if (sites.length === 1) {
+      setSelectedAssignmentId(sites[0].assignmentId);
     }
-  }, [sites, selectedSiteId]);
+  }, [dataUpdatedAt, now, selectedAssignmentId, sites]);
 
   useEffect(() => {
-    if (selectedSiteId && !sites.some((item) => item.site.id === selectedSiteId)) {
-      setSelectedSiteId(null);
+    if (
+      selectedAssignmentId &&
+      !sites.some((item) => item.assignmentId === selectedAssignmentId)
+    ) {
+      setSelectedAssignmentId(null);
     }
-  }, [selectedSiteId, sites]);
+  }, [selectedAssignmentId, sites]);
 
   const selectedSite = useMemo(
-    () => sites.find((item) => item.site.id === selectedSiteId),
-    [selectedSiteId, sites],
+    () => sites.find((item) => item.assignmentId === selectedAssignmentId),
+    [selectedAssignmentId, sites],
   );
+  const selectedAvailabilityStatus = selectedSite
+    ? getEffectiveAvailabilityStatus(
+        selectedSite,
+        now.getTime(),
+        dataUpdatedAt,
+      )
+    : null;
+  const canCheckinSelectedSite =
+    selectedAvailabilityStatus !== null &&
+    canCheckinAtSite(selectedAvailabilityStatus);
   const hasOpenShift = !!openCheckinId;
   const isCheckingState = isHydrating || isResolvingOpenCheckin;
   const isActionPending = isLocatingIn || isSubmittingIn || isLocatingOut || isSubmittingOut;
@@ -95,8 +172,8 @@ export function CheckinHome() {
   };
 
   const handleCheckin = async () => {
-    if (!selectedSiteId || isCheckingState) return;
-    const result = await checkIn(selectedSiteId);
+    if (!selectedSite || isCheckingState) return;
+    const result = await checkIn(selectedSite.site.id);
     if (result) goToResult(result.id);
   };
 
@@ -147,7 +224,7 @@ export function CheckinHome() {
         <FeedbackState
           icon="cloud-offline-outline"
           title="Không thể tải dữ liệu chấm công"
-          description="Kiểm tra kết nối mạng rồi thử lại."
+          description={parseCheckinError(error, 'Kiểm tra kết nối mạng rồi thử lại.')}
           actionLabel="Thử lại"
           onAction={refetch}
         />
@@ -156,12 +233,30 @@ export function CheckinHome() {
   }
 
   const actionLabel = hasOpenShift
-    ? isActionPending ? 'Đang ghi nhận check-out' : 'Kết thúc ca làm việc'
-    : isActionPending ? 'Đang xác thực vị trí' : 'Bắt đầu ca làm việc';
+    ? isActionPending
+      ? 'Đang ghi nhận check-out'
+      : 'Kết thúc ca làm việc'
+    : isActionPending
+      ? 'Đang xác thực vị trí'
+      : selectedAvailabilityStatus === 'upcoming'
+        ? 'Chưa đến giờ chấm công'
+        : selectedAvailabilityStatus === 'closed'
+          ? 'Ca đã kết thúc'
+          : 'Bắt đầu ca làm việc';
 
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={palette.primary}
+          />
+        }
+      >
         <ResponsiveContainer>
           <View style={styles.titleBlock}>
             <Text style={styles.title}>Chấm công</Text>
@@ -216,16 +311,33 @@ export function CheckinHome() {
               ) : (
                 <View style={styles.siteList}>
                   {sites.map((item: AvailableSite) => {
-                    const active = selectedSiteId === item.site.id;
+                    const active = selectedAssignmentId === item.assignmentId;
+                    const availabilityStatus = getEffectiveAvailabilityStatus(
+                      item,
+                      now.getTime(),
+                      dataUpdatedAt,
+                    );
+                    const availabilityColors =
+                      AVAILABILITY_COLORS[availabilityStatus];
+                    const availabilityDescription = getAvailabilityDescription(
+                      item,
+                      availabilityStatus,
+                      now.getTime(),
+                      dataUpdatedAt,
+                    );
                     return (
                       <Pressable
                         key={item.assignmentId}
-                        onPress={() => setSelectedSiteId(item.site.id)}
+                        onPress={() => setSelectedAssignmentId(item.assignmentId)}
                         accessibilityRole="radio"
                         accessibilityState={{ selected: active }}
-                        accessibilityLabel={`${item.site.name}${item.shift ? `, ca ${item.shift.name}` : ''}`}
+                        accessibilityLabel={`${item.site.name}, ${formatAvailableSiteSchedule(item)}, ${availabilityDescription}`}
                         style={({ pressed }) => [
                           styles.siteCard,
+                          {
+                            borderColor: availabilityColors.border,
+                            opacity: availabilityStatus === 'closed' ? 0.72 : 1,
+                          },
                           active && styles.siteCardActive,
                           pressed && styles.siteCardPressed,
                         ]}
@@ -234,21 +346,70 @@ export function CheckinHome() {
                           {active && <Ionicons name="checkmark" size={14} color={palette.white} />}
                         </View>
                         <View style={styles.siteCopy}>
-                          <Text style={styles.siteName}>{item.site.name}</Text>
+                          <View style={styles.siteTitleRow}>
+                            <Text style={styles.siteName}>{item.site.name}</Text>
+                            <View
+                              style={[
+                                styles.availabilityBadge,
+                                { backgroundColor: availabilityColors.background },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.availabilityBadgeText,
+                                  { color: availabilityColors.text },
+                                ]}
+                              >
+                                {AVAILABILITY_LABELS[availabilityStatus]}
+                              </Text>
+                            </View>
+                          </View>
                           {item.site.address && <Text style={styles.siteAddress} numberOfLines={2}>{item.site.address}</Text>}
+                          <View style={styles.availabilityRow}>
+                            <Ionicons
+                              name={
+                                availabilityStatus === 'open' ||
+                                availabilityStatus === 'unrestricted'
+                                  ? 'checkmark-circle-outline'
+                                  : availabilityStatus === 'upcoming'
+                                    ? 'hourglass-outline'
+                                    : 'close-circle-outline'
+                              }
+                              size={15}
+                              color={availabilityColors.text}
+                            />
+                            <Text
+                              style={[
+                                styles.availabilityText,
+                                { color: availabilityColors.text },
+                              ]}
+                            >
+                              {availabilityDescription}
+                            </Text>
+                          </View>
                           <View style={styles.siteMetaRow}>
-                            {item.shift && (
-                              <View style={styles.siteMeta}>
-                                <Ionicons name="time-outline" size={14} color={palette.primary} />
-                                <Text style={styles.siteMetaText}>
-                                  {item.shift.name} · {item.shift.startTime}–{item.shift.endTime}
-                                </Text>
-                              </View>
-                            )}
+                            <View style={styles.siteMeta}>
+                              <Ionicons name="time-outline" size={14} color={palette.primary} />
+                              <Text style={styles.siteMetaText}>
+                                {formatAvailableSiteSchedule(item)}
+                              </Text>
+                            </View>
+                            <View style={styles.siteMeta}>
+                              <Ionicons name="person-outline" size={14} color={palette.primary} />
+                              <Text style={styles.siteMetaText}>
+                                {ASSIGNMENT_ROLE_LABELS[item.assignmentRole]}
+                              </Text>
+                            </View>
                             {item.geofence && (
                               <View style={styles.siteMeta}>
                                 <Ionicons name="navigate-outline" size={14} color={palette.primary} />
                                 <Text style={styles.siteMetaText}>Bán kính {item.geofence.bufferMeters} m</Text>
+                              </View>
+                            )}
+                            {!item.geofence && (
+                              <View style={styles.siteMeta}>
+                                <Ionicons name="navigate-outline" size={14} color={palette.textMuted} />
+                                <Text style={styles.siteMetaMuted}>Không giới hạn vùng GPS</Text>
                               </View>
                             )}
                           </View>
@@ -277,7 +438,10 @@ export function CheckinHome() {
               icon={hasOpenShift ? 'exit-outline' : 'finger-print-outline'}
               variant={hasOpenShift ? 'dark' : 'primary'}
               loading={isActionPending}
-              disabled={isCheckingState || (!hasOpenShift && !selectedSite)}
+              disabled={
+                isCheckingState ||
+                (!hasOpenShift && (!selectedSite || !canCheckinSelectedSite))
+              }
               onPress={hasOpenShift ? () => setCheckoutConfirmVisible(true) : handleCheckin}
               accessibilityHint={
                 hasOpenShift
@@ -288,6 +452,19 @@ export function CheckinHome() {
             {!hasOpenShift && sites.length > 0 && !selectedSite && (
               <Text style={styles.actionHint}>Chọn một nơi làm việc để tiếp tục.</Text>
             )}
+            {!hasOpenShift &&
+              selectedSite &&
+              selectedAvailabilityStatus &&
+              !canCheckinSelectedSite && (
+                <Text style={styles.actionHint}>
+                  {getAvailabilityDescription(
+                    selectedSite,
+                    selectedAvailabilityStatus,
+                    now.getTime(),
+                    dataUpdatedAt,
+                  )}
+                </Text>
+              )}
             <AppButton
               label="Xem lịch sử chấm công"
               icon="time-outline"
@@ -401,11 +578,37 @@ const styles = StyleSheet.create({
   },
   radioActive: { backgroundColor: palette.primary, borderColor: palette.primary },
   siteCopy: { flex: 1 },
-  siteName: { color: palette.text, fontSize: 15, lineHeight: 21, fontWeight: '700' },
+  siteTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  siteName: {
+    flex: 1,
+    color: palette.text,
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '700',
+  },
+  availabilityBadge: {
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  availabilityBadgeText: { fontSize: 10, lineHeight: 14, fontWeight: '800' },
   siteAddress: { color: palette.textMuted, fontSize: 12, lineHeight: 18, marginTop: 2 },
+  availabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 5,
+    marginTop: spacing.sm,
+  },
+  availabilityText: { flex: 1, fontSize: 12, lineHeight: 17, fontWeight: '700' },
   siteMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   siteMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   siteMetaText: { color: palette.primary, fontSize: 11, lineHeight: 16, fontWeight: '600' },
+  siteMetaMuted: { color: palette.textMuted, fontSize: 11, lineHeight: 16, fontWeight: '600' },
   locationError: {
     marginTop: spacing.lg,
     borderRadius: radius.md,

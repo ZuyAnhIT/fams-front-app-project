@@ -7,6 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { useProfile } from '@/features/auth/hooks/use-profile';
 import { useAvailableSites } from '@/features/checkin/hooks/use-available-sites';
+import {
+  AVAILABILITY_LABELS,
+  formatShiftSchedule,
+  getAvailabilityDescription,
+  getEffectiveAvailabilityStatus,
+} from '@/features/checkin/utils/available-site';
 import { useUnreadCount } from '@/features/notification/hooks/useUnreadCount';
 import { palette, radius, shadows, spacing } from '@/theme/tokens';
 
@@ -48,11 +54,15 @@ export default function HomeScreen() {
     isLoading: isLoadingSites,
     isRefetching: isRefetchingSites,
     isError: isSitesError,
+    dataUpdatedAt: sitesUpdatedAt,
     refetch: refetchSites,
   } = useAvailableSites();
   const { unreadCount } = useUnreadCount();
 
   const firstSite = sites[0];
+  const firstSiteAvailability = firstSite
+    ? getEffectiveAvailabilityStatus(firstSite, Date.now(), sitesUpdatedAt)
+    : null;
   const displayName = profile?.full_name?.trim() || 'bạn';
   const firstName = displayName.split(/\s+/).at(-1) ?? displayName;
   const initial = displayName.charAt(0).toUpperCase();
@@ -71,10 +81,10 @@ export default function HomeScreen() {
       route: '/(tabs)/checkin-history',
     },
     {
-      label: 'Phân công',
-      description: 'Ca và công trình làm việc',
+      label: 'Nơi làm hôm nay',
+      description: 'Ca và công trình được phép chấm công',
       icon: 'clipboard-outline',
-      route: '/(tabs)/assignment',
+      route: '/(tabs)/checkin',
     },
     {
       label: 'Thông báo',
@@ -152,7 +162,39 @@ export default function HomeScreen() {
                   <View style={styles.detailLine}>
                     <Ionicons name="time-outline" size={17} color={palette.textMuted} />
                     <Text style={styles.detailText}>
-                      {firstSite.shift.startTime} – {firstSite.shift.endTime}
+                      {formatShiftSchedule(firstSite.shift)}
+                    </Text>
+                  </View>
+                )}
+                {firstSiteAvailability && (
+                  <View style={styles.detailLine}>
+                    <Ionicons
+                      name={
+                        firstSiteAvailability === 'open' ||
+                        firstSiteAvailability === 'unrestricted'
+                          ? 'checkmark-circle-outline'
+                          : firstSiteAvailability === 'upcoming'
+                            ? 'hourglass-outline'
+                            : 'close-circle-outline'
+                      }
+                      size={17}
+                      color={
+                        firstSiteAvailability === 'open' ||
+                        firstSiteAvailability === 'unrestricted'
+                          ? palette.success
+                          : firstSiteAvailability === 'upcoming'
+                            ? palette.warning
+                            : palette.textMuted
+                      }
+                    />
+                    <Text style={styles.detailText}>
+                      {AVAILABILITY_LABELS[firstSiteAvailability]} ·{' '}
+                      {getAvailabilityDescription(
+                        firstSite,
+                        firstSiteAvailability,
+                        Date.now(),
+                        sitesUpdatedAt,
+                      )}
                     </Text>
                   </View>
                 )}

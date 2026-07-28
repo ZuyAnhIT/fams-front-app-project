@@ -9,6 +9,7 @@ import { useGps } from '@/features/gps/hooks/use-gps';
 import { getCheckinHistory, submitCheckout } from '../services/checkin.service';
 import { useCheckinStore } from '../store/checkin.store';
 import type { CheckinResponse } from '../types/checkin.type';
+import { parseCheckinError } from '../utils/available-site';
 import { checkinKeys } from './use-checkin';
 
 export interface UseCheckoutSubmitResult {
@@ -73,8 +74,8 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
       await queryClient.invalidateQueries({ queryKey: checkinKeys.all });
       showToast(result.message, result.status === 'valid' ? 'success' : 'info');
     },
-    onError: () => {
-      showToast('Check-out thất bại, vui lòng thử lại.', 'error');
+    onError: (error) => {
+      showToast(parseCheckinError(error, 'Check-out thất bại, vui lòng thử lại.'), 'error');
     },
   });
 
@@ -100,12 +101,17 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
     }
     const coords = await requestLocation();
     if (!coords) return null;
-    return mutation.mutateAsync({
-      checkinId,
-      latitude: coords.latitude,
-      longitude: coords.longitude,
-      accuracy: coords.accuracy,
-    });
+    try {
+      return await mutation.mutateAsync({
+        checkinId,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy,
+      });
+    } catch {
+      // `onError` already shows the actionable server message.
+      return null;
+    }
   };
 
   return {
