@@ -3,8 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/toast';
 import { useAuthStore } from '@/features/auth/store';
 
-import { enrollFaceId, getFaceIdStatus, revokeFaceId, saveFaceIdConsent } from '../services/face.service';
-import type { FaceIdStatusDto, FaceImagePayload } from '../types/FaceId';
+import {
+  enrollFaceIdFromChallenge,
+  getFaceIdStatus,
+  revokeFaceId,
+  saveFaceIdConsent,
+} from '../services/face.service';
+import type { FaceIdStatusDto } from '../types/FaceId';
 import { parseFaceIdError } from '../utils/face-id.utils';
 
 export const faceIdKeys = {
@@ -20,12 +25,15 @@ export function useFaceIdStatus(employeeId: string | null) {
     queryFn: () => getFaceIdStatus(tenantId as string, employeeId as string),
     enabled: !!tenantId && !!employeeId,
     staleTime: 60 * 1000,
+    refetchInterval: (currentQuery) =>
+      currentQuery.state.data?.reviewStatus === 'pending' ? 30 * 1000 : false,
   });
 
   return {
     faceIdStatus: query.data,
     isLoading: query.isLoading,
     isError: query.isError,
+    error: query.error,
     refetch: query.refetch,
   };
 }
@@ -63,15 +71,17 @@ export function useFaceIdEnroll(employeeId: string | null) {
   const { showToast } = useToast();
 
   const mutation = useMutation({
-    mutationFn: (images: FaceImagePayload[]) =>
-      enrollFaceId(tenantId as string, employeeId as string, images),
+    mutationFn: (challengeId: string) =>
+      enrollFaceIdFromChallenge(
+        tenantId as string,
+        employeeId as string,
+        challengeId,
+      ),
     onSuccess: (data: FaceIdStatusDto) => {
       if (tenantId && employeeId) {
-        // Mutation response đã là FaceIdStatusDto mới nhất (status: "enrolled") —
-        // ghi thẳng vào cache thay vì chỉ invalidate, để UI cập nhật ngay.
         queryClient.setQueryData(faceIdKeys.status(tenantId, employeeId), data);
       }
-      showToast('Đăng ký Face ID thành công', 'success');
+      showToast('Đã gửi Face ID, đang chờ HR duyệt', 'success');
     },
     onError: (error) => {
       showToast(parseFaceIdError(error), 'error');

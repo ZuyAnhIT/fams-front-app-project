@@ -256,6 +256,10 @@ export function parseCheckinError(
       return serverMessage || 'Chưa đến giờ được phép chấm công.';
     case 'CHECKIN_TOO_LATE':
       return 'Ca làm việc đã kết thúc, không thể chấm công.';
+    case 'FACE_ID_REQUIRED':
+      return 'Công trình này yêu cầu xác thực khuôn mặt chủ động trước khi chấm công.';
+    case 'FACE_ID_NOT_ENROLLED':
+      return 'Bạn chưa có Face ID đã được duyệt. Vui lòng đăng ký Face ID trước.';
   }
 
   switch (error.response.status) {

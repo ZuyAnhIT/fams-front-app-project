@@ -22,12 +22,17 @@ export function FaceEnrollScreen() {
     consentVisible,
     isLoading,
     employeeId,
+    faceIdStatus,
+    hasApprovedFace,
+    isStatusError,
+    submitError,
     isSavingConsent,
     isRegistering,
     handleConsentConfirm,
-    handleRegister,
+    handleChallengePassed,
     handleBack,
     goToProfile,
+    refetchStatus,
   } = useFaceEnroll();
 
   if (isLoading) {
@@ -58,17 +63,49 @@ export function FaceEnrollScreen() {
     );
   }
 
-  if (step === 'done') {
+  if (isStatusError) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <View style={styles.doneWrap}>
-          <View style={[styles.doneIcon, { backgroundColor: theme.success + '18' }]}>
-            <Ionicons name="checkmark-circle-outline" size={48} color={theme.success} />
-          </View>
-          <Text style={[styles.doneTitle, { color: theme.text }]}>Đăng ký Face ID thành công</Text>
-          <Text style={[styles.doneDesc, { color: theme.textSecondary }]}>
-            Bạn có thể sử dụng nhận diện khuôn mặt khi chấm công.
+          <Ionicons name="cloud-offline-outline" size={52} color={theme.error} />
+          <Text style={[styles.doneTitle, { color: theme.text }]}>
+            Không thể kiểm tra trạng thái Face ID
           </Text>
+          <Text style={[styles.doneDesc, { color: theme.textSecondary }]}>
+            App chưa thể xác định hồ sơ hiện tại nên sẽ không mở camera hoặc thu
+            thập thêm dữ liệu khuôn mặt.
+          </Text>
+          <TouchableOpacity
+            style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
+            onPress={() => void refetchStatus()}
+          >
+            <Text style={styles.btnPrimaryText}>Thử lại</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (step === 'submitted') {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+        <View style={styles.doneWrap}>
+          <View style={[styles.doneIcon, { backgroundColor: `${theme.primary}18` }]}>
+            <Ionicons name="time-outline" size={48} color={theme.primary} />
+          </View>
+          <Text style={[styles.doneTitle, { color: theme.text }]}>
+            Đã gửi, đang chờ HR duyệt
+          </Text>
+          <Text style={[styles.doneDesc, { color: theme.textSecondary }]}>
+            {hasApprovedFace
+              ? 'Face ID đang sử dụng của bạn vẫn có hiệu lực trong lúc hồ sơ mới được xem xét.'
+              : 'Bạn chỉ có thể dùng Face ID để chấm công sau khi hồ sơ được HR hoặc quản lý phê duyệt.'}
+          </Text>
+          {faceIdStatus?.submittedAt && (
+            <Text style={[styles.submittedAt, { color: theme.textMuted }]}>
+              Gửi lúc {new Date(faceIdStatus.submittedAt).toLocaleString('vi-VN')}
+            </Text>
+          )}
 
           <TouchableOpacity
             style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
@@ -92,12 +129,20 @@ export function FaceEnrollScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {step === 'capture' && (
-          <FaceEnrollCamera
-            onComplete={handleRegister}
-            onRegister={handleRegister}
-            isRegistering={isRegistering}
-          />
+        {step === 'capture' && employeeId && (
+          <>
+            {submitError && (
+              <View style={[styles.errorCard, { backgroundColor: theme.errorBg }]}>
+                <Ionicons name="alert-circle-outline" size={20} color={theme.error} />
+                <Text style={[styles.errorText, { color: theme.error }]}>{submitError}</Text>
+              </View>
+            )}
+            <FaceEnrollCamera
+              employeeId={employeeId}
+              onPassed={handleChallengePassed}
+              isRegistering={isRegistering}
+            />
+          </>
         )}
       </ScrollView>
 
@@ -128,6 +173,16 @@ const styles = StyleSheet.create({
   doneIcon: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   doneTitle: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
   doneDesc: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  submittedAt: { fontSize: 12, textAlign: 'center' },
+  errorCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 14,
+  },
+  errorText: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: '600' },
   btnPrimary: { marginTop: 16, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 },
   btnPrimaryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

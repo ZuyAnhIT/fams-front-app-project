@@ -74,6 +74,11 @@ interface FaceIdApiErrorBody {
   userMessage?: string;
 }
 
+export function getFaceIdErrorCode(error: unknown): string {
+  const body = (error as { response?: { data?: FaceIdApiErrorBody } })?.response?.data;
+  return body?.errorCode ?? '';
+}
+
 const AI_ERROR_LABELS: Record<string, string> = {
   no_face_detected:
     'Không phát hiện khuôn mặt trong ảnh. Vui lòng chụp lại toàn bộ ảnh, đảm bảo khuôn mặt nằm trong khung.',
@@ -113,5 +118,21 @@ export function parseFaceIdError(error: unknown): string {
     return body.userMessage ?? body.message ?? GENERIC_ERROR_MESSAGE;
   }
 
-  return body.userMessage ?? GENERIC_ERROR_MESSAGE;
+  if (body.errorCode === 'FACE_ID_REQUIRED') {
+    return 'Công trình này yêu cầu xác thực khuôn mặt chủ động trước khi chấm công.';
+  }
+  if (body.errorCode === 'FACE_ID_NOT_ENROLLED') {
+    return 'Bạn chưa có Face ID đã được duyệt. Vui lòng đăng ký Face ID trước.';
+  }
+  if (body.errorCode === 'TOO_MANY_ATTEMPTS') {
+    return (
+      body.userMessage ??
+      'Bạn đã thử xác thực khuôn mặt quá nhiều lần. Vui lòng thử lại sau 10 phút.'
+    );
+  }
+  if (body.errorCode === 'DUPLICATE_RESOURCE' || body.message?.includes('pending review')) {
+    return 'Bạn đang có một lượt đăng ký chờ HR duyệt. Vui lòng đợi kết quả trước khi gửi lại.';
+  }
+
+  return body.userMessage ?? body.message ?? GENERIC_ERROR_MESSAGE;
 }

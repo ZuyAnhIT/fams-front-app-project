@@ -24,10 +24,11 @@ interface FaceConsentSheetProps {
 }
 
 const CONSENT_BULLETS = [
-  'Ảnh khuôn mặt chỉ dùng để xác thực chấm công và kiểm tra điểm danh.',
-  'Dữ liệu được mã hóa và lưu trữ theo chính sách bảo mật của công ty.',
-  'Bạn có thể thu hồi / xóa Face ID bất cứ lúc nào trong mục Hồ sơ.',
-  'Không chia sẻ ảnh khuôn mặt cho bên thứ ba ngoài hệ thống FAMS.',
+  'Dữ liệu xử lý gồm ảnh thử thách người thật và mẫu đặc trưng khuôn mặt (biometric embedding).',
+  'Mục đích sử dụng: đăng ký Face ID, xác thực chấm công và các lượt kiểm tra điểm danh được công ty cấu hình.',
+  'Hồ sơ đăng ký chỉ có hiệu lực sau khi HR hoặc người có thẩm quyền phê duyệt.',
+  'Bạn có thể rút lại đồng ý và yêu cầu thu hồi dữ liệu ngay trong mục Hồ sơ.',
+  'Nếu không muốn dùng Face ID, hãy liên hệ HR để được hướng dẫn phương thức chấm công thay thế theo chính sách công ty.',
 ];
 
 export function FaceConsentSheet({
@@ -59,68 +60,79 @@ export function FaceConsentSheet({
       >
         <Pressable style={[styles.overlay, { backgroundColor: theme.overlay }]} onPress={handleClose} />
         <View style={[styles.sheet, { backgroundColor: theme.card, paddingBottom: insets.bottom + 16 }]}>
-        <View style={[styles.handle, { backgroundColor: theme.border }]} />
-        <Text style={[styles.title, { color: theme.text }]}>Đồng ý sử dụng Face ID</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          Vui lòng đọc và xác nhận trước khi đăng ký nhận diện khuôn mặt.
-        </Text>
+          <View style={[styles.handle, { backgroundColor: theme.border }]} />
+          <Text style={[styles.title, { color: theme.text }]}>Đồng ý sử dụng Face ID</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            Vui lòng đọc và xác nhận trước khi đăng ký nhận diện khuôn mặt.
+          </Text>
 
-        <ScrollView style={styles.bullets} showsVerticalScrollIndicator={false}>
-          {CONSENT_BULLETS.map((item) => (
-            <View key={item} style={styles.bulletRow}>
-              <Text style={[styles.bulletDot, { color: theme.primary }]}>•</Text>
-              <Text style={[styles.bulletText, { color: theme.textSecondary }]}>{item}</Text>
+          <ScrollView style={styles.bullets} showsVerticalScrollIndicator={false}>
+            {CONSENT_BULLETS.map((item) => (
+              <View key={item} style={styles.bulletRow}>
+                <Text style={[styles.bulletDot, { color: theme.primary }]}>•</Text>
+                <Text style={[styles.bulletText, { color: theme.textSecondary }]}>
+                  {item}
+                </Text>
+              </View>
+            ))}
+            <Text style={[styles.version, { color: theme.textMuted }]}>
+              Phiên bản nội dung hiển thị trên App: v{FACE_CONSENT_VERSION}
+            </Text>
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.checkboxRow}
+            onPress={() => setChecked((v) => !v)}
+            activeOpacity={0.8}
+            accessibilityRole="checkbox"
+            accessibilityLabel="Đồng ý cho phép sử dụng dữ liệu khuôn mặt theo điều khoản"
+            accessibilityState={{ checked }}
+          >
+            <View
+              style={[
+                styles.checkbox,
+                {
+                  borderColor: checked ? theme.primary : theme.border,
+                  backgroundColor: checked ? theme.primary : 'transparent',
+                },
+              ]}
+            >
+              {checked && <Text style={styles.checkmark}>✓</Text>}
             </View>
-          ))}
-          <Text style={[styles.version, { color: theme.textMuted }]}>
-            Phiên bản điều khoản: v{FACE_CONSENT_VERSION}
-          </Text>
-        </ScrollView>
+            <Text style={[styles.checkboxLabel, { color: theme.text }]}>
+              Tôi đã đọc, hiểu và tự nguyện đồng ý cho công ty và hệ thống FAMS xử
+              lý dữ liệu khuôn mặt của tôi đúng các mục đích nêu trên.
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.checkboxRow}
-          onPress={() => setChecked((v) => !v)}
-          activeOpacity={0.8}
-          accessibilityRole="checkbox"
-          accessibilityLabel="Đồng ý cho phép sử dụng dữ liệu khuôn mặt theo điều khoản"
-          accessibilityState={{ checked }}
-        >
-          <View
-            style={[
-              styles.checkbox,
-              {
-                borderColor: checked ? theme.primary : theme.border,
-                backgroundColor: checked ? theme.primary : 'transparent',
-              },
-            ]}
-          >
-            {checked && <Text style={styles.checkmark}>✓</Text>}
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[styles.btnSecondary, { borderColor: theme.border }]}
+              onPress={handleClose}
+              disabled={isLoading}
+            >
+              <Text style={[styles.btnSecondaryText, { color: theme.textSecondary }]}>
+                Huỷ
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.btnPrimary,
+                {
+                  backgroundColor:
+                    checked && !isLoading
+                      ? theme.primary
+                      : theme.primaryDisabled,
+                },
+              ]}
+              onPress={handleConfirm}
+              disabled={!checked || isLoading}
+            >
+              <Text style={styles.btnPrimaryText}>
+                {isLoading ? 'Đang lưu...' : 'Đồng ý & Tiếp tục'}
+              </Text>
+            </TouchableOpacity>
           </View>
-          <Text style={[styles.checkboxLabel, { color: theme.text }]}>
-            Tôi đã đọc và đồng ý cho phép FAMS thu thập, lưu trữ và sử dụng dữ liệu
-            khuôn mặt của tôi theo điều khoản trên.
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.btnSecondary, { borderColor: theme.border }]}
-            onPress={handleClose}
-            disabled={isLoading}
-          >
-            <Text style={[styles.btnSecondaryText, { color: theme.textSecondary }]}>Huỷ</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.btnPrimary,
-              { backgroundColor: checked && !isLoading ? theme.primary : theme.primaryDisabled },
-            ]}
-            onPress={handleConfirm}
-            disabled={!checked || isLoading}
-          >
-            <Text style={styles.btnPrimaryText}>{isLoading ? 'Đang lưu...' : 'Đồng ý & Tiếp tục'}</Text>
-          </TouchableOpacity>
-        </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>

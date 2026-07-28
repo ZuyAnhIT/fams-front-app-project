@@ -4,6 +4,9 @@ import { unwrapApiData } from '@/services/api-response';
 import type {
   FaceIdStatusDto,
   FaceImagePayload,
+  FaceLivenessChallengeDto,
+  FaceLivenessPurpose,
+  FaceLivenessResultDto,
   FaceVerifyResultDto,
   FaceVerifySubmitResponse,
 } from '../types/FaceId';
@@ -45,6 +48,56 @@ export async function enrollFaceId(
   const { data } = await apiClient.post(`${faceIdBase(tenantId, employeeId)}/enroll`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
+  return unwrapApiData<FaceIdStatusDto>(data);
+}
+
+export async function startFaceLivenessChallenge(
+  tenantId: string,
+  employeeId: string,
+  purpose: FaceLivenessPurpose,
+  siteId?: string,
+): Promise<FaceLivenessChallengeDto> {
+  const { data } = await apiClient.post(
+    `${faceIdBase(tenantId, employeeId)}/liveness-challenge`,
+    undefined,
+    { params: { purpose, ...(siteId ? { siteId } : {}) } },
+  );
+  return unwrapApiData<FaceLivenessChallengeDto>(data);
+}
+
+export async function submitFaceLivenessFrames(
+  tenantId: string,
+  employeeId: string,
+  challengeId: string,
+  frames: FaceImagePayload[],
+): Promise<FaceLivenessResultDto> {
+  const formData = new FormData();
+  frames.forEach((frame, index) => {
+    formData.append('frames', {
+      uri: frame.uri,
+      type: 'image/jpeg',
+      name: `liveness-${index}.jpg`,
+    } as unknown as Blob);
+  });
+
+  const { data } = await apiClient.post(
+    `${faceIdBase(tenantId, employeeId)}/liveness-challenge/${challengeId}/frames`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return unwrapApiData<FaceLivenessResultDto>(data);
+}
+
+export async function enrollFaceIdFromChallenge(
+  tenantId: string,
+  employeeId: string,
+  challengeId: string,
+): Promise<FaceIdStatusDto> {
+  const { data } = await apiClient.post(
+    `${faceIdBase(tenantId, employeeId)}/enroll/from-challenge`,
+    undefined,
+    { params: { challengeId } },
+  );
   return unwrapApiData<FaceIdStatusDto>(data);
 }
 
