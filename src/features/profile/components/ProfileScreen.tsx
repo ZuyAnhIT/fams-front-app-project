@@ -314,9 +314,9 @@ export function ProfileScreen() {
 
           <ProfileSettingsRow
             icon="calendar-outline"
-            label="Phân công của tôi"
-            sublabel="Ca làm, công trường và thời hạn hiệu lực"
-            onPress={() => router.push('/assignment' as never)}
+            label="Nơi làm hôm nay"
+            sublabel="Ca và công trình được phép chấm công"
+            onPress={() => router.push('/checkin' as never)}
             theme={theme}
           />
           <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />

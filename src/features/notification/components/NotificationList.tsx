@@ -44,7 +44,9 @@ export function NotificationList() {
       }
 
       if (notification.eventType === 'assignment') {
-        router.push('/(tabs)/assignment');
+        // App employees must use the self-service available-sites contract.
+        // The assignment list is an HR/Supervisor management API and may 403.
+        router.push('/(tabs)/checkin');
       } else if (notification.eventType === 'checkin' || notification.eventType === 'attendance') {
         router.push('/(tabs)/checkin-history');
       }

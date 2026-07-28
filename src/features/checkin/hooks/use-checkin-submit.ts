@@ -8,6 +8,7 @@ import { useGps } from '@/features/gps/hooks/use-gps';
 import { submitCheckin } from '../services/checkin.service';
 import { useCheckinStore } from '../store/checkin.store';
 import type { CheckinResponse } from '../types/checkin.type';
+import { parseCheckinError } from '../utils/available-site';
 import { checkinKeys } from './use-checkin';
 
 export interface UseCheckinSubmitResult {
@@ -39,8 +40,8 @@ export function useCheckinSubmit(): UseCheckinSubmitResult {
       await queryClient.invalidateQueries({ queryKey: checkinKeys.all });
       showToast(result.message, result.status === 'valid' ? 'success' : 'info');
     },
-    onError: () => {
-      showToast('Check-in thất bại, vui lòng thử lại.', 'error');
+    onError: (error) => {
+      showToast(parseCheckinError(error, 'Check-in thất bại, vui lòng thử lại.'), 'error');
     },
   });
 
@@ -48,12 +49,18 @@ export function useCheckinSubmit(): UseCheckinSubmitResult {
     if (!tenantId) return null;
     const coords = await requestLocation();
     if (!coords) return null;
-    return mutation.mutateAsync({
-      siteId,
-      latitude: coords.latitude,
-      longitude: coords.longitude,
-      accuracy: coords.accuracy,
-    });
+    try {
+      return await mutation.mutateAsync({
+        siteId,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy,
+      });
+    } catch {
+      // `onError` already presents the backend business message. Returning
+      // null keeps a rejected mutateAsync promise from reaching the press handler.
+      return null;
+    }
   };
 
   return {
