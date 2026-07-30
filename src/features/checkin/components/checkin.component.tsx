@@ -18,11 +18,14 @@ import { FeedbackState } from '@/components/ui/feedback-state';
 import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { useProfile } from '@/features/auth/hooks/use-profile';
 import { useAuthStore } from '@/features/auth/store';
+import { useCurrentEmployeeId } from '@/features/face/hooks/use-current-employee-id';
+import { useFaceIdStatus } from '@/features/face/hooks/use-face-id';
 import { palette, radius, shadows, spacing } from '@/theme/tokens';
 
 import { useAvailableSites } from '../hooks/use-available-sites';
 import { useCheckinSubmit } from '../hooks/use-checkin-submit';
 import { useCheckoutSubmit } from '../hooks/use-checkout-submit';
+import { useOfflineCheckinSync } from '../hooks/use-offline-checkin-sync';
 import { useCheckinStore } from '../store/checkin.store';
 import type {
   AvailableSite,
@@ -31,8 +34,10 @@ import type {
 import {
   ASSIGNMENT_ROLE_LABELS,
   AVAILABILITY_LABELS,
+  CHECKIN_POLICY_LABELS,
   canCheckinAtSite,
   formatAvailableSiteSchedule,
+  formatOfflineSyncReason,
   getAvailabilityDescription,
   getEffectiveAvailabilityStatus,
   parseCheckinError,
@@ -83,6 +88,16 @@ export function CheckinHome() {
   const tenantId = useAuthStore((state) => state.activeTenantId);
   const { profile, isLoading: isLoadingProfile, isError: isProfileError } = useProfile();
   const {
+    employeeId,
+    isLoading: isLoadingEmployeeId,
+  } = useCurrentEmployeeId();
+  const {
+    faceIdStatus,
+    isLoading: isLoadingFaceStatus,
+    isError: isFaceStatusError,
+    refetch: refetchFaceStatus,
+  } = useFaceIdStatus(employeeId);
+  const {
     sites,
     isLoading,
     isRefetching,
@@ -105,7 +120,17 @@ export function CheckinHome() {
     isSubmitting: isSubmittingOut,
     locationErrorMessage: errOut,
     openCheckinId,
+    openCheckin,
   } = useCheckoutSubmit();
+  const {
+    items: offlineItems,
+    pendingCount: offlinePendingCount,
+    isConnected,
+    isSyncing,
+    syncNow,
+    remove: removeOfflineItem,
+    refresh: refreshOfflineItems,
+  } = useOfflineCheckinSync(profile?.id, tenantId);
 
   const hydrate = useCheckinStore((state) => state.hydrate);
   const isHydrating = useCheckinStore((state) => state.isHydrating);
@@ -162,37 +187,70 @@ export function CheckinHome() {
   const canCheckinSelectedSite =
     selectedAvailabilityStatus !== null &&
     canCheckinAtSite(selectedAvailabilityStatus);
+  const selectedRequiresFace =
+    selectedSite?.effectiveCheckinPolicy === 'gps_face' ||
+    selectedSite?.effectiveCheckinPolicy === 'gps_face_liveness';
+  const isCheckingFaceReadiness =
+    selectedRequiresFace && (isLoadingEmployeeId || isLoadingFaceStatus);
+  const isFaceReady = faceIdStatus?.status === 'enrolled';
+  const isFaceReadinessBlocked =
+    selectedRequiresFace && !isCheckingFaceReadiness && !isFaceReady;
   const hasOpenShift = !!openCheckinId;
+  const hasPendingOfflineCheckin = offlinePendingCount > 0;
+  const openSite = openCheckin?.siteId
+    ? sites.find((item) => item.site.id === openCheckin.siteId)
+    : null;
+  const checkoutPolicy =
+    openCheckin?.effectiveCheckinPolicy ??
+    openSite?.effectiveCheckinPolicy ??
+    'gps_only';
+  const checkoutSiteId = openSite?.site.id ?? openCheckin?.siteId ?? '';
+  const checkoutSiteName =
+    openSite?.site.name ?? openCheckin?.siteName ?? 'Công trình';
   const isCheckingState = isHydrating || isResolvingOpenCheckin;
   const isActionPending = isLocatingIn || isSubmittingIn || isLocatingOut || isSubmittingOut;
   const locationError = errIn ?? errOut;
 
-  const goToResult = (checkinId: string) => {
-    router.push({ pathname: '/modal/checkin-result', params: { checkinId } } as never);
+  const goToResult = (checkinId: string, policy?: string) => {
+    router.push({
+      pathname: '/modal/checkin-result',
+      params: { checkinId, ...(policy ? { policy } : {}) },
+    } as never);
   };
 
   const handleCheckin = async () => {
     if (!selectedSite || isCheckingState) return;
-    if (selectedSite.site.requireFaceIdCheckin) {
+    if (selectedSite.effectiveCheckinPolicy !== 'gps_only') {
       router.push({
         pathname: '/face/checkin',
         params: {
           siteId: selectedSite.site.id,
           siteName: selectedSite.site.name,
+          assignmentId: selectedSite.assignmentId,
+          policy: selectedSite.effectiveCheckinPolicy,
+          offline: isConnected === false ? 'true' : 'false',
         },
       } as never);
       return;
     }
 
-    const attempt = await checkIn(selectedSite.site.id);
+    const attempt = await checkIn(selectedSite.site.id, {
+      assignmentId: selectedSite.assignmentId,
+      siteName: selectedSite.site.name,
+      effectiveCheckinPolicy: selectedSite.effectiveCheckinPolicy,
+    });
     if (attempt.result) {
-      goToResult(attempt.result.id);
+      goToResult(attempt.result.id, selectedSite.effectiveCheckinPolicy);
+    } else if (attempt.queuedOffline) {
+      await refreshOfflineItems();
     } else if (attempt.faceRequirement === 'required') {
       router.push({
         pathname: '/face/checkin',
         params: {
           siteId: selectedSite.site.id,
           siteName: selectedSite.site.name,
+          assignmentId: selectedSite.assignmentId,
+          policy: selectedSite.effectiveCheckinPolicy,
         },
       } as never);
     } else if (attempt.faceRequirement === 'not_enrolled') {
@@ -201,10 +259,33 @@ export function CheckinHome() {
   };
 
   const handleCheckout = async () => {
-    const result = await checkOut();
+    if (checkoutPolicy !== 'gps_only') {
+      setCheckoutConfirmVisible(false);
+      router.push({
+        pathname: '/face/checkout',
+        params: {
+          siteId: checkoutSiteId,
+          siteName: checkoutSiteName,
+          policy: checkoutPolicy,
+        },
+      } as never);
+      return;
+    }
+    const attempt = await checkOut();
     setCheckoutConfirmVisible(false);
-    if (result) {
-      goToResult(result.id);
+    if (attempt.result) {
+      goToResult(attempt.result.id, checkoutPolicy);
+    } else if (attempt.faceRequirement === 'required' && checkoutSiteId) {
+      router.push({
+        pathname: '/face/checkout',
+        params: {
+          siteId: checkoutSiteId,
+          siteName: checkoutSiteName,
+          policy: checkoutPolicy === 'gps_only' ? 'gps_face' : checkoutPolicy,
+        },
+      } as never);
+    } else if (attempt.faceRequirement === 'not_enrolled') {
+      router.push('/face/enroll');
     }
   };
 
@@ -255,7 +336,9 @@ export function CheckinHome() {
     );
   }
 
-  const actionLabel = hasOpenShift
+  const actionLabel = hasPendingOfflineCheckin
+    ? 'Đang chờ đồng bộ chấm công'
+    : hasOpenShift
     ? isActionPending
       ? 'Đang ghi nhận check-out'
       : 'Kết thúc ca làm việc'
@@ -314,6 +397,50 @@ export function CheckinHome() {
               </View>
             ) : null}
           </View>
+
+          {offlineItems.length > 0 && (
+            <View style={styles.offlineCard}>
+              <View style={styles.offlineHeader}>
+                <Ionicons
+                  name={offlinePendingCount > 0 ? 'cloud-upload-outline' : 'warning-outline'}
+                  size={22}
+                  color={offlinePendingCount > 0 ? palette.primary : palette.warning}
+                />
+                <View style={styles.offlineCopy}>
+                  <Text style={styles.offlineTitle}>
+                    {offlinePendingCount > 0
+                      ? `${offlinePendingCount} lượt đang chờ đồng bộ`
+                      : 'Lượt offline cần kiểm tra'}
+                  </Text>
+                  <Text style={styles.offlineText}>
+                    {isConnected === false
+                      ? 'Thiết bị đang offline. Dữ liệu vẫn được giữ trên máy.'
+                      : 'Kết nối đã sẵn sàng; bạn có thể đồng bộ ngay.'}
+                  </Text>
+                </View>
+              </View>
+              {offlineItems
+                .filter((item) => item.status !== 'pending')
+                .map((item) => (
+                  <View key={item.clientNonce} style={styles.offlineIssue}>
+                    <Text style={styles.offlineIssueText}>
+                      {item.siteName}: {formatOfflineSyncReason(item.reason)}
+                    </Text>
+                    <Pressable onPress={() => void removeOfflineItem(item.clientNonce)}>
+                      <Text style={styles.removeOfflineText}>Xóa</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              <AppButton
+                label="Đồng bộ ngay"
+                icon="sync-outline"
+                variant="secondary"
+                loading={isSyncing}
+                disabled={isConnected === false || offlinePendingCount === 0}
+                onPress={() => void syncNow()}
+              />
+            </View>
+          )}
 
           {!hasOpenShift && !isCheckingState && (
             <View style={styles.section}>
@@ -435,24 +562,83 @@ export function CheckinHome() {
                                 <Text style={styles.siteMetaMuted}>Không giới hạn vùng GPS</Text>
                               </View>
                             )}
-                            {item.site.requireFaceIdCheckin && (
-                              <View style={styles.siteMeta}>
-                                <Ionicons
-                                  name="person-circle-outline"
-                                  size={14}
-                                  color={palette.warning}
-                                />
-                                <Text style={styles.faceRequiredText}>
-                                  Bắt buộc Face ID
-                                </Text>
-                              </View>
-                            )}
+                            <View style={styles.siteMeta}>
+                              <Ionicons
+                                name={
+                                  item.effectiveCheckinPolicy === 'gps_only'
+                                    ? 'location-outline'
+                                    : 'person-circle-outline'
+                                }
+                                size={14}
+                                color={
+                                  item.effectiveCheckinPolicy === 'gps_only'
+                                    ? palette.primary
+                                    : palette.warning
+                                }
+                              />
+                              <Text
+                                style={
+                                  item.effectiveCheckinPolicy === 'gps_only'
+                                    ? styles.siteMetaText
+                                    : styles.faceRequiredText
+                                }
+                              >
+                                {CHECKIN_POLICY_LABELS[item.effectiveCheckinPolicy]}
+                              </Text>
+                            </View>
                           </View>
                         </View>
                       </Pressable>
                     );
                   })}
                 </View>
+              )}
+            </View>
+          )}
+
+          {!hasOpenShift && selectedRequiresFace && (
+            <View
+              style={[
+                styles.faceReadinessCard,
+                isFaceReady && styles.faceReadinessCardReady,
+              ]}
+            >
+              <Ionicons
+                name={isFaceReady ? 'shield-checkmark-outline' : 'person-circle-outline'}
+                size={23}
+                color={isFaceReady ? palette.success : palette.warning}
+              />
+              <View style={styles.faceReadinessCopy}>
+                <Text style={styles.faceReadinessTitle}>
+                  {isCheckingFaceReadiness
+                    ? 'Đang kiểm tra Face ID'
+                    : isFaceReady
+                      ? 'Face ID đã sẵn sàng'
+                      : faceIdStatus?.reviewStatus === 'pending'
+                        ? 'Face ID đang chờ HR duyệt'
+                        : isFaceStatusError
+                          ? 'Chưa kiểm tra được Face ID'
+                          : 'Cần đăng ký Face ID'}
+                </Text>
+                <Text style={styles.faceReadinessText}>
+                  {isFaceReady
+                    ? 'Bạn có thể xác thực khuôn mặt khi vào và ra ca.'
+                    : 'Ca đã chọn yêu cầu hồ sơ Face ID được phê duyệt trước khi chấm công.'}
+                </Text>
+              </View>
+              {!isCheckingFaceReadiness && !isFaceReady && (
+                <Pressable
+                  onPress={() =>
+                    isFaceStatusError
+                      ? void refetchFaceStatus()
+                      : router.push('/face/enroll')
+                  }
+                  style={styles.faceReadinessAction}
+                >
+                  <Text style={styles.faceReadinessActionText}>
+                    {isFaceStatusError ? 'Thử lại' : 'Xem'}
+                  </Text>
+                </Pressable>
               )}
             </View>
           )}
@@ -475,6 +661,9 @@ export function CheckinHome() {
               loading={isActionPending}
               disabled={
                 isCheckingState ||
+                hasPendingOfflineCheckin ||
+                !!isCheckingFaceReadiness ||
+                !!isFaceReadinessBlocked ||
                 (!hasOpenShift && (!selectedSite || !canCheckinSelectedSite))
               }
               onPress={hasOpenShift ? () => setCheckoutConfirmVisible(true) : handleCheckin}
@@ -571,6 +760,67 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   activeShiftText: { flex: 1, color: palette.textSecondary, fontSize: 13, lineHeight: 19 },
+  offlineCard: {
+    marginTop: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: palette.surface,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  offlineHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  offlineCopy: { flex: 1 },
+  offlineTitle: { color: palette.text, fontSize: 14, fontWeight: '800' },
+  offlineText: {
+    color: palette.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  offlineIssue: {
+    borderRadius: radius.md,
+    backgroundColor: palette.warningSoft,
+    padding: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  offlineIssueText: {
+    flex: 1,
+    color: palette.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  removeOfflineText: { color: palette.danger, fontSize: 12, fontWeight: '800' },
+  faceReadinessCard: {
+    marginTop: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    backgroundColor: palette.warningSoft,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  faceReadinessCardReady: {
+    borderColor: '#BBF7D0',
+    backgroundColor: palette.successSoft,
+  },
+  faceReadinessCopy: { flex: 1 },
+  faceReadinessTitle: { color: palette.text, fontSize: 13, fontWeight: '800' },
+  faceReadinessText: { color: palette.textSecondary, fontSize: 12, lineHeight: 18 },
+  faceReadinessAction: {
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  faceReadinessActionText: { color: palette.primary, fontSize: 13, fontWeight: '800' },
   section: { marginTop: spacing.xxl },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
   sectionHeaderCopy: { flex: 1 },

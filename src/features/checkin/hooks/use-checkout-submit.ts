@@ -1,24 +1,44 @@
 import * as Device from 'expo-device';
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 
 import { useAuthStore } from '@/features/auth/store';
 import { useToast } from '@/components/ui/toast';
 import { useGps } from '@/features/gps/hooks/use-gps';
+import { getFaceIdErrorCode } from '@/features/face/utils/face-id.utils';
 
 import { getCheckinHistory, submitCheckout } from '../services/checkin.service';
 import { useCheckinStore } from '../store/checkin.store';
-import type { CheckinResponse } from '../types/checkin.type';
+import type { CheckinResponse, OpenCheckinContext } from '../types/checkin.type';
 import { parseCheckinError } from '../utils/available-site';
 import { checkinKeys } from './use-checkin';
 
 export interface UseCheckoutSubmitResult {
-  checkOut: () => Promise<CheckinResponse | null>;
+  checkOut: (verification?: CheckoutVerification) => Promise<CheckoutAttempt>;
   isLocating: boolean;
   isResolvingOpenCheckin: boolean;
   isSubmitting: boolean;
   locationErrorMessage: string | null;
   openCheckinId: string | null;
+  openCheckin: OpenCheckinContext | null;
+}
+
+export interface CheckoutVerification {
+  employeePhotoBase64?: string;
+  livenessChallengeId?: string;
+}
+
+export interface CheckoutAttempt {
+  result: CheckinResponse | null;
+  faceRequirement: 'required' | 'not_enrolled' | null;
+  alreadyCompleted: boolean;
+}
+
+function isAlreadyCheckedOut(error: unknown): boolean {
+  if (!isAxiosError(error) || error.response?.status !== 409) return false;
+  const body = error.response.data as { message?: string } | undefined;
+  return body?.message?.toLowerCase().includes('already checked out') ?? false;
 }
 
 /**
@@ -30,8 +50,9 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
   const { showToast } = useToast();
   const { isLocating, errorMessage: locationErrorMessage, requestLocation } = useGps();
   const openCheckinId = useCheckinStore((s) => s.openCheckinId);
+  const openCheckin = useCheckinStore((s) => s.openCheckin);
   const isHydratingCheckin = useCheckinStore((s) => s.isHydrating);
-  const setOpenCheckinId = useCheckinStore((s) => s.setOpenCheckinId);
+  const setOpenCheckin = useCheckinStore((s) => s.setOpenCheckin);
   const clearOpenCheckinId = useCheckinStore((s) => s.clearOpenCheckinId);
   const queryClient = useQueryClient();
   const [isResolvingOpenCheckin, setIsResolvingOpenCheckin] = useState(false);
@@ -48,7 +69,12 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
       .then(async (history) => {
         const openRecord = history.content.find((record) => record.checkOutAt === null);
         if (!cancelled && openRecord) {
-          await setOpenCheckinId(openRecord.id);
+          await setOpenCheckin({
+            checkinId: openRecord.id,
+            siteId: openRecord.siteId,
+            siteName: openRecord.siteName,
+            effectiveCheckinPolicy: openRecord.effectiveCheckinPolicy,
+          });
         }
       })
       .catch(() => undefined)
@@ -59,15 +85,25 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
     return () => {
       cancelled = true;
     };
-  }, [isHydratingCheckin, openCheckinId, setOpenCheckinId, tenantId]);
+  }, [isHydratingCheckin, openCheckinId, setOpenCheckin, tenantId]);
 
   const mutation = useMutation({
-    mutationFn: (payload: { checkinId: string; latitude: number; longitude: number; accuracy: number | null }) =>
+    mutationFn: (payload: {
+      checkinId: string;
+      latitude: number;
+      longitude: number;
+      accuracy: number | null;
+      employeePhotoBase64?: string;
+      livenessChallengeId?: string;
+    }) =>
       submitCheckout(tenantId!, payload.checkinId, {
         latitude: payload.latitude,
         longitude: payload.longitude,
         gpsAccuracy: payload.accuracy ?? undefined,
         deviceId: Device.osInternalBuildId ?? Device.modelId ?? undefined,
+        employeePhotoBase64: payload.employeePhotoBase64,
+        requiresLiveness: !!payload.livenessChallengeId,
+        livenessChallengeId: payload.livenessChallengeId,
       }),
     onSuccess: async (result) => {
       await clearOpenCheckinId();
@@ -75,6 +111,11 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
       showToast(result.message, result.status === 'valid' ? 'success' : 'info');
     },
     onError: (error) => {
+      if (isAlreadyCheckedOut(error)) return;
+      const errorCode = getFaceIdErrorCode(error);
+      if (errorCode === 'FACE_ID_REQUIRED' || errorCode === 'FACE_ID_NOT_ENROLLED') {
+        return;
+      }
       showToast(parseCheckinError(error, 'Check-out thất bại, vui lòng thử lại.'), 'error');
     },
   });
@@ -92,25 +133,46 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
     }
   };
 
-  const checkOut = async (): Promise<CheckinResponse | null> => {
-    if (!tenantId) return null;
+  const checkOut = async (
+    verification: CheckoutVerification = {},
+  ): Promise<CheckoutAttempt> => {
+    if (!tenantId) {
+      return { result: null, faceRequirement: null, alreadyCompleted: false };
+    }
     const checkinId = await resolveOpenCheckinId();
     if (!checkinId) {
       showToast('Không tìm thấy ca chấm công đang mở để check-out.', 'error');
-      return null;
+      return { result: null, faceRequirement: null, alreadyCompleted: false };
     }
     const coords = await requestLocation();
-    if (!coords) return null;
+    if (!coords) {
+      return { result: null, faceRequirement: null, alreadyCompleted: false };
+    }
     try {
-      return await mutation.mutateAsync({
+      const result = await mutation.mutateAsync({
         checkinId,
         latitude: coords.latitude,
         longitude: coords.longitude,
         accuracy: coords.accuracy,
+        ...verification,
       });
-    } catch {
+      return { result, faceRequirement: null, alreadyCompleted: false };
+    } catch (error) {
+      if (isAlreadyCheckedOut(error)) {
+        await clearOpenCheckinId();
+        await queryClient.invalidateQueries({ queryKey: checkinKeys.all });
+        showToast('Lượt chấm công đã được check-out. Đã làm mới trạng thái.', 'info');
+        return { result: null, faceRequirement: null, alreadyCompleted: true };
+      }
+      const errorCode = getFaceIdErrorCode(error);
+      if (errorCode === 'FACE_ID_REQUIRED') {
+        return { result: null, faceRequirement: 'required', alreadyCompleted: false };
+      }
+      if (errorCode === 'FACE_ID_NOT_ENROLLED') {
+        return { result: null, faceRequirement: 'not_enrolled', alreadyCompleted: false };
+      }
       // `onError` already shows the actionable server message.
-      return null;
+      return { result: null, faceRequirement: null, alreadyCompleted: false };
     }
   };
 
@@ -121,5 +183,6 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
     isSubmitting: mutation.isPending,
     locationErrorMessage,
     openCheckinId,
+    openCheckin,
   };
 }

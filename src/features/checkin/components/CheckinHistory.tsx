@@ -32,6 +32,13 @@ function formatTime(value: string): string {
   return new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 }
 
+function faceState(value: boolean | null, expected: boolean): string {
+  if (!expected) return 'Không yêu cầu';
+  if (value === true) return 'Đạt';
+  if (value === false) return 'Không đạt';
+  return 'Đang xác thực';
+}
+
 /** Employee attendance history with explicit navigation and readable daily cards. */
 export function CheckinHistory() {
   const router = useRouter();
@@ -47,7 +54,15 @@ export function CheckinHistory() {
   };
 
   const handlePress = (record: CheckinResponse) => {
-    router.push({ pathname: '/modal/checkin-result', params: { checkinId: record.id } } as never);
+    router.push({
+      pathname: '/modal/checkin-result',
+      params: {
+        checkinId: record.id,
+        ...(record.effectiveCheckinPolicy
+          ? { policy: record.effectiveCheckinPolicy }
+          : {}),
+      },
+    } as never);
   };
 
   return (
@@ -90,7 +105,10 @@ export function CheckinHistory() {
                   </View>
                   <View style={styles.dateCopy}>
                     <Text style={styles.itemDate}>{formatDate(item.checkInAt)}</Text>
-                    <Text style={styles.itemSub}>Bản ghi chấm công</Text>
+                    <Text style={styles.itemSub}>
+                      {item.siteName ?? 'Bản ghi chấm công'}
+                      {item.source === 'offline' ? ' · Offline' : ''}
+                    </Text>
                   </View>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: STATUS_BACKGROUNDS[item.status] }]}>
@@ -118,6 +136,18 @@ export function CheckinHistory() {
               {item.workMinutes !== null && (
                 <Text style={styles.duration}>Tổng thời gian: {formatWorkMinutes(item.workMinutes)}</Text>
               )}
+              {item.effectiveCheckinPolicy &&
+                item.effectiveCheckinPolicy !== 'gps_only' && (
+                  <View style={styles.faceSummary}>
+                    <Ionicons name="person-circle-outline" size={15} color={palette.primary} />
+                    <Text style={styles.faceSummaryText}>
+                      Face vào: {faceState(item.faceVerified, true)}
+                      {item.checkOutAt
+                        ? ` · Face ra: ${faceState(item.checkoutFaceVerified, true)}`
+                        : ''}
+                    </Text>
+                  </View>
+                )}
             </Pressable>
           )}
           ListEmptyComponent={
@@ -216,6 +246,18 @@ const styles = StyleSheet.create({
   timeValue: { color: palette.text, fontSize: 13, lineHeight: 19, fontWeight: '700' },
   chevron: { marginLeft: 'auto' },
   duration: { color: palette.textSecondary, fontSize: 12, lineHeight: 18, marginTop: spacing.sm },
+  faceSummary: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  faceSummaryText: {
+    color: palette.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '600',
+  },
   pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingTop: spacing.lg },
   pageButton: {
     minHeight: 44,

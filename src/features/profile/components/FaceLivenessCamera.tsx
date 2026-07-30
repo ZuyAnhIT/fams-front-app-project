@@ -79,7 +79,10 @@ interface FaceLivenessCameraBaseProps {
 type FaceLivenessCameraProps = FaceLivenessCameraBaseProps &
   (
     | { purpose: Extract<FaceLivenessPurpose, 'enroll'>; siteId?: never }
-    | { purpose: Extract<FaceLivenessPurpose, 'checkin'>; siteId: string }
+    | {
+        purpose: Extract<FaceLivenessPurpose, 'checkin' | 'checkout'>;
+        siteId: string;
+      }
   );
 
 export function FaceLivenessCamera({
