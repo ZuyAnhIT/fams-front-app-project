@@ -1,6 +1,8 @@
 import type { PageResponse } from '@/features/site/types/Site';
 
 export type CheckinStatus = 'valid' | 'pending_review' | 'rejected';
+export type CheckinPolicy = 'gps_only' | 'gps_face' | 'gps_face_liveness';
+export type CheckinSource = 'online' | 'offline';
 export type CheckinAvailabilityStatus =
   | 'unrestricted'
   | 'upcoming'
@@ -17,8 +19,6 @@ export interface CheckinSiteInfo {
   latitude: number | null;
   longitude: number | null;
   timezone: string | null;
-  /** Backend contract: proactively opens active-liveness before check-in. */
-  requireFaceIdCheckin: boolean;
 }
 
 export interface CheckinShiftInfo {
@@ -51,6 +51,8 @@ export interface AvailableSite {
   checkinAllowedUntil: string | null;
   /** UX hint only; submitCheckin remains the source of truth. */
   availabilityStatus: CheckinAvailabilityStatus;
+  /** Policy đã resolve theo site + shift; App không tự suy luận từ site. */
+  effectiveCheckinPolicy: CheckinPolicy;
 }
 
 // ─── submit checkin / checkout ─────────────────────────────────────────────────
@@ -61,6 +63,8 @@ export interface SubmitCheckinRequest {
   longitude: number;
   gpsAccuracy?: number;
   deviceId?: string;
+  employeePhotoBase64?: string;
+  requiresLiveness?: boolean;
   livenessChallengeId?: string;
 }
 
@@ -69,6 +73,9 @@ export interface SubmitCheckoutRequest {
   longitude: number;
   gpsAccuracy?: number;
   deviceId?: string;
+  employeePhotoBase64?: string;
+  requiresLiveness?: boolean;
+  livenessChallengeId?: string;
 }
 
 export interface CheckinResponse {
@@ -85,6 +92,10 @@ export interface CheckinResponse {
   checkInAccuracy: number | null;
   checkInInsideGeofence: boolean;
   checkOutAt: string | null;
+  checkOutLat: number | null;
+  checkOutLon: number | null;
+  checkOutAccuracy: number | null;
+  checkOutInsideGeofence: boolean | null;
   workMinutes: number | null;
   gpsRiskScore: number;
   deviceId: string | null;
@@ -94,6 +105,64 @@ export interface CheckinResponse {
   faceVerified: boolean | null;
   livenessVerified: boolean | null;
   faceVerifyScore: number | null;
+  checkoutFaceVerified: boolean | null;
+  checkoutLivenessVerified: boolean | null;
+  checkoutFaceVerifyScore: number | null;
+  /** Snapshot tại check-in; null chỉ với bản ghi lịch sử trước V78. */
+  effectiveCheckinPolicy: CheckinPolicy | null;
+  source: CheckinSource;
+  employeeName: string | null;
+  employeeCode: string | null;
+  siteName: string | null;
+}
+
+// ─── offline sync ─────────────────────────────────────────────────────────────
+
+export interface OfflineCheckinRequest {
+  assignmentId: string;
+  checkinAt: string;
+  lat: number;
+  lon: number;
+  accuracy?: number;
+  facePhotoBase64?: string;
+  clientNonce: string;
+}
+
+export type OfflineSyncStatus = 'accepted' | 'rejected' | 'conflict';
+
+export interface OfflineSyncResultItem {
+  clientNonce: string;
+  status: OfflineSyncStatus;
+  reason: string | null;
+  checkinRecordId: string | null;
+}
+
+export type OfflineQueueStatus = 'pending' | 'rejected' | 'conflict';
+
+export interface OfflineCheckinQueueItem {
+  clientNonce: string;
+  tenantId: string;
+  userId: string;
+  assignmentId: string;
+  siteId: string;
+  siteName: string;
+  effectiveCheckinPolicy: CheckinPolicy;
+  checkinAt: string;
+  lat: number;
+  lon: number;
+  accuracy?: number;
+  /** App-private file containing base64; never a gallery/public URI. */
+  faceEvidenceFileUri?: string;
+  status: OfflineQueueStatus;
+  reason: string | null;
+  attempts: number;
+}
+
+export interface OpenCheckinContext {
+  checkinId: string;
+  siteId: string | null;
+  siteName: string | null;
+  effectiveCheckinPolicy: CheckinPolicy | null;
 }
 
 // ─── explain ────────────────────────────────────────────────────────────────────

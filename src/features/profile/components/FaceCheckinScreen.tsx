@@ -13,10 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthTheme } from '@/features/auth/theme';
 import { useCheckinSubmit } from '@/features/checkin/hooks/use-checkin-submit';
+import type { CheckinPolicy } from '@/features/checkin/types/checkin.type';
 import { useCurrentEmployeeId } from '@/features/face/hooks/use-current-employee-id';
 import { useFaceIdStatus } from '@/features/face/hooks/use-face-id';
 
 import { FaceLivenessCamera } from './FaceLivenessCamera';
+import { FacePhotoCapture } from './FacePhotoCapture';
 
 function firstParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? '' : value ?? '';
@@ -28,9 +30,17 @@ export function FaceCheckinScreen() {
   const params = useLocalSearchParams<{
     siteId?: string | string[];
     siteName?: string | string[];
+    assignmentId?: string | string[];
+    policy?: string | string[];
+    offline?: string | string[];
   }>();
   const siteId = firstParam(params.siteId);
   const siteName = firstParam(params.siteName);
+  const assignmentId = firstParam(params.assignmentId);
+  const policyParam = firstParam(params.policy);
+  const policy: CheckinPolicy =
+    policyParam === 'gps_face_liveness' ? 'gps_face_liveness' : 'gps_face';
+  const offline = firstParam(params.offline) === 'true';
   const { employeeId, isLoading: isLoadingEmployee } = useCurrentEmployeeId();
   const {
     faceIdStatus,
@@ -51,11 +61,16 @@ export function FaceCheckinScreen() {
 
   const handlePassed = async (challengeId: string) => {
     setSubmitError(null);
-    const attempt = await checkIn(siteId, challengeId);
+    const attempt = await checkIn(siteId, {
+      assignmentId,
+      siteName,
+      effectiveCheckinPolicy: policy,
+      livenessChallengeId: challengeId,
+    });
     if (attempt.result) {
       router.replace({
         pathname: '/modal/checkin-result',
-        params: { checkinId: attempt.result.id },
+        params: { checkinId: attempt.result.id, policy },
       } as never);
       return;
     }
@@ -64,7 +79,6 @@ export function FaceCheckinScreen() {
       router.replace('/face/enroll');
       return;
     }
-
     if (attempt.faceRequirement === 'required') {
       const message =
         'Phiên xác thực không còn hợp lệ hoặc không đúng công trình. Vui lòng thực hiện một thử thách mới ngay tại đây.';
@@ -77,6 +91,51 @@ export function FaceCheckinScreen() {
       'Thử thách đã đạt nhưng chưa ghi nhận được chấm công. Vui lòng thử lại.';
     setSubmitError(message);
     throw new Error(message);
+  };
+
+  const handlePhoto = async (employeePhotoBase64: string) => {
+    setSubmitError(null);
+    const attempt = await checkIn(siteId, {
+      assignmentId,
+      siteName,
+      effectiveCheckinPolicy: policy,
+      employeePhotoBase64,
+    });
+    if (attempt.result) {
+      router.replace({
+        pathname: '/modal/checkin-result',
+        params: { checkinId: attempt.result.id, policy },
+      } as never);
+      return;
+    }
+    if (attempt.queuedOffline) {
+      router.replace('/(tabs)/checkin');
+      return;
+    }
+    if (attempt.faceRequirement === 'not_enrolled') {
+      router.replace('/face/enroll');
+      return;
+    }
+    if (
+      attempt.faceRequirement === 'required' &&
+      policy === 'gps_face_liveness'
+    ) {
+      router.replace({
+        pathname: '/face/checkin',
+        params: {
+          siteId,
+          siteName,
+          assignmentId,
+          policy,
+          offline: 'false',
+        },
+      } as never);
+      return;
+    }
+    setSubmitError(
+      locationErrorMessage ??
+        'Chưa ghi nhận được chấm công. Vui lòng kiểm tra mạng và thử lại.',
+    );
   };
 
   if (isLoading) {
@@ -203,13 +262,21 @@ export function FaceCheckinScreen() {
             </Text>
           </View>
         )}
-        <FaceLivenessCamera
-          employeeId={employeeId}
-          purpose="checkin"
-          siteId={siteId}
-          onPassed={handlePassed}
-          isFinalizing={isLocating || isSubmitting}
-        />
+        {policy === 'gps_face_liveness' && !offline ? (
+          <FaceLivenessCamera
+            employeeId={employeeId}
+            purpose="checkin"
+            siteId={siteId}
+            onPassed={handlePassed}
+            isFinalizing={isLocating || isSubmitting}
+          />
+        ) : (
+          <FacePhotoCapture
+            onSubmit={handlePhoto}
+            isSubmitting={isLocating || isSubmitting}
+            offlineReviewNotice={offline && policy === 'gps_face_liveness'}
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   );

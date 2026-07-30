@@ -3,6 +3,7 @@ import { isAxiosError } from 'axios';
 import type {
   AvailableSite,
   CheckinAvailabilityStatus,
+  CheckinPolicy,
   CheckinShiftInfo,
 } from '../types/checkin.type';
 
@@ -17,6 +18,44 @@ export const AVAILABILITY_LABELS: Record<CheckinAvailabilityStatus, string> = {
   open: 'Có thể chấm công',
   closed: 'Đã kết thúc',
 };
+
+export const CHECKIN_POLICY_LABELS: Record<CheckinPolicy, string> = {
+  gps_only: 'GPS',
+  gps_face: 'GPS + Face ID',
+  gps_face_liveness: 'GPS + Face ID + người thật',
+};
+
+export function requiresFaceVerification(policy: CheckinPolicy): boolean {
+  return policy !== 'gps_only';
+}
+
+export function requiresActiveLiveness(policy: CheckinPolicy): boolean {
+  return policy === 'gps_face_liveness';
+}
+
+export function formatOfflineSyncReason(reason: string | null): string {
+  if (!reason) return 'Bản ghi cần được kiểm tra trước khi xử lý tiếp.';
+  const normalized = reason.toLowerCase();
+  if (normalized.includes('employee status')) {
+    return 'Tài khoản nhân viên không còn hoạt động — vui lòng liên hệ HR.';
+  }
+  if (normalized.includes('site status')) {
+    return 'Công trình không còn hoạt động — vui lòng liên hệ quản lý.';
+  }
+  if (normalized.includes('does not cover')) {
+    return 'Phân công hoặc ca làm không phủ ngày chấm công này.';
+  }
+  if (normalized.includes('earlier than') || normalized.includes('allowed window')) {
+    return 'Thời điểm chấm công sớm hơn khung giờ được cho phép.';
+  }
+  if (normalized.includes('face id') || normalized.includes('photo')) {
+    return 'Ca làm yêu cầu ảnh khuôn mặt nhưng bằng chứng offline chưa hợp lệ.';
+  }
+  if (normalized.includes('another open') || normalized.includes('already exists')) {
+    return 'Đã có bản ghi chấm công trùng hoặc một ca khác đang mở.';
+  }
+  return reason;
+}
 
 /** Backend serializes LocalTime as HH:mm:ss; the mobile UI only needs HH:mm. */
 export function formatShiftTime(value: string): string {
@@ -220,6 +259,20 @@ function formatOpenCheckinConflict(serverMessage: string): string {
     : 'Bạn đang có phiên chấm công chưa hoàn tất. Hãy check-out trước khi bắt đầu ca khác.';
 }
 
+function formatConflictMessage(serverMessage: string): string {
+  const normalized = serverMessage.toLowerCase();
+  if (
+    normalized.includes('already used by another request') ||
+    normalized.includes('challenge')
+  ) {
+    return 'Phiên xác thực khuôn mặt đã được sử dụng. Vui lòng thực hiện thử thách mới.';
+  }
+  if (normalized.includes('already checked out')) {
+    return 'Lượt chấm công này đã được check-out. Trạng thái đang được làm mới.';
+  }
+  return formatOpenCheckinConflict(serverMessage);
+}
+
 export function parseCheckinError(
   error: unknown,
   fallback = 'Không thể thực hiện chấm công. Vui lòng thử lại.',
@@ -242,7 +295,7 @@ export function parseCheckinError(
   // The shared backend message for every duplicate is intentionally generic;
   // check-in needs the technical message here to recover the open-session time.
   if (errorCode === 'DUPLICATE_RESOURCE') {
-    return formatOpenCheckinConflict(serverMessage);
+    return formatConflictMessage(serverMessage);
   }
 
   if (userMessage) return userMessage;
@@ -270,7 +323,7 @@ export function parseCheckinError(
     case 404:
       return 'Không tìm thấy phân công còn hiệu lực cho công trình này hôm nay.';
     case 409:
-      return formatOpenCheckinConflict(serverMessage);
+      return formatConflictMessage(serverMessage);
     case 422:
       return serverMessage || 'Thời điểm hoặc dữ liệu chấm công chưa hợp lệ.';
     case 429:

@@ -17,6 +17,7 @@ import { CHECKIN_STATUS_COLORS, CHECKIN_STATUS_LABELS, formatWorkMinutes } from 
 
 interface CheckinResultProps {
   checkinId: string;
+  policy?: string;
 }
 
 const STATUS_META: Record<CheckinStatus, { icon: keyof typeof Ionicons.glyphMap; background: string }> = {
@@ -50,7 +51,17 @@ function DetailRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMa
 }
 
 /** Result modal for a completed check-in/out action. */
-export function CheckinResult({ checkinId }: CheckinResultProps) {
+function verificationLabel(value: boolean | null, expected: boolean): string {
+  if (value === true) return 'Đã xác thực';
+  if (value === false) return 'Không đạt — chờ quản lý xem xét';
+  return expected ? 'Đang xác thực' : 'Không yêu cầu';
+}
+
+function scoreSuffix(score: number | null): string {
+  return score === null ? '' : ` · Độ khớp ${Math.round(score * 100)}%`;
+}
+
+export function CheckinResult({ checkinId, policy }: CheckinResultProps) {
   const { result, isLoading, isError, refetch } = useCheckinResult(checkinId);
   const { submitExplanation, isSubmitting } = useCheckinExplain(checkinId);
   const [showExplainForm, setShowExplainForm] = useState(false);
@@ -86,7 +97,13 @@ export function CheckinResult({ checkinId }: CheckinResultProps) {
           actionLabel="Thử lại"
           onAction={refetch}
         />
-      ) : (
+      ) : (() => {
+        const effectivePolicy = result.effectiveCheckinPolicy ?? policy;
+        const expectsFace =
+          effectivePolicy === 'gps_face' ||
+          effectivePolicy === 'gps_face_liveness';
+        const expectsLiveness = effectivePolicy === 'gps_face_liveness';
+        return (
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -121,11 +138,60 @@ export function CheckinResult({ checkinId }: CheckinResultProps) {
                   {result.workMinutes !== null && (
                     <DetailRow icon="hourglass-outline" label="Tổng thời gian làm việc" value={formatWorkMinutes(result.workMinutes)} />
                   )}
+                  {result.siteName && (
+                    <DetailRow icon="business-outline" label="Công trình" value={result.siteName} />
+                  )}
+                  <DetailRow
+                    icon={result.source === 'offline' ? 'cloud-offline-outline' : 'cloud-done-outline'}
+                    label="Nguồn ghi nhận"
+                    value={result.source === 'offline' ? 'Đồng bộ từ thiết bị offline' : 'Ghi nhận trực tuyến'}
+                  />
                   <DetailRow
                     icon="location-outline"
                     label="Xác thực vị trí vào ca"
                     value={result.checkInInsideGeofence ? 'Trong phạm vi cho phép' : 'Ngoài phạm vi cho phép'}
                   />
+                  {result.checkOutAt && result.checkOutInsideGeofence !== null && (
+                    <DetailRow
+                      icon="navigate-outline"
+                      label="Xác thực vị trí ra ca"
+                      value={
+                        result.checkOutInsideGeofence
+                          ? 'Trong phạm vi cho phép'
+                          : 'Ngoài phạm vi cho phép'
+                      }
+                    />
+                  )}
+                  {(expectsFace ||
+                    result.faceVerified !== null ||
+                    result.livenessVerified !== null) && (
+                    <DetailRow
+                      icon="person-circle-outline"
+                      label="Face ID vào ca"
+                      value={`${verificationLabel(result.faceVerified, expectsFace)}${scoreSuffix(result.faceVerifyScore)}${
+                        expectsLiveness
+                          ? ` · Người thật: ${verificationLabel(result.livenessVerified, true)}`
+                          : ''
+                      }`}
+                    />
+                  )}
+                  {result.checkOutAt &&
+                    (expectsFace ||
+                      result.checkoutFaceVerified !== null ||
+                      result.checkoutLivenessVerified !== null) && (
+                      <DetailRow
+                        icon="shield-checkmark-outline"
+                        label="Face ID ra ca"
+                        value={`${verificationLabel(result.checkoutFaceVerified, expectsFace)}${scoreSuffix(result.checkoutFaceVerifyScore)}${
+                          expectsLiveness
+                            ? ` · Người thật: ${verificationLabel(
+                                result.checkoutLivenessVerified,
+                                true,
+                              )}`
+                            : ''
+                        }`}
+                      />
+                    )}
                 </View>
               </View>
 
@@ -192,7 +258,8 @@ export function CheckinResult({ checkinId }: CheckinResultProps) {
             </ResponsiveContainer>
           </ScrollView>
         </KeyboardAvoidingView>
-      )}
+        );
+      })()}
     </SafeAreaView>
   );
 }

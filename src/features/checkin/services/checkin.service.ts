@@ -7,6 +7,8 @@ import type {
   CheckinHistoryResponse,
   CheckinResponse,
   ExplanationResponse,
+  OfflineCheckinRequest,
+  OfflineSyncResultItem,
   SubmitCheckinRequest,
   SubmitCheckoutRequest,
   SubmitExplanationRequest,
@@ -39,6 +41,14 @@ export async function submitCheckout(
     payload,
   );
   return unwrapApiData<CheckinResponse>(data);
+}
+
+export async function syncOfflineCheckins(
+  tenantId: string,
+  payload: OfflineCheckinRequest[],
+): Promise<OfflineSyncResultItem[]> {
+  const { data } = await apiClient.post(`${checkinBase(tenantId)}/sync`, payload);
+  return unwrapApiData<OfflineSyncResultItem[]>(data);
 }
 
 export async function getCheckinResult(
