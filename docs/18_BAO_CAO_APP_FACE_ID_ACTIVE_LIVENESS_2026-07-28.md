@@ -1,5 +1,13 @@
 # Báo cáo hoàn thiện App Face ID và active liveness
 
+> Cập nhật InsightFace ngày 31/07/2026: backend đã thay dlib bằng SCRFD +
+> ArcFace 512 chiều, khôi phục cúi/ngẩng và yêu cầu hồ sơ cũ đăng ký lại. App
+> đã đồng bộ tại `docs/22_BAO_CAO_DONG_BO_APP_FACE_ID_INSIGHTFACE_2026-07-31.md`.
+>
+> Cập nhật P0 ngày 30/07/2026: backend đã chuyển head-pose sang baseline theo
+> từng challenge và tạm bỏ `look_up`/`look_down`. App đã đồng bộ UX và chẩn
+> đoán lỗi trong `docs/21_BAO_CAO_DONG_BO_APP_FACE_ID_P0_2026-07-30.md`.
+
 Ngày thực hiện: 28/07/2026  
 Phạm vi thay đổi: `fams-front-app-project`  
 Tài liệu backend đối chiếu:

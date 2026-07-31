@@ -38,7 +38,7 @@ export function useLogin(): UseLoginResult {
         return;
       }
       await setTokens(data.access_token, data.refresh_token);
-      const session = await resolveAuthenticatedSession(data.user);
+      const session = await resolveAuthenticatedSession(data.user, data.active_tenant_id);
       setUser(session.user);
       showToast('Đăng nhập thành công', 'success');
       navigateAfterAuth(session);

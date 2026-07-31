@@ -28,6 +28,7 @@ import { useAuthStore } from '@/features/auth/store';
 import type { UserProfile } from '@/features/auth/types';
 import { shadows } from '@/theme/tokens';
 import { useMyRoles } from '@/features/rbac/use-my-roles';
+import { useAvailableTenants } from '@/features/rbac/use-available-tenants';
 
 import { ProfileFaceSection } from './ProfileFaceSection';
 import { ProfileSettingsRow } from './ProfileSettingsRow';
@@ -74,6 +75,7 @@ export function ProfileScreen() {
   const { profile, isLoading, isError, refetch } = useProfile();
   const activeTenantId = useAuthStore((state) => state.activeTenantId);
   const rolesQuery = useMyRoles();
+  const tenantsQuery = useAvailableTenants();
   const { logout, logoutAll, isPending: isLoggingOut } = useLogout();
   const {
     link: linkGoogle,
@@ -269,8 +271,8 @@ export function ProfileScreen() {
               <ActivityIndicator size="small" color={theme.primary} />
               <Text style={{ color: theme.textSecondary }}>Đang tải vai trò...</Text>
             </View>
-          ) : rolesQuery.data?.length ? (
-            rolesQuery.data.map((assignment, index) => (
+          ) : visibleRoles.length ? (
+            visibleRoles.map((assignment, index) => (
               <View key={assignment.id}>
                 <View style={styles.roleAssignment}>
                   <View style={styles.roleAssignmentCopy}>
@@ -286,7 +288,7 @@ export function ProfileScreen() {
                   </View>
                   <Ionicons name="shield-checkmark-outline" size={22} color={theme.primary} />
                 </View>
-                {index < rolesQuery.data.length - 1 && (
+                {index < visibleRoles.length - 1 && (
                   <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
                 )}
               </View>
@@ -319,15 +321,23 @@ export function ProfileScreen() {
             onPress={() => router.push('/checkin' as never)}
             theme={theme}
           />
-          <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
-
-          <ProfileSettingsRow
-            icon="swap-horizontal-outline"
-            label="Chuyển đổi công ty"
-            sublabel="Đổi công ty đang thao tác — không cần đăng xuất"
-            onPress={() => router.push('/(auth)/select-tenant' as never)}
-            theme={theme}
-          />
+          {tenantsQuery.data && tenantsQuery.data.length > 1 && (
+            <>
+              <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+              <ProfileSettingsRow
+                icon="swap-horizontal-outline"
+                label="Chuyển đổi công ty"
+                sublabel="Đổi công ty đang thao tác — không cần đăng xuất"
+                onPress={() =>
+                  router.push({
+                    pathname: '/(auth)/select-tenant',
+                    params: { source: 'profile' },
+                  } as never)
+                }
+                theme={theme}
+              />
+            </>
+          )}
         </View>
 
         <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>

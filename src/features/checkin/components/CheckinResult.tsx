@@ -103,6 +103,18 @@ export function CheckinResult({ checkinId, policy }: CheckinResultProps) {
           effectivePolicy === 'gps_face' ||
           effectivePolicy === 'gps_face_liveness';
         const expectsLiveness = effectivePolicy === 'gps_face_liveness';
+        // CheckinResponse does not expose the AI callback error code. A failed
+        // face result with no score is the only stable client-visible signal
+        // for stale embedding/no-profile/extraction failures; re-enrollment is
+        // the safe recovery path for all of those cases.
+        const checkinMayNeedReEnrollment =
+          result.faceVerified === false && result.faceVerifyScore === null;
+        const checkoutMayNeedReEnrollment =
+          result.checkOutAt !== null &&
+          result.checkoutFaceVerified === false &&
+          result.checkoutFaceVerifyScore === null;
+        const mayNeedReEnrollment =
+          checkinMayNeedReEnrollment || checkoutMayNeedReEnrollment;
         return (
         <KeyboardAvoidingView
           style={styles.flex}
@@ -194,6 +206,29 @@ export function CheckinResult({ checkinId, policy }: CheckinResultProps) {
                     )}
                 </View>
               </View>
+
+              {mayNeedReEnrollment && (
+                <View style={styles.faceUpgradeCard}>
+                  <View style={styles.explanationHeader}>
+                    <View style={styles.faceUpgradeIcon}>
+                      <Ionicons name="person-circle-outline" size={22} color={palette.primary} />
+                    </View>
+                    <View style={styles.explanationCopy}>
+                      <Text style={styles.explanationTitle}>Cần đăng ký lại Face ID</Text>
+                      <Text style={styles.explanationDescription}>
+                        Hồ sơ khuôn mặt có thể được tạo bằng mô hình cũ hoặc hiện
+                        không thể so khớp. Hãy đăng ký lại Face ID và chờ HR duyệt
+                        trước lần chấm công tiếp theo.
+                      </Text>
+                    </View>
+                  </View>
+                  <AppButton
+                    label="Đăng ký lại Face ID"
+                    icon="camera-outline"
+                    onPress={() => router.push('/face/enroll')}
+                  />
+                </View>
+              )}
 
               {result.status !== 'valid' && (
                 <View style={styles.explanationCard}>
@@ -303,6 +338,23 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
     padding: spacing.lg,
     gap: spacing.lg,
+  },
+  faceUpgradeCard: {
+    marginTop: spacing.lg,
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: palette.primary,
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  faceUpgradeIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    backgroundColor: palette.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   explanationHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   explanationIcon: {

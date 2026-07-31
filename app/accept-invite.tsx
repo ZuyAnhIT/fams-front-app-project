@@ -136,7 +136,7 @@ export default function AcceptInviteScreen() {
       ),
     onSuccess: async (login) => {
       await setTokens(login.access_token, login.refresh_token);
-      const session = await resolveAuthenticatedSession(login.user);
+      const session = await resolveAuthenticatedSession(login.user, login.active_tenant_id);
       setUser(session.user);
       if (invitationType === 'platform' && session.tenantCandidates.length === 0) {
         router.replace('/(tabs)/profile');

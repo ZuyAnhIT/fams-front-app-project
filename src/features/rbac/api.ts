@@ -8,6 +8,7 @@ export interface MyRoleAssignment {
   roleName: string;
   tenantId: string | null;
   tenantName?: string;
+  tenantSlug?: string;
   siteIds?: string[];
   sites?: { id: string; name: string }[];
   assignedAt: string;
@@ -16,8 +17,9 @@ export interface MyRoleAssignment {
 
 export interface AvailableTenant {
   id: string;
-  /** Only known for platform admins (via GET /tenants); otherwise undefined. */
   name?: string;
+  slug?: string;
+  roleNames: string[];
 }
 
 /** Every role the authenticated user holds, across all tenants they belong to. */
@@ -26,37 +28,27 @@ export async function getMyRoles(): Promise<MyRoleAssignment[]> {
   return unwrapApiData(data);
 }
 
-/**
- * Tenants the user can act in. Ordinary users get this from their own
- * `user_roles` rows (GET /roles/me). Platform admins typically hold no
- * `user_roles` at all (they bypass per-tenant checks via `isPlatformAdmin`),
- * so when that list is empty we fall back to GET /tenants — the
- * PLATFORM_ADMIN-only endpoint that lists every tenant in the system.
- */
+/** Tenants with an active role that POST /auth/switch-tenant will accept. */
 export async function getAvailableTenants(): Promise<AvailableTenant[]> {
   const roles = await getMyRoles();
-  const roleTenantIds = [
-    ...new Set(
-      roles
-        .map((role) => role.tenantId)
-        .filter((tenantId): tenantId is string => Boolean(tenantId)),
-    ),
-  ];
-  if (roleTenantIds.length > 0) {
-    return roleTenantIds.map((id) => ({ id }));
+  const grouped = new Map<string, AvailableTenant>();
+  for (const role of roles) {
+    if (!role.tenantId) continue;
+    const existing = grouped.get(role.tenantId);
+    if (existing) {
+      if (!existing.roleNames.includes(role.roleName)) {
+        existing.roleNames.push(role.roleName);
+      }
+      existing.name ??= role.tenantName;
+      existing.slug ??= role.tenantSlug;
+      continue;
+    }
+    grouped.set(role.tenantId, {
+      id: role.tenantId,
+      name: role.tenantName,
+      slug: role.tenantSlug,
+      roleNames: [role.roleName],
+    });
   }
-
-  try {
-    const { data } = await apiClient.get('/tenants');
-    const payload = unwrapApiData<{
-      content?: { id: string; name: string }[];
-      items?: { id: string; name: string }[];
-    }>(data);
-    return (payload.content ?? payload.items ?? []).map((tenant) => ({
-      id: tenant.id,
-      name: tenant.name,
-    }));
-  } catch {
-    return [];
-  }
+  return [...grouped.values()];
 }

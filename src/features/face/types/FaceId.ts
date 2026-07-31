@@ -12,6 +12,9 @@ export interface FaceIdStatusDto {
   submittedAt: string | null;
   reviewedAt: string | null;
   rejectionReason: string | null;
+  /** Optional forward-compatible fields recommended for an embedding-model migration. */
+  embeddingModel?: 'dlib_128' | 'arcface_512' | null;
+  requiresReEnrollment?: boolean;
 }
 
 export interface FaceImagePayload {

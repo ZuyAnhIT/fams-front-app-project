@@ -39,11 +39,11 @@ function shouldSkipRefresh(url: string | undefined): boolean {
   return REFRESH_EXCLUDED_PATHS.has(getRequestPath(url));
 }
 
-/** Refresh-token rotation happens before a retried logout request. Keep the
- * logout body aligned with the newly stored token so the backend revokes the
- * actual current session instead of receiving the now-invalid previous token. */
-function syncLogoutRefreshToken(config: { url?: string; data?: unknown }): void {
-  if (getRequestPath(config.url) !== '/auth/logout') return;
+/** Refresh-token rotation can happen before retrying logout or switch-tenant.
+ * Keep their request bodies aligned with the newly stored token. */
+function syncRotatedRefreshToken(config: { url?: string; data?: unknown }): void {
+  const path = getRequestPath(config.url);
+  if (path !== '/auth/logout' && path !== '/auth/switch-tenant') return;
   const refreshToken = useAuthStore.getState().refreshToken;
   if (!refreshToken) return;
 
@@ -78,6 +78,7 @@ function flushQueue(error: unknown, token: string | null = null) {
  */
 export function setupAuthInterceptors(
   onAuthFailure: () => void | Promise<void>,
+  onTenantContextChanged?: () => void | Promise<void>,
 ): () => void {
   // ─── Request: attach access token ─────────────────────────────────────────
   const requestInterceptorId = apiClient.interceptors.request.use((config) => {
@@ -116,7 +117,7 @@ export function setupAuthInterceptors(
           failedQueue.push({ resolve, reject });
         }).then((newToken) => {
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          syncLogoutRefreshToken(originalRequest);
+          syncRotatedRefreshToken(originalRequest);
           return apiClient(originalRequest);
         });
       }
@@ -124,17 +125,35 @@ export function setupAuthInterceptors(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const { refreshToken, setTokens } = useAuthStore.getState();
+      const { refreshToken, setTenantSession, setTokens } = useAuthStore.getState();
 
       try {
         if (!refreshToken) throw new Error('No refresh token');
 
         const tokens = await refreshAccessToken({ refresh_token: refreshToken });
+        const previousTenantId = useAuthStore.getState().activeTenantId;
+        const tenantContextChanged =
+          !!tokens.active_tenant_id && tokens.active_tenant_id !== previousTenantId;
+
+        if (tenantContextChanged) {
+          await setTenantSession(
+            tokens.access_token,
+            tokens.refresh_token,
+            tokens.active_tenant_id!,
+          );
+          const contextError = new Error(
+            'Tenant context changed while refreshing the authenticated session',
+          );
+          flushQueue(contextError);
+          await onTenantContextChanged?.();
+          return Promise.reject(contextError);
+        }
+
         await setTokens(tokens.access_token, tokens.refresh_token);
 
         flushQueue(null, tokens.access_token);
         originalRequest.headers.Authorization = `Bearer ${tokens.access_token}`;
-        syncLogoutRefreshToken(originalRequest);
+        syncRotatedRefreshToken(originalRequest);
         return apiClient(originalRequest);
       } catch (refreshError) {
         flushQueue(refreshError);

@@ -19,10 +19,13 @@ export interface AuthenticatedSession {
 /**
  * Resolves the logged-in user's profile after a login/register/OTP/2FA flow
  * and figures out which tenant(s) they can act in, then applies the previous
- * active tenant or the sole candidate automatically.
+ * active tenant. A sole candidate is selected automatically; accounts with
+ * multiple companies must explicitly confirm a company so the backend can
+ * issue a matching token pair through POST /auth/switch-tenant.
  */
 export async function resolveAuthenticatedSession(
   presetUser: UserProfile | undefined,
+  tokenActiveTenantId?: string,
 ): Promise<AuthenticatedSession> {
   const user = presetUser ?? (await getMyProfile());
 
@@ -34,14 +37,19 @@ export async function resolveAuthenticatedSession(
   }
 
   const { activeTenantId, setActiveTenantId } = useAuthStore.getState();
-  const keepExisting =
-    !!activeTenantId && tenantCandidates.some((t) => t.id === activeTenantId);
-
-  let resolvedTenantId = keepExisting ? activeTenantId : null;
-  if (!keepExisting) {
-    resolvedTenantId = tenantCandidates.length === 1 ? tenantCandidates[0].id : null;
-    await setActiveTenantId(resolvedTenantId);
-  }
+  const tokenTenantIsAvailable =
+    !!tokenActiveTenantId &&
+    tenantCandidates.some((tenant) => tenant.id === tokenActiveTenantId);
+  const storedTenantIsAvailable =
+    !!activeTenantId && tenantCandidates.some((tenant) => tenant.id === activeTenantId);
+  const resolvedTenantId = tokenTenantIsAvailable
+    ? tokenActiveTenantId
+    : tenantCandidates.length === 1
+      ? tenantCandidates[0].id
+      : storedTenantIsAvailable
+        ? activeTenantId
+        : null;
+  await setActiveTenantId(resolvedTenantId);
 
   return {
     user: { ...user, tenant_id: resolvedTenantId ?? user.tenant_id },
@@ -55,7 +63,7 @@ export async function resolveAuthenticatedSession(
  * and none is currently active; otherwise goes straight to the app.
  */
 export function navigateAfterAuth(session: AuthenticatedSession): void {
-  if (session.tenantCandidates.length > 1 && !session.user.tenant_id) {
+  if (session.tenantCandidates.length > 1) {
     router.replace('/(auth)/select-tenant' as never);
     return;
   }

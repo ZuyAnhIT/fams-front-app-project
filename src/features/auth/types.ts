@@ -103,6 +103,8 @@ export interface TokenPair {
 }
 
 export interface LoginResponse extends TokenPair {
+  user_id?: string;
+  active_tenant_id?: string;
   /** Always undefined from the real backend — resolveAuthenticatedSession() falls back to GET /auth/me */
   user?: UserProfile;
   /** True when TOTP is enabled – client must complete 2FA step */
@@ -116,6 +118,12 @@ export interface LoginResponse extends TokenPair {
 
 export interface RefreshTokenResponse extends TokenPair {
   user?: UserProfile;
+  active_tenant_id?: string;
+}
+
+export interface SwitchTenantResponse extends TokenPair {
+  user_id: string;
+  active_tenant_id: string;
 }
 
 // ─── 2FA Types ────────────────────────────────────────────────────────────────
@@ -210,10 +218,9 @@ export interface AuthState {
   /** Short-lived token held during the 2FA verification step */
   tempToken: string | null;
   /**
-   * Tenant the user is currently operating in. Backend has no single
-   * "current tenant" concept (users can hold roles in multiple tenants via
-   * `user_roles`), so this is chosen client-side after login and persisted
-   * across app restarts independently of `user`.
+   * Tenant the user is currently operating in. It must match the
+   * activeTenantId embedded in the latest token pair returned by login or
+   * POST /auth/switch-tenant.
    */
   activeTenantId: string | null;
 }
@@ -221,6 +228,8 @@ export interface AuthState {
 export interface AuthActions {
   /** Persists tokens to SecureStore and updates in-memory state */
   setTokens: (access: string, refresh: string) => Promise<void>;
+  /** Atomically updates the in-memory token pair and active tenant after switch. */
+  setTenantSession: (access: string, refresh: string, tenantId: string) => Promise<void>;
   setUser: (user: UserProfile) => void;
   set2FARequired: (required: boolean, tempToken?: string | null) => void;
   /** Persists the chosen active tenant to SecureStore and updates in-memory state */

@@ -32,12 +32,19 @@ function AppInit() {
 
   useEffect(() => {
     void hydrateFromSecureStore();
-    const ejectInterceptors = setupAuthInterceptors(async () => {
-      await clearAuth();
-      useCheckinStore.getState().resetContext();
-      queryClient.clear();
-      router.replace('/(auth)/login');
-    });
+    const ejectInterceptors = setupAuthInterceptors(
+      async () => {
+        await clearAuth();
+        useCheckinStore.getState().resetContext();
+        queryClient.clear();
+        router.replace('/(auth)/login');
+      },
+      () => {
+        useCheckinStore.getState().resetContext();
+        queryClient.clear();
+        router.replace('/(tabs)/home');
+      },
+    );
 
     return ejectInterceptors;
   }, [clearAuth, hydrateFromSecureStore]);
