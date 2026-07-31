@@ -67,7 +67,10 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="attendance"
-        options={{ href: null }}
+        options={{
+          title: 'Bảng công',
+          tabBarIcon: tabIcon('stats-chart-outline', 'stats-chart'),
+        }}
       />
       <Tabs.Screen
         name="assignment"
