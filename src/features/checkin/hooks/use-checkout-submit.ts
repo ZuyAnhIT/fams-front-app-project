@@ -107,7 +107,10 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
       }),
     onSuccess: async (result) => {
       await clearOpenCheckinId();
-      await queryClient.invalidateQueries({ queryKey: checkinKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: checkinKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['attendance'] }),
+      ]);
       showToast(result.message, result.status === 'valid' ? 'success' : 'info');
     },
     onError: (error) => {
@@ -160,7 +163,10 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
     } catch (error) {
       if (isAlreadyCheckedOut(error)) {
         await clearOpenCheckinId();
-        await queryClient.invalidateQueries({ queryKey: checkinKeys.all });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: checkinKeys.all }),
+          queryClient.invalidateQueries({ queryKey: ['attendance'] }),
+        ]);
         showToast('Lượt chấm công đã được check-out. Đã làm mới trạng thái.', 'info');
         return { result: null, faceRequirement: null, alreadyCompleted: true };
       }

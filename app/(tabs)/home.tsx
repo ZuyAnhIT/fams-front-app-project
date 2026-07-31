@@ -81,6 +81,12 @@ export default function HomeScreen() {
       route: '/(tabs)/checkin-history',
     },
     {
+      label: 'Bảng công',
+      description: 'Xem công ngày và tổng hợp tháng',
+      icon: 'stats-chart-outline',
+      route: '/(tabs)/attendance',
+    },
+    {
       label: 'Nơi làm hôm nay',
       description: 'Ca và công trình được phép chấm công',
       icon: 'clipboard-outline',

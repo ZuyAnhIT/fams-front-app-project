@@ -84,7 +84,10 @@ export function useCheckinSubmit(): UseCheckinSubmitResult {
           result.effectiveCheckinPolicy ?? payload.effectiveCheckinPolicy ?? null,
       };
       await setOpenCheckin(context);
-      await queryClient.invalidateQueries({ queryKey: checkinKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: checkinKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['attendance'] }),
+      ]);
       showToast(result.message, result.status === 'valid' ? 'success' : 'info');
     },
     onError: (error, payload) => {
