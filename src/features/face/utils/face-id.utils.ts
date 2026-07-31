@@ -1,12 +1,31 @@
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
-import type { FaceImagePayload } from '../types/FaceId';
+import { FACE_ID_ARCFACE_ROLLOUT_AT } from '@/config/env';
+
+import type { FaceIdStatusDto, FaceImagePayload } from '../types/FaceId';
 import { FACE_MAX_PHOTOS, FACE_MIN_PHOTOS } from './face-quality';
 
 const MAX_BYTES = 1024 * 1024;
 const MAX_DIMENSION = 1280;
 const MIN_QUALITY = 0.3;
 const QUALITY_STEP = 0.15;
+
+export function requiresFaceIdReEnrollment(
+  faceStatus: FaceIdStatusDto | undefined,
+): boolean {
+  if (!faceStatus || faceStatus.status !== 'enrolled') return false;
+  if (typeof faceStatus.requiresReEnrollment === 'boolean') {
+    return faceStatus.requiresReEnrollment;
+  }
+  if (faceStatus.embeddingModel) {
+    return faceStatus.embeddingModel !== 'arcface_512';
+  }
+  if (!faceStatus.enrolledAt) return false;
+
+  const enrolledAt = Date.parse(faceStatus.enrolledAt);
+  const rolloutAt = Date.parse(FACE_ID_ARCFACE_ROLLOUT_AT);
+  return Number.isFinite(enrolledAt) && enrolledAt < rolloutAt;
+}
 
 async function getFileSizeBytes(uri: string): Promise<number> {
   const response = await fetch(uri);

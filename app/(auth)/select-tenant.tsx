@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,18 +14,26 @@ import { useSelectTenant } from '@/features/auth/hooks/use-select-tenant';
 import { useAuthTheme } from '@/features/auth/theme';
 
 /**
- * Tenant picker. Reached two ways: right after login when the account can
- * act in more than one tenant (backend has no single "current tenant"
- * concept), or pushed from Profile to switch companies without signing out.
- * Platform admins get tenant names (via GET /tenants); ordinary
- * multi-tenant users only get IDs, since they can't call the
- * tenant-detail endpoint.
+ * Tenant picker. Reached right after a multi-company login or from Profile.
+ * Entries come from active role assignments returned by GET /roles/me, so
+ * every listed tenant is eligible for POST /auth/switch-tenant.
  */
 export default function SelectTenantScreen() {
   const theme = useAuthTheme();
-  const { tenants, isLoading, isError, selectedId, select, confirm, isConfirming } =
-    useSelectTenant();
-  const canGoBack = router.canGoBack();
+  const params = useLocalSearchParams<{ source?: string }>();
+  const {
+    tenants,
+    isLoading,
+    isError,
+    errorMessage,
+    selectedId,
+    select,
+    confirm,
+    retry,
+    isConfirming,
+    activeTenantId,
+  } = useSelectTenant();
+  const canGoBack = params.source === 'profile' && router.canGoBack();
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -43,7 +51,16 @@ export default function SelectTenantScreen() {
         </Text>
 
         {isLoading && <ActivityIndicator style={styles.spinner} />}
-        {isError && <Text style={styles.errorText}>Không tải được danh sách công ty</Text>}
+        {(isError || errorMessage) && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>
+              {errorMessage ?? 'Không tải được danh sách công ty.'}
+            </Text>
+            <TouchableOpacity onPress={retry} hitSlop={8}>
+              <Text style={[styles.retryText, { color: theme.primary }]}>Tải lại</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <FlatList
           data={tenants}
@@ -55,11 +72,31 @@ export default function SelectTenantScreen() {
               onPress={() => select(item.id)}
               activeOpacity={0.85}
             >
-              <Text style={styles.itemText} numberOfLines={1}>
-                {item.name ?? item.id}
-              </Text>
+              <View style={styles.itemHeader}>
+                <Text style={styles.itemText} numberOfLines={2}>
+                  {item.name ?? item.slug ?? item.id}
+                </Text>
+                {item.id === activeTenantId && (
+                  <View style={styles.activeBadge}>
+                    <Text style={styles.activeBadgeText}>Đang dùng</Text>
+                  </View>
+                )}
+              </View>
+              {item.roleNames.length > 0 && (
+                <Text style={styles.itemMeta}>{item.roleNames.join(' · ')}</Text>
+              )}
             </TouchableOpacity>
           )}
+          ListEmptyComponent={
+            !isLoading ? (
+              <View style={styles.emptyBox}>
+                <Ionicons name="business-outline" size={34} color="#94A3B8" />
+                <Text style={styles.emptyText}>
+                  Tài khoản hiện không có công ty hoạt động để lựa chọn.
+                </Text>
+              </View>
+            ) : null
+          }
         />
 
         <TouchableOpacity
@@ -75,7 +112,9 @@ export default function SelectTenantScreen() {
           {isConfirming ? (
             <ActivityIndicator color="#ffffff" size="small" />
           ) : (
-            <Text style={styles.primaryButtonText}>Tiếp tục</Text>
+            <Text style={styles.primaryButtonText}>
+              {activeTenantId ? 'Chuyển sang công ty này' : 'Tiếp tục'}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -120,12 +159,24 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   errorText: {
+    flex: 1,
     fontSize: 13,
     color: '#DC2626',
   },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+  },
+  retryText: { fontSize: 13, fontWeight: '700' },
   list: {
     gap: 10,
   },
+  emptyBox: { alignItems: 'center', gap: 8, paddingVertical: 32 },
+  emptyText: { color: '#64748B', fontSize: 13, textAlign: 'center', lineHeight: 19 },
   item: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -138,10 +189,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
   },
   itemText: {
+    flex: 1,
     fontSize: 14,
     color: '#1E293B',
     fontWeight: '600',
   },
+  itemHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  itemMeta: { marginTop: 6, fontSize: 12, color: '#64748B' },
+  activeBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: '#DCFCE7',
+  },
+  activeBadgeText: { color: '#15803D', fontSize: 10, fontWeight: '800' },
   primaryButton: {
     borderRadius: 12,
     paddingVertical: 15,

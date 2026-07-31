@@ -18,6 +18,7 @@ import type {
   FaceLivenessAction,
   FaceLivenessChallengeDto,
   FaceLivenessPurpose,
+  FaceLivenessResultDto,
   FaceLivenessStepResult,
 } from '@/features/face/types/FaceId';
 import {
@@ -34,32 +35,36 @@ const ACTION_COPY: Record<
 > = {
   center: {
     title: 'Nhìn thẳng vào camera',
-    description: 'Giữ khuôn mặt ở giữa khung, mắt mở và không nghiêng đầu.',
+    description:
+      'Nhìn vào ống kính, giữ mặt giữa khung và giữ nguyên vị trí điện thoại làm mốc cho các bước sau.',
     icon: 'scan-outline',
   },
   turn_left: {
     title: 'Quay đầu sang trái',
-    description: 'Quay vừa đủ khoảng 20°, vẫn giữ toàn bộ khuôn mặt trong khung.',
+    description:
+      'Chỉ quay đầu sang trái khoảng 20°; không xoay hoặc di chuyển điện thoại khỏi vị trí ban đầu.',
     icon: 'arrow-back-circle-outline',
   },
   turn_right: {
     title: 'Quay đầu sang phải',
-    description: 'Quay vừa đủ khoảng 20°, vẫn giữ toàn bộ khuôn mặt trong khung.',
+    description:
+      'Chỉ quay đầu sang phải khoảng 20°; không xoay hoặc di chuyển điện thoại khỏi vị trí ban đầu.',
     icon: 'arrow-forward-circle-outline',
   },
   look_up: {
     title: 'Ngẩng mặt lên',
-    description: 'Ngẩng nhẹ cằm và giữ điện thoại đứng yên.',
+    description: 'Ngẩng nhẹ cằm so với bước nhìn thẳng và giữ điện thoại đứng yên.',
     icon: 'arrow-up-circle-outline',
   },
   look_down: {
     title: 'Cúi mặt xuống',
-    description: 'Cúi nhẹ cằm và giữ điện thoại đứng yên.',
+    description: 'Cúi nhẹ cằm so với bước nhìn thẳng và giữ điện thoại đứng yên.',
     icon: 'arrow-down-circle-outline',
   },
   blink: {
     title: 'Nhắm cả hai mắt',
-    description: 'Nhắm mắt khi bộ đếm về 0 và giữ trong khoảnh khắc chụp.',
+    description:
+      'Giữ đầu và điện thoại như bước nhìn thẳng; nhắm cả hai mắt khi bộ đếm về 0.',
     icon: 'eye-off-outline',
   },
 };
@@ -69,6 +74,59 @@ const FAILURE_COPY: Record<string, string> = {
   no_face_detected: 'Không phát hiện khuôn mặt.',
   multiple_faces_detected: 'Có nhiều hơn một khuôn mặt trong ảnh.',
 };
+
+function getFailedStepDetail(step: FaceLivenessStepResult): string {
+  if (step.reason) {
+    return FAILURE_COPY[step.reason] ?? 'Hành động chưa đạt yêu cầu.';
+  }
+
+  const detected = new Set(step.detected ?? []);
+  switch (step.action) {
+    case 'center':
+      if (detected.has('turn_left') || detected.has('turn_right')) {
+        return 'Khuôn mặt chưa nhìn thẳng. Hãy nhìn vào ống kính và chụp lại bước đầu.';
+      }
+      if (detected.has('look_up') || detected.has('look_down')) {
+        return 'Góc nhìn chưa ổn định. Hãy nhìn trực tiếp vào ống kính, không cố ngẩng hoặc cúi đầu.';
+      }
+      return 'Không đo được tư thế nhìn thẳng ổn định. Hãy giữ mặt giữa khung và đủ sáng.';
+    case 'turn_left':
+      if (detected.has('turn_right')) {
+        return 'Bạn đã quay ngược hướng. Hãy quay đầu sang bên trái của chính bạn.';
+      }
+      return 'Bạn chưa quay đầu đủ sang trái. Giữ điện thoại đứng yên và chỉ xoay đầu thêm một chút.';
+    case 'turn_right':
+      if (detected.has('turn_left')) {
+        return 'Bạn đã quay ngược hướng. Hãy quay đầu sang bên phải của chính bạn.';
+      }
+      return 'Bạn chưa quay đầu đủ sang phải. Giữ điện thoại đứng yên và chỉ xoay đầu thêm một chút.';
+    case 'blink':
+      return 'Camera chụp khi mắt chưa nhắm rõ. Hãy nhắm cả hai mắt khi bộ đếm về 0.';
+    case 'look_up':
+      return 'Bạn chưa ngẩng đủ so với tư thế nhìn thẳng. Giữ điện thoại đứng yên và ngẩng nhẹ cằm.';
+    case 'look_down':
+      return 'Bạn chưa cúi đủ so với tư thế nhìn thẳng. Giữ điện thoại đứng yên và cúi nhẹ cằm.';
+    case 'anti_spoof_check':
+      return 'Ảnh chưa vượt qua kiểm tra người thật. Tránh ngược sáng, màn hình hoặc ảnh phản chiếu.';
+    default:
+      return 'Hành động chưa đạt yêu cầu.';
+  }
+}
+
+function getChallengeFailureMessage(result: FaceLivenessResultDto): string {
+  if (result.steps.some((step) => !step.passed)) {
+    return 'Chưa xác minh được người thật. Xem bước chưa đạt và thực hiện lại bằng thử thách mới.';
+  }
+
+  const reason = result.reason?.toLowerCase() ?? '';
+  if (reason.includes('same person') || reason.includes('similarity=')) {
+    return 'Khuôn mặt giữa các bước chưa đủ nhất quán. Hãy chỉ để một người trong khung và giữ đủ sáng.';
+  }
+  if (reason.includes('anti-spoof')) {
+    return 'Chưa hoàn tất được kiểm tra người thật. Tránh ngược sáng, ảnh phản chiếu hoặc màn hình khác trong khung.';
+  }
+  return 'Chưa xác minh được người thật. Vui lòng giữ điện thoại ổn định và thực hiện lại thử thách mới.';
+}
 
 interface FaceLivenessCameraBaseProps {
   employeeId: string;
@@ -226,9 +284,7 @@ export function FaceLivenessCamera({
 
       setChallengeFailed(true);
       setFailureSteps(result.steps.filter((step) => !step.passed));
-      setErrorMessage(
-        'Chưa xác minh được người thật. Xem bước chưa đạt và thực hiện lại bằng thử thách mới.',
-      );
+      setErrorMessage(getChallengeFailureMessage(result));
     } catch (error) {
       if (challenge && stepIndex === challenge.actions.length - 1) {
         // A passed challenge that could not be consumed must not leave the UI
@@ -254,9 +310,7 @@ export function FaceLivenessCamera({
           step.action === 'anti_spoof_check'
             ? 'Kiểm tra ảnh thật'
             : ACTION_COPY[step.action]?.title ?? step.action;
-        const detail = step.reason
-          ? FAILURE_COPY[step.reason] ?? 'Hành động chưa đạt yêu cầu.'
-          : 'Hành động chưa đạt yêu cầu.';
+        const detail = getFailedStepDetail(step);
         return { action, detail };
       }),
     [failureSteps],
@@ -272,8 +326,9 @@ export function FaceLivenessCamera({
           Xác minh người thật
         </Text>
         <Text style={[styles.introText, { color: theme.textSecondary }]}>
-          Hệ thống sẽ đưa ra 3 hành động ngẫu nhiên. Mỗi bước chỉ chụp một ảnh
-          và thử thách hết hạn sau 90 giây.
+          Hệ thống sẽ chụp một bước nhìn thẳng làm mốc, sau đó yêu cầu hai hành
+          động ngẫu nhiên: quay trái, quay phải, ngẩng mặt, cúi mặt hoặc nhắm
+          mắt. Mỗi bước chụp một ảnh và thử thách hết hạn sau 90 giây.
         </Text>
         <View style={styles.tipList}>
           <Text style={[styles.tip, { color: theme.textSecondary }]}>
@@ -283,7 +338,8 @@ export function FaceLivenessCamera({
             • Tháo khẩu trang, kính râm và không để người khác vào khung hình.
           </Text>
           <Text style={[styles.tip, { color: theme.textSecondary }]}>
-            • Giữ điện thoại ngang tầm mắt và làm đúng từng hướng dẫn.
+            • Sau bước nhìn thẳng, giữ điện thoại ở nguyên vị trí và chỉ chuyển
+            động đầu hoặc mắt theo hướng dẫn.
           </Text>
           <Text style={[styles.tip, { color: theme.textSecondary }]}>
             • Hệ thống giới hạn tối đa 5 lần bắt đầu trong mỗi 10 phút.

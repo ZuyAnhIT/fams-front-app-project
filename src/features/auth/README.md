@@ -45,6 +45,7 @@ Các file scaffold auth rỗng và mock adapter cũ đã được xóa; nguồn 
 | POST | `/auth/otp/verify` | `{ firebaseIdToken, deviceId }` | `LoginResponse` | `use-phone-otp.ts` |
 | POST | `/auth/login/totp` | `{ pendingToken, code }` | `LoginResponse` | `use-2fa.ts` (`use2FAVerify`) |
 | POST | `/auth/refresh-token` | `{ refreshToken }` | `RefreshTokenResponse` | `api-interceptors.ts` (tự động khi 401) |
+| POST | `/auth/switch-tenant` | `{ tenantId, refreshToken }` + Bearer access token | `LoginResponse` mới | `use-select-tenant.ts` |
 | POST | `/auth/logout`, `/auth/logout/all` | `{ refreshToken }` / không body | `void` | `use-logout.ts` |
 | POST | `/auth/totp/setup` | — | `{ setup_token, qr_code_url, secret }` | `use2FASetup` |
 | POST | `/auth/totp/verify` | `{ setupToken, code }` | `void` | `use2FAConfirmSetup` |
@@ -55,7 +56,7 @@ Các file scaffold auth rỗng và mock adapter cũ đã được xóa; nguồn 
 | GET | `/auth/me` | — | `UserProfile` | `use-profile.ts`, `session.ts` |
 | PATCH | `/auth/me` | `{ displayName?, phone?, avatarUrl? }` | `UserProfile` | `use-profile.ts` |
 
-`LoginResponse`: `{ access_token, refresh_token, token_type: 'Bearer', expires_in, user?, requires_2fa, temp_token? }`. Backend thật **không trả `user`** trong response login — mọi hook login đều tự gọi tiếp `resolveAuthenticatedSession()` để lấy `GET /auth/me`.
+`LoginResponse`: `{ user_id?, active_tenant_id?, access_token, refresh_token, token_type: 'Bearer', expires_in, user?, requires_2fa, temp_token? }`. Backend thật **không trả `user`** trong response login — mọi hook login đều tự gọi tiếp `resolveAuthenticatedSession()` để lấy `GET /auth/me`.
 
 `UserProfile`: `{ id, email, phone?, full_name, avatar_url?, role: 'employee'|'manager'|'admin'|'hr', tenant_id, department?, employee_code?, is_2fa_enabled, locked_until? }`.
 
@@ -75,7 +76,7 @@ LoginForm → useLogin().login({identifier,password})
 ### 2. Refresh token (transparent, trong `api-interceptors.ts`)
 
 - Request interceptor: luôn gắn `Authorization: Bearer <accessToken>` từ `useAuthStore.getState()`.
-- Response interceptor: khi 401 ở endpoint được bảo vệ và request chưa retry → nếu đã có 1 refresh đang chạy thì **xếp hàng** (`failedQueue`) chờ; nếu chưa, tự gọi `POST /auth/refresh`, cập nhật token và replay request. Chỉ các endpoint credential công khai như login/register/refresh bị loại; `/auth/me` vẫn được refresh. Refresh thất bại → clear auth/check-in/query cache và replace về login.
+- Response interceptor: khi 401 ở endpoint được bảo vệ và request chưa retry → nếu đã có 1 refresh đang chạy thì **xếp hàng** (`failedQueue`) chờ; nếu chưa, tự gọi `POST /auth/refresh`, cập nhật token và replay request. Chỉ các endpoint credential công khai như login/register/refresh bị loại; `/auth/me` vẫn được refresh. Nếu backend đổi `activeTenantId` lúc refresh, App hủy request đang giữ URL tenant cũ, xóa cache và về Home. Refresh thất bại → clear auth/check-in/query cache và replace về login.
 - `setupAuthInterceptors()` trả cleanup function để eject request/response interceptor khi root layout unmount/hot reload.
 
 ### 3. Đăng ký phone và đăng nhập phone OTP là hai flow khác nhau

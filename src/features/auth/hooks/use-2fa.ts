@@ -65,7 +65,7 @@ export function use2FAVerify(): Use2FAVerifyResult {
     onSuccess: async (data) => {
       set2FARequired(false, null);
       await setTokens(data.access_token, data.refresh_token);
-      const session = await resolveAuthenticatedSession(data.user);
+      const session = await resolveAuthenticatedSession(data.user, data.active_tenant_id);
       setUser({ ...session.user, is_2fa_enabled: true });
       showToast('Xác thực 2 lớp thành công', 'success');
       navigateAfterAuth(session);

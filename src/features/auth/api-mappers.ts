@@ -9,6 +9,8 @@ import type {
 
 /** Backend login payload (camelCase keys from Spring Boot). */
 interface BackendLoginResponse {
+  userId?: string;
+  activeTenantId?: string;
   accessToken?: string;
   refreshToken?: string;
   tokenType?: string;
@@ -84,6 +86,8 @@ function toUserRole(raw?: string): UserRole {
 
 export function mapLoginResponse(raw: BackendLoginResponse): LoginResponse {
   return {
+    user_id: raw.userId,
+    active_tenant_id: raw.activeTenantId,
     access_token: raw.accessToken ?? '',
     refresh_token: raw.refreshToken ?? '',
     token_type: 'Bearer',

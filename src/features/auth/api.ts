@@ -27,6 +27,7 @@ import type {
   ResendVerificationRequest,
   ResetPasswordRequest,
   SendRegistrationOTPRequest,
+  SwitchTenantResponse,
   TwoFAConfirmSetupRequest,
   TwoFAConfirmSetupResponse,
   TwoFADisableRequest,
@@ -142,6 +143,7 @@ export async function refreshAccessToken(
     refreshToken?: string;
     tokenType?: string;
     expiresIn?: number;
+    activeTenantId?: string;
     access_token?: string;
     refresh_token?: string;
     token_type?: string;
@@ -159,6 +161,43 @@ export async function refreshAccessToken(
     refresh_token: refreshToken,
     token_type: 'Bearer',
     expires_in: raw.expiresIn ?? raw.expires_in ?? 0,
+    active_tenant_id: raw.activeTenantId,
+  };
+}
+
+/**
+ * Switches the tenant embedded in the authenticated session. The request
+ * interceptor supplies the current access token; the current refresh token is
+ * also required in the body so the backend can rotate both tokens together.
+ */
+export async function switchActiveTenant(
+  tenantId: string,
+  refreshToken: string,
+): Promise<SwitchTenantResponse> {
+  const { data } = await apiClient.post(`${BASE}/switch-tenant`, {
+    tenantId,
+    refreshToken,
+  });
+  const raw = unwrapApiData<{
+    userId?: string;
+    activeTenantId?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    tokenType?: string;
+    expiresIn?: number;
+  }>(data);
+
+  if (!raw.accessToken || !raw.refreshToken || !raw.activeTenantId) {
+    throw new Error('Switch-tenant response does not contain a valid session');
+  }
+
+  return {
+    user_id: raw.userId ?? '',
+    active_tenant_id: raw.activeTenantId,
+    access_token: raw.accessToken,
+    refresh_token: raw.refreshToken,
+    token_type: 'Bearer',
+    expires_in: raw.expiresIn ?? 0,
   };
 }
 

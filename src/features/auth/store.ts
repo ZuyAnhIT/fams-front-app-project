@@ -28,6 +28,20 @@ export const useAuthStore = create<AuthStore>((set) => ({
     set({ accessToken: access, refreshToken: refresh, isAuthenticated: true });
   },
 
+  setTenantSession: async (access, refresh, tenantId) => {
+    await Promise.all([
+      SecureStore.setItemAsync(KEY_ACCESS, access),
+      SecureStore.setItemAsync(KEY_REFRESH, refresh),
+      SecureStore.setItemAsync(KEY_ACTIVE_TENANT, tenantId),
+    ]);
+    set({
+      accessToken: access,
+      refreshToken: refresh,
+      activeTenantId: tenantId,
+      isAuthenticated: true,
+    });
+  },
+
   setUser: (user: UserProfile) => set({ user }),
 
   set2FARequired: (required, tempToken = null) =>

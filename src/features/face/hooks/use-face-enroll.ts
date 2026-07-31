@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
+import { parseFaceIdError } from '../utils/face-id.utils';
 import { useCurrentEmployeeId } from './use-current-employee-id';
 import { useFaceIdConsent, useFaceIdEnroll, useFaceIdStatus } from './use-face-id';
 
@@ -59,12 +60,11 @@ export function useFaceEnroll() {
       try {
         await enrollAsync(challengeId);
         setStep('submitted');
-      } catch {
-        setSubmitError(
-          'Thử thách đã đạt nhưng chưa gửi được hồ sơ. Vui lòng tạo thử thách mới và thử lại.',
-        );
+      } catch (error) {
+        const message = parseFaceIdError(error);
+        setSubmitError(message);
         resetEnroll();
-        throw new Error('Không thể gửi hồ sơ Face ID');
+        throw new Error(message);
       }
     },
     [enrollAsync, resetEnroll],

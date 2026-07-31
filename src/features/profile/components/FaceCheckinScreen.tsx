@@ -16,6 +16,7 @@ import { useCheckinSubmit } from '@/features/checkin/hooks/use-checkin-submit';
 import type { CheckinPolicy } from '@/features/checkin/types/checkin.type';
 import { useCurrentEmployeeId } from '@/features/face/hooks/use-current-employee-id';
 import { useFaceIdStatus } from '@/features/face/hooks/use-face-id';
+import { requiresFaceIdReEnrollment } from '@/features/face/utils/face-id.utils';
 
 import { FaceLivenessCamera } from './FaceLivenessCamera';
 import { FacePhotoCapture } from './FacePhotoCapture';
@@ -58,6 +59,7 @@ export function FaceCheckinScreen() {
 
   const isLoading = isLoadingEmployee || (!!employeeId && isLoadingFace);
   const hasApprovedFace = faceIdStatus?.status === 'enrolled';
+  const needsModelUpgrade = requiresFaceIdReEnrollment(faceIdStatus);
 
   const handlePassed = async (challengeId: string) => {
     setSubmitError(null);
@@ -183,7 +185,7 @@ export function FaceCheckinScreen() {
     );
   }
 
-  if (!siteId || !employeeId || !hasApprovedFace) {
+  if (!siteId || !employeeId || !hasApprovedFace || needsModelUpgrade) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <View style={styles.header}>
@@ -206,10 +208,14 @@ export function FaceCheckinScreen() {
               ? 'Không tìm thấy hồ sơ nhân viên'
               : !siteId
                 ? 'Thiếu thông tin công trình'
+                : needsModelUpgrade
+                  ? 'Face ID cần được đăng ký lại'
                 : 'Face ID chưa được phê duyệt'}
           </Text>
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-            Công trình này yêu cầu Face ID đã được duyệt trước khi chấm công.
+            {needsModelUpgrade
+              ? 'Hồ sơ cũ không tương thích với ArcFace 512 chiều. Hãy đăng ký lại và chờ HR duyệt trước khi check-in.'
+              : 'Công trình này yêu cầu Face ID đã được duyệt trước khi chấm công.'}
           </Text>
           {employeeId && (
             <Pressable
@@ -219,7 +225,9 @@ export function FaceCheckinScreen() {
               <Text style={styles.primaryButtonText}>
                 {faceIdStatus?.reviewStatus === 'pending'
                   ? 'Xem trạng thái chờ duyệt'
-                  : 'Đăng ký Face ID'}
+                  : needsModelUpgrade
+                    ? 'Nâng cấp Face ID'
+                    : 'Đăng ký Face ID'}
               </Text>
             </Pressable>
           )}

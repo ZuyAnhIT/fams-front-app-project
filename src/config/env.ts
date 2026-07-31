@@ -32,3 +32,21 @@ export const API_BASE_URL = getApiBaseUrl();
  */
 export const AVATAR_UPLOAD_URL =
   process.env.EXPO_PUBLIC_AVATAR_UPLOAD_URL?.trim() ?? '';
+
+/**
+ * Profiles approved before this instant may contain the retired dlib 128-dim
+ * embedding and must be enrolled again under ArcFace 512-dim. Override this
+ * value in EAS/production with the actual backend rollout instant.
+ */
+const DEFAULT_FACE_ID_ARCFACE_ROLLOUT_AT = '2026-07-31T01:14:52Z';
+const configuredFaceIdRolloutAt =
+  process.env.EXPO_PUBLIC_FACE_ID_ARCFACE_ROLLOUT_AT?.trim() ||
+  DEFAULT_FACE_ID_ARCFACE_ROLLOUT_AT;
+
+if (!Number.isFinite(Date.parse(configuredFaceIdRolloutAt))) {
+  throw new Error(
+    'EXPO_PUBLIC_FACE_ID_ARCFACE_ROLLOUT_AT không hợp lệ. Cần dùng ISO-8601, ví dụ 2026-07-31T01:14:52Z.',
+  );
+}
+
+export const FACE_ID_ARCFACE_ROLLOUT_AT = configuredFaceIdRolloutAt;

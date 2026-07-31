@@ -39,7 +39,12 @@ export function FaceCheckoutScreen() {
       ? 'gps_face_liveness'
       : 'gps_face';
   const { employeeId, isLoading: isLoadingEmployee } = useCurrentEmployeeId();
-  const { faceIdStatus, isLoading: isLoadingFace } = useFaceIdStatus(employeeId);
+  const {
+    faceIdStatus,
+    isLoading: isLoadingFace,
+    isError: isFaceStatusError,
+    refetch: refetchFaceStatus,
+  } = useFaceIdStatus(employeeId);
   const { checkOut, isLocating, isSubmitting, locationErrorMessage } =
     useCheckoutSubmit();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -79,6 +84,36 @@ export function FaceCheckoutScreen() {
         <View style={styles.center}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={{ color: theme.textMuted }}>Đang kiểm tra Face ID...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (employeeId && isFaceStatusError) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} hitSlop={12}>
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Xác thực ra ca</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={58} color={theme.error} />
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>
+            Không thể kiểm tra Face ID
+          </Text>
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+            Camera chưa được mở để tránh thu dữ liệu khuôn mặt khi trạng thái hồ
+            sơ chưa được xác định.
+          </Text>
+          <Pressable
+            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+            onPress={() => void refetchFaceStatus()}
+          >
+            <Text style={styles.primaryButtonText}>Thử lại</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -195,4 +230,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   errorText: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: '600' },
+  primaryButton: {
+    marginTop: 8,
+    borderRadius: 13,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+  },
+  primaryButtonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
 });

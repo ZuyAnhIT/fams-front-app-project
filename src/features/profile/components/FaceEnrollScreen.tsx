@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthTheme } from '@/features/auth/theme';
 
 import { useFaceEnroll } from '@/features/face/hooks/use-face-enroll';
+import { requiresFaceIdReEnrollment } from '@/features/face/utils/face-id.utils';
 import { FaceConsentSheet } from './FaceConsentSheet';
 import { FaceEnrollCamera } from './FaceEnrollCamera';
 
@@ -34,6 +35,7 @@ export function FaceEnrollScreen() {
     goToProfile,
     refetchStatus,
   } = useFaceEnroll();
+  const needsModelUpgrade = requiresFaceIdReEnrollment(faceIdStatus);
 
   if (isLoading) {
     return (
@@ -97,8 +99,10 @@ export function FaceEnrollScreen() {
             Đã gửi, đang chờ HR duyệt
           </Text>
           <Text style={[styles.doneDesc, { color: theme.textSecondary }]}>
-            {hasApprovedFace
-              ? 'Face ID đang sử dụng của bạn vẫn có hiệu lực trong lúc hồ sơ mới được xem xét.'
+            {needsModelUpgrade
+              ? 'Hồ sơ cũ không tương thích với ArcFace 512 chiều. Hãy chờ hồ sơ mới được duyệt trước khi check-in bằng Face ID.'
+              : hasApprovedFace
+                ? 'Face ID hiện tại vẫn dùng được trong lúc chờ HR duyệt lượt đăng ký lại.'
               : 'Bạn chỉ có thể dùng Face ID để chấm công sau khi hồ sơ được HR hoặc quản lý phê duyệt.'}
           </Text>
           {faceIdStatus?.submittedAt && (

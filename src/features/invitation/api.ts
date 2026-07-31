@@ -10,6 +10,8 @@ import type {
 } from './types';
 
 interface BackendLoginResponse {
+  userId?: string;
+  activeTenantId?: string;
   accessToken?: string;
   refreshToken?: string;
   tokenType?: string;
