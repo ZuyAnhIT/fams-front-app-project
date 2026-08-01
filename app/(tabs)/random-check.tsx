@@ -1,5 +1,5 @@
-import { Redirect } from 'expo-router';
+import { RandomCheckScreen as RandomCheckFeatureScreen } from '@/features/random-check/components/RandomCheckScreen';
 
 export default function RandomCheckScreen() {
-  return <Redirect href="/(tabs)/home" />;
+  return <RandomCheckFeatureScreen />;
 }

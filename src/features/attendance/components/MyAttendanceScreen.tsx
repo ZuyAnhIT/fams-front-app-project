@@ -156,6 +156,11 @@ function DailyCard({ item }: { item: AttendanceSummary }) {
             <Text style={[styles.badgeText, { color: palette.danger }]}>Có phiên bị từ chối</Text>
           </View>
         )}
+        {item.hasRandomCheckFailure && (
+          <View style={[styles.badge, styles.randomCheckBadge]}>
+            <Text style={[styles.badgeText, { color: palette.warning }]}>Random check chưa đạt</Text>
+          </View>
+        )}
         {item.missingCheckout && (
           <View style={[styles.badge, styles.rejectedBadge]}>
             <Text style={[styles.badgeText, { color: palette.danger }]}>Thiếu check-out</Text>
@@ -309,6 +314,15 @@ export function MyAttendanceScreen() {
                   background={palette.dangerSoft}
                 />
               )}
+              {data.daysWithRandomCheckFailure > 0 && (
+                <WarningBanner
+                  icon="shield-outline"
+                  title={`${data.daysWithRandomCheckFailure} ngày có random check chưa đạt`}
+                  description="Đây là cảnh báo tuân thủ để bạn và HR đối soát; hệ thống không tự trừ giờ làm hoặc OT."
+                  tone={palette.warning}
+                  background={palette.warningSoft}
+                />
+              )}
 
               <View style={styles.summaryCard}>
                 <Text style={styles.sectionEyebrow}>
@@ -416,6 +430,7 @@ const styles = StyleSheet.create({
   pendingBadge: { backgroundColor: palette.warningSoft },
   rejectedBadge: { backgroundColor: palette.dangerSoft },
   adjustedBadge: { backgroundColor: palette.primarySoft },
+  randomCheckBadge: { backgroundColor: palette.warningSoft },
   badgeText: { fontSize: 10, lineHeight: 14, fontWeight: '800' },
   timeLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   timeText: { color: palette.textSecondary, fontSize: 12, lineHeight: 18, fontWeight: '600' },

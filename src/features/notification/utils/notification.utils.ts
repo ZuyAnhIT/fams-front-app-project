@@ -14,6 +14,7 @@ export function isNotificationRead(
 /** Best-effort — Swagger không công bố danh sách eventType cố định. */
 const EVENT_TYPE_LABELS: Record<string, string> = {
   random_check: 'Kiểm tra ngẫu nhiên',
+  random_check_sent: 'Kiểm tra ngẫu nhiên',
   violation: 'Vi phạm',
   system_alert: 'Hệ thống',
   assignment: 'Phân công',
@@ -24,7 +25,12 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 const DEFAULT_LABEL = 'Thông báo';
 
 export function getEventTypeLabel(eventType: string): string {
-  return EVENT_TYPE_LABELS[eventType] ?? DEFAULT_LABEL;
+  return EVENT_TYPE_LABELS[eventType.toLowerCase()] ?? DEFAULT_LABEL;
+}
+
+export function isRandomCheckNotification(eventType: string): boolean {
+  const normalized = eventType.toLowerCase();
+  return normalized === 'random_check' || normalized === 'random_check_sent';
 }
 
 export function formatNotificationTime(isoDate: string): string {

@@ -14,6 +14,7 @@ import {
   getEffectiveAvailabilityStatus,
 } from '@/features/checkin/utils/available-site';
 import { useUnreadCount } from '@/features/notification/hooks/useUnreadCount';
+import { useMyPendingRandomChecks } from '@/features/random-check/hooks/use-random-check';
 import { palette, radius, shadows, spacing } from '@/theme/tokens';
 
 interface QuickAction {
@@ -58,6 +59,10 @@ export default function HomeScreen() {
     refetch: refetchSites,
   } = useAvailableSites();
   const { unreadCount } = useUnreadCount();
+  const randomCheckQuery = useMyPendingRandomChecks();
+  const activeRandomChecks = randomCheckQuery.checks.filter(
+    (item) => item.status === 'sent' && !!item.expiresAt && Date.parse(item.expiresAt) > Date.now(),
+  );
 
   const firstSite = sites[0];
   const firstSiteAvailability = firstSite
@@ -93,6 +98,15 @@ export default function HomeScreen() {
       route: '/(tabs)/checkin',
     },
     {
+      label: 'Kiểm tra ngẫu nhiên',
+      description: activeRandomChecks.length > 0
+        ? `${activeRandomChecks.length} yêu cầu cần phản hồi ngay`
+        : 'Xem yêu cầu kiểm tra hiện trường',
+      icon: 'scan-outline',
+      route: '/(tabs)/random-check',
+      badge: activeRandomChecks.length,
+    },
+    {
       label: 'Thông báo',
       description: unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Không có thông báo mới',
       icon: 'notifications-outline',
@@ -108,10 +122,11 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetchingProfile || isRefetchingSites}
+            refreshing={isRefetchingProfile || isRefetchingSites || randomCheckQuery.isRefetching}
             onRefresh={() => {
               refetchProfile();
               refetchSites();
+              randomCheckQuery.refetch();
             }}
             tintColor={palette.primary}
           />
@@ -138,6 +153,24 @@ export default function HomeScreen() {
               )}
             </Pressable>
           </View>
+
+          {activeRandomChecks.length > 0 && (
+            <Pressable
+              onPress={() => router.push('/(tabs)/random-check')}
+              style={({ pressed }) => [styles.randomCheckAlert, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`${activeRandomChecks.length} yêu cầu kiểm tra ngẫu nhiên cần phản hồi`}
+            >
+              <View style={styles.alertIcon}>
+                <Ionicons name="warning-outline" size={25} color={palette.danger} />
+              </View>
+              <View style={styles.alertCopy}>
+                <Text style={styles.alertTitle}>Kiểm tra ngẫu nhiên đang chờ</Text>
+                <Text style={styles.alertText}>{activeRandomChecks.length} yêu cầu có giới hạn thời gian. Phản hồi ngay.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={palette.danger} />
+            </Pressable>
+          )}
 
           <View style={styles.shiftCard}>
             <View style={styles.shiftHeader}>
@@ -293,6 +326,21 @@ const styles = StyleSheet.create({
   avatar: { width: '100%', height: '100%' },
   avatarInitial: { color: palette.primary, fontSize: 21, fontWeight: '800' },
   pressed: { opacity: 0.75 },
+  randomCheckAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: palette.dangerSoft,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  alertIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: palette.surface, alignItems: 'center', justifyContent: 'center' },
+  alertCopy: { flex: 1 },
+  alertTitle: { color: palette.danger, fontSize: 14, lineHeight: 20, fontWeight: '800' },
+  alertText: { color: palette.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 2 },
   shiftCard: {
     backgroundColor: palette.surface,
     borderRadius: radius.xl,

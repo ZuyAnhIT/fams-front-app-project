@@ -16,6 +16,7 @@ export interface NotificationItem {
   createdAt: string;
   read: boolean;
   isRead: boolean;
+  metadata: Record<string, unknown> | null;
 }
 
 export interface NotificationListParams {
