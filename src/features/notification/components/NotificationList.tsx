@@ -16,7 +16,7 @@ import { palette, radius, spacing } from '@/theme/tokens';
 import { useMarkAsRead } from '../hooks/useMarkAsRead';
 import { useNotifications } from '../hooks/useNotifications';
 import type { NotificationItem as NotificationItemType } from '../types/Notification';
-import { isNotificationRead } from '../utils/notification.utils';
+import { isNotificationRead, isRandomCheckNotification } from '../utils/notification.utils';
 import { NotificationItem } from './NotificationItem';
 
 export function NotificationList() {
@@ -43,7 +43,19 @@ export function NotificationList() {
         markAsRead(notification.id);
       }
 
-      if (notification.eventType === 'assignment') {
+      if (isRandomCheckNotification(notification.eventType)) {
+        const checkId = notification.metadata?.checkId;
+        if (typeof checkId === 'string' && checkId.trim()) {
+          router.push({
+            pathname: '/(tabs)/random-check',
+            params: { checkId },
+          });
+        } else {
+          // Fallback for old notifications and raw FCM push payloads, which do
+          // not yet carry structured metadata while the app is fully closed.
+          router.push('/(tabs)/random-check');
+        }
+      } else if (notification.eventType === 'assignment') {
         // App employees must use the self-service available-sites contract.
         // The assignment list is an HR/Supervisor management API and may 403.
         router.push('/(tabs)/checkin');

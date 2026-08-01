@@ -21,6 +21,8 @@ export interface AttendanceSummary {
   missingCheckout: boolean;
   hasPendingReviewSession: boolean;
   hasRejectedSession: boolean;
+  /** Warning only; it does not subtract work or overtime minutes. */
+  hasRandomCheckFailure: boolean;
   createdAt: string;
   updatedAt: string;
   adjustmentReason: string | null;
@@ -42,5 +44,7 @@ export interface AttendanceMonthly {
   missingCheckoutDays: number;
   daysWithPendingReview: number;
   daysWithRejectedSession: number;
+  /** Warning only; it does not subtract work or overtime minutes. */
+  daysWithRandomCheckFailure: number;
   dailySummaries: AttendanceSummary[];
 }

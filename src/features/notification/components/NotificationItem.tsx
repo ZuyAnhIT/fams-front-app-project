@@ -7,6 +7,7 @@ import type { NotificationItem as NotificationItemType } from '../types/Notifica
 import {
   formatNotificationTime,
   getEventTypeLabel,
+  isRandomCheckNotification,
   isNotificationRead,
 } from '../utils/notification.utils';
 
@@ -18,7 +19,8 @@ interface NotificationItemProps {
 export function NotificationItem({ notification, onPress }: NotificationItemProps) {
   const read = isNotificationRead(notification);
   const typeLabel = getEventTypeLabel(notification.eventType);
-  const opensRelatedScreen = ['assignment', 'checkin', 'attendance'].includes(notification.eventType);
+  const normalizedEventType = notification.eventType.toLowerCase();
+  const opensRelatedScreen = isRandomCheckNotification(notification.eventType) || ['assignment', 'checkin', 'attendance'].includes(normalizedEventType);
   const icon: keyof typeof Ionicons.glyphMap = {
     random_check: 'dice-outline',
     violation: 'warning-outline',
@@ -26,7 +28,8 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
     assignment: 'clipboard-outline',
     checkin: 'checkmark-circle-outline',
     attendance: 'stats-chart-outline',
-  }[notification.eventType] as keyof typeof Ionicons.glyphMap ?? 'notifications-outline';
+    random_check_sent: 'dice-outline',
+  }[normalizedEventType] as keyof typeof Ionicons.glyphMap ?? 'notifications-outline';
 
   return (
     <Pressable
