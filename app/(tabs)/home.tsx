@@ -15,6 +15,7 @@ import {
 } from '@/features/checkin/utils/available-site';
 import { useUnreadCount } from '@/features/notification/hooks/useUnreadCount';
 import { useMyPendingRandomChecks } from '@/features/random-check/hooks/use-random-check';
+import { secondsLeft } from '@/features/random-check/utils/random-check.utils';
 import { palette, radius, shadows, spacing } from '@/theme/tokens';
 
 interface QuickAction {
@@ -61,7 +62,9 @@ export default function HomeScreen() {
   const { unreadCount } = useUnreadCount();
   const randomCheckQuery = useMyPendingRandomChecks();
   const activeRandomChecks = randomCheckQuery.checks.filter(
-    (item) => item.status === 'sent' && !!item.expiresAt && Date.parse(item.expiresAt) > Date.now(),
+    (item) =>
+      item.status === 'sent' &&
+      secondsLeft(item, Date.now(), randomCheckQuery.dataUpdatedAt) > 0,
   );
 
   const firstSite = sites[0];

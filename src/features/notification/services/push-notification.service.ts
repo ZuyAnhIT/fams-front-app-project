@@ -1,0 +1,155 @@
+import type { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+
+import { isNativeDevelopmentOrProductionBuild } from '@/features/auth/runtime';
+import * as SecureStorage from '@/features/auth/secure-storage';
+import { apiClient } from '@/services/api-client';
+
+const DEVICE_TOKEN_KEY = 'fams_fcm_device_token';
+
+export interface PushMessage {
+  messageId?: string;
+  title?: string;
+  body?: string;
+  data?: Record<string, string | object>;
+}
+
+async function loadMessaging() {
+  if (!isNativeDevelopmentOrProductionBuild()) return null;
+  return import('@react-native-firebase/messaging');
+}
+
+async function hasNotificationPermission(): Promise<boolean> {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('random-checks', {
+      name: 'Kiểm tra ngẫu nhiên',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 150, 250],
+    });
+  }
+  const current = await Notifications.getPermissionsAsync();
+  if (current.granted) return true;
+  const requested = await Notifications.requestPermissionsAsync();
+  return requested.granted;
+}
+
+async function saveDeviceToken(token: string): Promise<void> {
+  await apiClient.post('/me/devices', {
+    deviceToken: token,
+    // Both Android and iOS receive a Firebase registration token. Firebase
+    // routes the iOS message onwards through the configured APNs key.
+    platform: 'FCM',
+  });
+  await SecureStorage.setItemAsync(DEVICE_TOKEN_KEY, token);
+}
+
+/** Registers this installation after auth. Expo Go intentionally returns null. */
+export async function registerCurrentPushDevice(): Promise<string | null> {
+  const messagingModule = await loadMessaging();
+  if (!messagingModule || !(await hasNotificationPermission())) return null;
+
+  const messaging = messagingModule.getMessaging();
+  if (!messagingModule.isDeviceRegisteredForRemoteMessages(messaging)) {
+    await messagingModule.registerDeviceForRemoteMessages(messaging);
+  }
+  const token = await messagingModule.getToken(messaging);
+  await saveDeviceToken(token);
+  return token;
+}
+
+/** Removes the current installation while the access token is still valid. */
+export async function unregisterCurrentPushDevice(): Promise<void> {
+  const token = await SecureStorage.getItemAsync(DEVICE_TOKEN_KEY);
+  if (!token) return;
+
+  await apiClient.delete(`/me/devices/${encodeURIComponent(token)}`);
+  await SecureStorage.deleteItemAsync(DEVICE_TOKEN_KEY);
+}
+
+export async function subscribeToPushTokenRefresh(
+  onError?: (error: unknown) => void,
+): Promise<() => void> {
+  const messagingModule = await loadMessaging();
+  if (!messagingModule) return () => undefined;
+
+  return messagingModule.onTokenRefresh(
+    messagingModule.getMessaging(),
+    (token) => void saveDeviceToken(token).catch(onError ?? (() => undefined)),
+  );
+}
+
+export async function subscribeToForegroundPush(
+  listener: (message: PushMessage) => void,
+): Promise<() => void> {
+  const messagingModule = await loadMessaging();
+  if (!messagingModule) return () => undefined;
+
+  return messagingModule.onMessage(
+    messagingModule.getMessaging(),
+    (message: FirebaseMessagingTypes.RemoteMessage) => listener({
+      title: message.notification?.title,
+      body: message.notification?.body,
+      data: message.data,
+    }),
+  );
+}
+
+function toPushMessage(message: FirebaseMessagingTypes.RemoteMessage): PushMessage {
+  return {
+    messageId: message.messageId,
+    title: message.notification?.title,
+    body: message.notification?.body,
+    data: message.data,
+  };
+}
+
+/** Handles taps from background and the notification that launched a quit app. */
+export async function subscribeToNotificationOpen(
+  listener: (message: PushMessage) => void,
+): Promise<() => void> {
+  const messagingModule = await loadMessaging();
+  if (!messagingModule) return () => undefined;
+
+  const messaging = messagingModule.getMessaging();
+  const unsubscribe = messagingModule.onNotificationOpenedApp(
+    messaging,
+    (message) => listener(toPushMessage(message)),
+  );
+  const initialMessage = await messagingModule.getInitialNotification(messaging);
+  if (initialMessage) listener(toPushMessage(initialMessage));
+  return unsubscribe;
+}
+
+export function isRandomCheckPush(message: PushMessage): boolean {
+  const eventType = String(
+    message.data?.eventType ?? message.data?.type ?? message.data?.notificationType ?? '',
+  ).toUpperCase();
+  if (eventType === 'RANDOM_CHECK_SENT') return true;
+
+  const title = message.title?.toLocaleLowerCase('vi-VN') ?? '';
+  return title.includes('kiểm tra ngẫu nhiên') || title.includes('random check');
+}
+
+/** Reads the flat String→String FCM data contract, with a legacy nested fallback. */
+export function getRandomCheckIdFromPush(message: PushMessage): string | null {
+  const direct = message.data?.checkId;
+  if (typeof direct === 'string' && direct.trim()) return direct.trim();
+
+  const metadata = message.data?.metadata;
+  if (metadata && typeof metadata === 'object' && 'checkId' in metadata) {
+    const nested = metadata.checkId;
+    if (typeof nested === 'string' && nested.trim()) return nested.trim();
+  }
+  if (typeof metadata === 'string') {
+    try {
+      const parsed = JSON.parse(metadata) as { checkId?: unknown };
+      if (typeof parsed.checkId === 'string' && parsed.checkId.trim()) {
+        return parsed.checkId.trim();
+      }
+    } catch {
+      // Older/non-random messages may carry plain-text metadata.
+    }
+  }
+  return null;
+}

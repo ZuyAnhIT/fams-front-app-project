@@ -51,8 +51,7 @@ export function NotificationList() {
             params: { checkId },
           });
         } else {
-          // Fallback for old notifications and raw FCM push payloads, which do
-          // not yet carry structured metadata while the app is fully closed.
+          // Fallback for notification rows created before metadata was added.
           router.push('/(tabs)/random-check');
         }
       } else if (notification.eventType === 'assignment') {
