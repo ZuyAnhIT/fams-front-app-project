@@ -50,14 +50,16 @@ function CheckCard({
   now,
   selected,
   onSelect,
+  syncedAt,
 }: {
   item: EmployeePendingCheck;
   now: number;
   selected: boolean;
   onSelect: () => void;
+  syncedAt: number;
 }) {
   const mode = getRandomCheckMode(item.configSnapshot);
-  const remaining = secondsLeft(item, now);
+  const remaining = secondsLeft(item, now, syncedAt);
   const actionable = item.status === 'sent' && remaining > 0;
 
   return (
@@ -122,10 +124,11 @@ export function RandomCheckScreen() {
   }, []);
 
   const checks = useMemo(
-    () => [...query.checks].sort((a, b) => {
-      if (a.status !== b.status) return a.status === 'sent' ? -1 : 1;
-      return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
-    }),
+    // Future pending checks must stay undisclosed or the employee can predict
+    // a supposedly random spot check. Only dispatched checks are actionable.
+    () => query.checks
+      .filter((item) => item.status === 'sent')
+      .sort((a, b) => new Date(a.expiresAt ?? 0).getTime() - new Date(b.expiresAt ?? 0).getTime()),
     [query.checks],
   );
   const selected = checks.find((item) => item.id === selectedId) ?? null;
@@ -133,7 +136,9 @@ export function RandomCheckScreen() {
     ? getRandomCheckMode(selected.configSnapshot)
     : 'location_only';
   const face = useFaceIdStatus(selected?.employeeId ?? null);
-  const selectedExpired = selected ? secondsLeft(selected, now) <= 0 : false;
+  const selectedExpired = selected
+    ? secondsLeft(selected, now, query.dataUpdatedAt) <= 0
+    : false;
 
   useEffect(() => {
     if (selected && (selected.status !== 'sent' || selectedExpired)) setSelectedId(null);
@@ -141,18 +146,33 @@ export function RandomCheckScreen() {
 
   useEffect(() => {
     const target = params.checkId;
-    if (!target || query.isLoading || handledDeepLinkRef.current === target) return;
+    if (
+      !target ||
+      query.isLoading ||
+      query.isFetching ||
+      handledDeepLinkRef.current === target
+    ) return;
     const matchingCheck = checks.find(
-      (item) => item.id === target && item.status === 'sent' && secondsLeft(item, Date.now()) > 0,
+      (item) =>
+        item.id === target &&
+        item.status === 'sent' &&
+        secondsLeft(item, Date.now(), query.dataUpdatedAt) > 0,
     );
-    handledDeepLinkRef.current = target;
-    if (matchingCheck) setSelectedId(matchingCheck.id);
-  }, [checks, params.checkId, query.isLoading]);
+    if (matchingCheck) {
+      handledDeepLinkRef.current = target;
+      setSelectedId(matchingCheck.id);
+    }
+  }, [checks, params.checkId, query.dataUpdatedAt, query.isFetching, query.isLoading]);
 
   const send = async (employeePhotoBase64?: string) => {
     if (!selected || selectedExpired) return;
     const coords = await gps.requestLocation();
     if (!coords) return;
+    if (secondsLeft(selected, Date.now(), query.dataUpdatedAt) <= 0) {
+      setSelectedId(null);
+      await query.refetch();
+      return;
+    }
     try {
       const response = await submission.submit({
         checkId: selected.id,
@@ -213,7 +233,14 @@ export function RandomCheckScreen() {
           ) : (
             <View style={styles.list}>
               {checks.map((item) => (
-                <CheckCard key={item.id} item={item} now={now} selected={item.id === selectedId} onSelect={() => setSelectedId(item.id)} />
+                <CheckCard
+                  key={item.id}
+                  item={item}
+                  now={now}
+                  syncedAt={query.dataUpdatedAt}
+                  selected={item.id === selectedId}
+                  onSelect={() => setSelectedId(item.id)}
+                />
               ))}
             </View>
           )}

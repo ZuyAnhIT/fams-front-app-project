@@ -9,7 +9,10 @@ import {
   submitRandomCheckResponse,
 } from '../services/random-check.service';
 import type { SubmitRandomCheckPayload } from '../types/random-check.type';
-import { randomCheckErrorMessage } from '../utils/random-check.utils';
+import {
+  randomCheckErrorMessage,
+  shouldReconcileRandomCheckSubmission,
+} from '../utils/random-check.utils';
 
 export const randomCheckKeys = {
   all: ['random-check'] as const,
@@ -60,7 +63,35 @@ export function useSubmitRandomCheck() {
     }: {
       checkId: string;
       payload: SubmitRandomCheckPayload;
-    }) => submitRandomCheckResponse(tenantId!, checkId, payload),
+    }) => submitRandomCheckResponse(tenantId!, checkId, payload).catch(async (error) => {
+      if (!shouldReconcileRandomCheckSubmission(error)) throw error;
+
+      try {
+        const result = await getMyRandomCheckResult(tenantId!, checkId);
+        // A timeout does not prove that POST /respond reached the server. Only
+        // reconcile when the employee-safe result confirms a stored response.
+        if (result.status !== 'responded' || !result.respondedAt) throw error;
+        return {
+          id: `reconciled:${checkId}`,
+          scheduledCheckId: checkId,
+          employeeId: '',
+          respondedAt: result.respondedAt,
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+          accuracyMeters: payload.accuracyMeters ?? null,
+          locationVerified: result.locationVerified ?? false,
+          faceVerified: result.faceVerified,
+          livenessVerified: result.livenessVerified,
+          faceVerifyScore: result.faceVerifyScore,
+          hasPhotoEvidence: Boolean(payload.employeePhotoBase64),
+          outcome: result.outcome ?? 'pass',
+          failureReason: result.failureReason,
+          createdAt: result.respondedAt,
+        };
+      } catch {
+        throw error;
+      }
+    }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: randomCheckKeys.all }),

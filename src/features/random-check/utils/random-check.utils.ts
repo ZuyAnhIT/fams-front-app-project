@@ -41,9 +41,25 @@ export function randomCheckRequiresLiveness(mode: RandomCheckMode): boolean {
   return mode === 'location_face_liveness';
 }
 
-export function secondsLeft(check: EmployeePendingCheck, now: number): number {
+export function secondsLeft(
+  check: EmployeePendingCheck,
+  now: number,
+  syncedAt?: number,
+): number {
+  if (typeof check.secondsRemaining === 'number' && syncedAt && syncedAt > 0) {
+    const elapsed = Math.max(0, now - syncedAt) / 1_000;
+    return Math.max(0, Math.ceil(check.secondsRemaining - elapsed));
+  }
   if (!check.expiresAt) return 0;
-  return Math.max(0, Math.ceil((new Date(check.expiresAt).getTime() - now) / 1000));
+  return Math.max(0, Math.ceil((new Date(check.expiresAt).getTime() - now) / 1_000));
+}
+
+export function shouldReconcileRandomCheckSubmission(error: unknown): boolean {
+  if (!isAxiosError(error)) return false;
+  const code = String(
+    error.response?.data?.code ?? error.response?.data?.errorCode ?? '',
+  );
+  return !error.response || error.code === 'ECONNABORTED' || code === 'ALREADY_RESPONDED';
 }
 
 export function isRandomCheckProcessing(
@@ -74,6 +90,7 @@ export function randomCheckFailureLabel(reason: string | null): string {
 export function randomCheckErrorMessage(error: unknown): string {
   if (isAxiosError(error)) {
     const code = String(error.response?.data?.code ?? error.response?.data?.errorCode ?? '');
+    const userMessage = error.response?.data?.userMessage;
     const message = error.response?.data?.message;
     const known: Record<string, string> = {
       CHECK_NOT_SENT: 'Yêu cầu kiểm tra chưa được mở để phản hồi.',
@@ -82,6 +99,7 @@ export function randomCheckErrorMessage(error: unknown): string {
       EMPLOYEE_NOT_ACTIVE: 'Hồ sơ nhân viên không còn hoạt động.',
       FACE_ID_NOT_ENROLLED: 'Bạn cần đăng ký và được duyệt Face ID trước.',
     };
+    if (typeof userMessage === 'string' && userMessage.trim()) return userMessage;
     if (known[code]) return known[code];
     if (typeof message === 'string' && message.trim()) return message;
     if (!error.response) return 'Không thể kết nối máy chủ. Kiểm tra mạng rồi thử lại.';

@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 
 import { useToast } from '@/components/ui/toast';
 import { useCheckinStore } from '@/features/checkin/store/checkin.store';
+import { unregisterCurrentPushDevice } from '@/features/notification/services/push-notification.service';
 
 import { logoutAllDevices, logoutSingleDevice } from '../api';
 import { useAuthStore } from '../store';
@@ -37,6 +38,7 @@ export function useLogout(): UseLogoutResult {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       try {
+        await unregisterCurrentPushDevice().catch(() => undefined);
         if (refreshToken) await logoutSingleDevice(refreshToken);
       } finally {
         await resetAndRedirect('Đã đăng xuất');
@@ -47,6 +49,7 @@ export function useLogout(): UseLogoutResult {
   const logoutAllMutation = useMutation({
     mutationFn: async () => {
       try {
+        await unregisterCurrentPushDevice().catch(() => undefined);
         await logoutAllDevices();
       } finally {
         await resetAndRedirect('Đã đăng xuất khỏi tất cả thiết bị');
