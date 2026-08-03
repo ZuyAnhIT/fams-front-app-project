@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { ToastProvider, useToast } from "@/components/ui/toast";
 import { setupAuthInterceptors } from "@/features/auth/api-interceptors";
+import { resolveAuthenticatedSession } from "@/features/auth/session";
 import { useAuthStore } from "@/features/auth/store";
 import { useCheckinStore } from "@/features/checkin/store/checkin.store";
 import {
@@ -28,14 +29,16 @@ const queryClient = new QueryClient({
 
 /**
  * Initialises auth on mount:
- * 1. Hydrates tokens from SecureStore so the app knows if the session is live.
- * 2. Attaches axios interceptors for transparent token refresh.
+ * 1. Restores token candidates from SecureStore.
+ * 2. Verifies the restored session through /auth/me before unlocking the app.
+ * 3. Attaches axios interceptors for transparent token refresh.
  *
  * Must be rendered *inside* QueryClientProvider because interceptors trigger
  * router navigation, which requires the navigator to be ready.
  */
 function AppInit() {
   const hydrateFromSecureStore = useAuthStore((s) => s.hydrateFromSecureStore);
+  const finishHydration = useAuthStore((s) => s.finishHydration);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isHydrating = useAuthStore((s) => s.isHydrating);
@@ -44,13 +47,12 @@ function AppInit() {
   const openedPushIds = useRef(new Set<string>());
 
   useEffect(() => {
-    void hydrateFromSecureStore();
+    let disposed = false;
     const ejectInterceptors = setupAuthInterceptors(
       async () => {
         await clearAuth();
         useCheckinStore.getState().resetContext();
         queryClient.clear();
-        router.replace('/(auth)/login');
       },
       () => {
         useCheckinStore.getState().resetContext();
@@ -59,8 +61,34 @@ function AppInit() {
       },
     );
 
-    return ejectInterceptors;
-  }, [clearAuth, hydrateFromSecureStore]);
+    void (async () => {
+      await hydrateFromSecureStore();
+      if (disposed) return;
+
+      const restored = useAuthStore.getState();
+      if (!restored.accessToken || !restored.refreshToken) return;
+
+      try {
+        const session = await resolveAuthenticatedSession(
+          undefined,
+          restored.activeTenantId ?? undefined,
+        );
+        if (disposed) return;
+        useAuthStore.getState().setUser(session.user);
+        finishHydration();
+      } catch {
+        if (disposed) return;
+        await useAuthStore.getState().clearAuth();
+        useCheckinStore.getState().resetContext();
+        queryClient.clear();
+      }
+    })();
+
+    return () => {
+      disposed = true;
+      ejectInterceptors();
+    };
+  }, [clearAuth, finishHydration, hydrateFromSecureStore]);
 
   useEffect(() => {
     if (isHydrating || !isAuthenticated || !accessToken) return;
