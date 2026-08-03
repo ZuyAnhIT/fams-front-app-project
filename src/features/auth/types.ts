@@ -236,6 +236,8 @@ export interface AuthActions {
   setActiveTenantId: (tenantId: string | null) => Promise<void>;
   /** Called once on app start to restore a previous session */
   hydrateFromSecureStore: () => Promise<void>;
+  /** Marks a restored token pair as authenticated after /auth/me succeeds. */
+  finishHydration: () => void;
   /** Wipes all auth state and removes tokens from SecureStore */
   clearAuth: () => Promise<void>;
 }

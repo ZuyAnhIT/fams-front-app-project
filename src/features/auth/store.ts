@@ -64,17 +64,28 @@ export const useAuthStore = create<AuthStore>((set) => ({
         SecureStore.getItemAsync(KEY_ACTIVE_TENANT),
       ]);
       if (access && refresh) {
-        set({ accessToken: access, refreshToken: refresh, isAuthenticated: true });
+        // A stored token pair is only a session candidate. AppInit verifies it
+        // against GET /auth/me before protected routes may render.
+        set({
+          accessToken: access,
+          refreshToken: refresh,
+          activeTenantId,
+          isAuthenticated: false,
+        });
+        return;
       }
-      if (activeTenantId) {
-        set({ activeTenantId });
-      }
+      set({ activeTenantId: null, isAuthenticated: false, isHydrating: false });
     } catch {
       // Hydration failure leaves the user unauthenticated – that's correct
-    } finally {
       set({ isHydrating: false });
     }
   },
+
+  finishHydration: () =>
+    set((state) => ({
+      isAuthenticated: Boolean(state.accessToken && state.refreshToken && state.user),
+      isHydrating: false,
+    })),
 
   clearAuth: async () => {
     await Promise.allSettled([
@@ -87,6 +98,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+      isHydrating: false,
       is2FARequired: false,
       tempToken: null,
       activeTenantId: null,

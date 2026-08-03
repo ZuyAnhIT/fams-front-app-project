@@ -159,7 +159,7 @@ Giá trị `availabilityStatus`: `open | upcoming | closed | unrestricted`:
 - Expo export Android: đạt.
 - Expo export iOS: đạt.
 - Sau khi đổi IP LAN, export lần đầu còn dùng Metro cache chứa IP cũ
-  `192.168.1.7`. Đã export lại với `--clear` và kiểm tra trực tiếp bundle Android
+  `192.168.1.10`. Đã export lại với `--clear` và kiểm tra trực tiếp bundle Android
   lẫn iOS đều chứa đúng `192.168.1.10:8080`.
 - `GET /api/v1/auth/health` qua IP LAN hiện tại `192.168.1.10:8080`: HTTP
   200, backend đang hoạt động.
