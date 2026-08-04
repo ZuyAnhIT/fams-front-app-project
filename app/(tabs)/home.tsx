@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { useProfile } from '@/features/auth/hooks/use-profile';
 import { useAvailableSites } from '@/features/checkin/hooks/use-available-sites';
+import { useMyExceptions } from '@/features/exception/hooks/use-my-exceptions';
 import {
   AVAILABILITY_LABELS,
   formatShiftSchedule,
@@ -60,12 +61,15 @@ export default function HomeScreen() {
     refetch: refetchSites,
   } = useAvailableSites();
   const { unreadCount } = useUnreadCount();
+  const exceptionQuery = useMyExceptions();
   const randomCheckQuery = useMyPendingRandomChecks();
   const activeRandomChecks = randomCheckQuery.checks.filter(
     (item) =>
       item.status === 'sent' &&
       secondsLeft(item, Date.now(), randomCheckQuery.dataUpdatedAt) > 0,
   );
+  const unexplainedExceptions = exceptionQuery.items.filter((item) => !item.hasExplanation).length;
+  const explainedExceptions = exceptionQuery.items.length - unexplainedExceptions;
 
   const firstSite = sites[0];
   const firstSiteAvailability = firstSite
@@ -110,6 +114,15 @@ export default function HomeScreen() {
       badge: activeRandomChecks.length,
     },
     {
+      label: 'Cần giải thích',
+      description: exceptionQuery.items.length > 0
+        ? `${unexplainedExceptions} chưa giải trình · ${explainedExceptions} đang chờ HR`
+        : 'Không có chấm công hoặc vi phạm cần giải thích',
+      icon: 'chatbox-ellipses-outline',
+      route: '/(tabs)/exceptions',
+      badge: unexplainedExceptions,
+    },
+    {
       label: 'Thông báo',
       description: unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Không có thông báo mới',
       icon: 'notifications-outline',
@@ -125,11 +138,12 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetchingProfile || isRefetchingSites || randomCheckQuery.isRefetching}
+            refreshing={isRefetchingProfile || isRefetchingSites || randomCheckQuery.isRefetching || exceptionQuery.isRefetching}
             onRefresh={() => {
               refetchProfile();
               refetchSites();
               randomCheckQuery.refetch();
+              exceptionQuery.refetch();
             }}
             tintColor={palette.primary}
           />
