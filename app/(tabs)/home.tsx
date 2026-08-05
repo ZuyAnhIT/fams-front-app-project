@@ -6,15 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { useProfile } from '@/features/auth/hooks/use-profile';
-import { useAvailableSites } from '@/features/checkin/hooks/use-available-sites';
-import { useMyExceptions } from '@/features/exception/hooks/use-my-exceptions';
-import {
-  AVAILABILITY_LABELS,
-  formatShiftSchedule,
-  getAvailabilityDescription,
-  getEffectiveAvailabilityStatus,
-} from '@/features/checkin/utils/available-site';
-import { useUnreadCount } from '@/features/notification/hooks/useUnreadCount';
+import { useEmployeeDashboard, useIsCurrentTenantSupervisor } from '@/features/dashboard/hooks/use-dashboard';
 import { useMyPendingRandomChecks } from '@/features/random-check/hooks/use-random-check';
 import { secondsLeft } from '@/features/random-check/utils/random-check.utils';
 import { palette, radius, shadows, spacing } from '@/theme/tokens';
@@ -45,6 +37,12 @@ function formatToday(): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+const CHECKIN_STATUS_LABELS = {
+  valid: 'Hợp lệ',
+  pending_review: 'Chờ HR duyệt',
+  rejected: 'Không hợp lệ',
+} as const;
+
 export default function HomeScreen() {
   const {
     profile,
@@ -52,29 +50,19 @@ export default function HomeScreen() {
     isRefetching: isRefetchingProfile,
     refetch: refetchProfile,
   } = useProfile();
-  const {
-    sites,
-    isLoading: isLoadingSites,
-    isRefetching: isRefetchingSites,
-    isError: isSitesError,
-    dataUpdatedAt: sitesUpdatedAt,
-    refetch: refetchSites,
-  } = useAvailableSites();
-  const { unreadCount } = useUnreadCount();
-  const exceptionQuery = useMyExceptions();
+  const dashboardQuery = useEmployeeDashboard();
+  const { isSupervisor } = useIsCurrentTenantSupervisor();
   const randomCheckQuery = useMyPendingRandomChecks();
   const activeRandomChecks = randomCheckQuery.checks.filter(
     (item) =>
       item.status === 'sent' &&
       secondsLeft(item, Date.now(), randomCheckQuery.dataUpdatedAt) > 0,
   );
-  const unexplainedExceptions = exceptionQuery.items.filter((item) => !item.hasExplanation).length;
-  const explainedExceptions = exceptionQuery.items.length - unexplainedExceptions;
-
-  const firstSite = sites[0];
-  const firstSiteAvailability = firstSite
-    ? getEffectiveAvailabilityStatus(firstSite, Date.now(), sitesUpdatedAt)
-    : null;
+  const dashboard = dashboardQuery.data;
+  const todayShifts = dashboard?.todayShifts ?? [];
+  const firstShift = todayShifts[0];
+  const pendingExplanations = dashboard?.alerts.pendingExplanations ?? 0;
+  const unreadNotifications = dashboard?.alerts.unreadNotifications ?? 0;
   const displayName = profile?.full_name?.trim() || 'bạn';
   const firstName = displayName.split(/\s+/).at(-1) ?? displayName;
   const initial = displayName.charAt(0).toUpperCase();
@@ -115,21 +103,29 @@ export default function HomeScreen() {
     },
     {
       label: 'Cần giải thích',
-      description: exceptionQuery.items.length > 0
-        ? `${unexplainedExceptions} chưa giải trình · ${explainedExceptions} đang chờ HR`
+      description: pendingExplanations > 0
+        ? `${pendingExplanations} mục cần theo dõi hoặc đang chờ HR`
         : 'Không có chấm công hoặc vi phạm cần giải thích',
       icon: 'chatbox-ellipses-outline',
       route: '/(tabs)/exceptions',
-      badge: unexplainedExceptions,
+      badge: pendingExplanations,
     },
     {
       label: 'Thông báo',
-      description: unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Không có thông báo mới',
+      description: unreadNotifications > 0 ? `${unreadNotifications} thông báo chưa đọc` : 'Không có thông báo mới',
       icon: 'notifications-outline',
       route: '/(tabs)/notifications',
-      badge: unreadCount,
+      badge: unreadNotifications,
     },
   ];
+  if (isSupervisor) {
+    quickActions.splice(1, 0, {
+      label: 'Hiện trường của tôi',
+      description: 'Xem nhân viên đang có mặt tại các công trình phụ trách',
+      icon: 'people-circle-outline',
+      route: '/(tabs)/supervisor-dashboard',
+    });
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -138,12 +134,11 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetchingProfile || isRefetchingSites || randomCheckQuery.isRefetching || exceptionQuery.isRefetching}
+            refreshing={isRefetchingProfile || dashboardQuery.isRefetching || randomCheckQuery.isRefetching}
             onRefresh={() => {
               refetchProfile();
-              refetchSites();
+              dashboardQuery.refetch();
               randomCheckQuery.refetch();
-              exceptionQuery.refetch();
             }}
             tintColor={palette.primary}
           />
@@ -189,14 +184,34 @@ export default function HomeScreen() {
             </Pressable>
           )}
 
+          {(pendingExplanations > 0 || unreadNotifications > 0) && (
+            <View style={styles.taskCard}>
+              <Text style={styles.taskTitle}>Cần bạn xử lý</Text>
+              {pendingExplanations > 0 && (
+                <Pressable onPress={() => router.push('/(tabs)/exceptions' as never)} style={styles.taskRow}>
+                  <Ionicons name="chatbox-ellipses-outline" size={20} color={palette.warning} />
+                  <Text style={styles.taskText}>{pendingExplanations} chấm công/vi phạm cần theo dõi</Text>
+                  <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
+                </Pressable>
+              )}
+              {unreadNotifications > 0 && (
+                <Pressable onPress={() => router.push('/(tabs)/notifications' as never)} style={styles.taskRow}>
+                  <Ionicons name="notifications-outline" size={20} color={palette.primary} />
+                  <Text style={styles.taskText}>{unreadNotifications} thông báo chưa đọc</Text>
+                  <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
+                </Pressable>
+              )}
+            </View>
+          )}
+
           <View style={styles.shiftCard}>
             <View style={styles.shiftHeader}>
               <View>
                 <Text style={styles.sectionEyebrow}>CA LÀM HÔM NAY</Text>
                 <Text style={styles.shiftTitle}>
-                  {isLoadingSites
+                  {dashboardQuery.isLoading
                     ? 'Đang kiểm tra lịch làm việc'
-                    : firstSite?.shift?.name ?? (sites.length > 0 ? 'Ca làm được phân công' : 'Chưa có ca làm')}
+                    : firstShift?.shift?.name ?? (todayShifts.length > 0 ? 'Ca làm được phân công' : 'Chưa có ca làm')}
                 </Text>
               </View>
               <View style={styles.calendarIcon}>
@@ -204,58 +219,36 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {isLoadingSites ? (
+            {dashboardQuery.isLoading ? (
               <ActivityIndicator style={styles.shiftLoader} color={palette.primary} />
-            ) : isSitesError ? (
+            ) : dashboardQuery.isError ? (
               <Text style={styles.mutedText}>Không thể tải lịch làm việc. Kéo xuống để thử lại.</Text>
-            ) : firstSite ? (
+            ) : firstShift ? (
               <View style={styles.shiftDetails}>
                 <View style={styles.detailLine}>
                   <Ionicons name="business-outline" size={17} color={palette.textMuted} />
-                  <Text style={styles.detailText} numberOfLines={1}>{firstSite.site.name}</Text>
+                  <Text style={styles.detailText} numberOfLines={1}>{firstShift.siteName || 'Công trình chưa có tên'}</Text>
                 </View>
-                {firstSite.shift && (
+                {firstShift.shift && (
                   <View style={styles.detailLine}>
                     <Ionicons name="time-outline" size={17} color={palette.textMuted} />
                     <Text style={styles.detailText}>
-                      {formatShiftSchedule(firstSite.shift)}
+                      {firstShift.shift.startTime.slice(0, 5)} – {firstShift.shift.endTime.slice(0, 5)}
                     </Text>
                   </View>
                 )}
-                {firstSiteAvailability && (
-                  <View style={styles.detailLine}>
-                    <Ionicons
-                      name={
-                        firstSiteAvailability === 'open' ||
-                        firstSiteAvailability === 'unrestricted'
-                          ? 'checkmark-circle-outline'
-                          : firstSiteAvailability === 'upcoming'
-                            ? 'hourglass-outline'
-                            : 'close-circle-outline'
-                      }
-                      size={17}
-                      color={
-                        firstSiteAvailability === 'open' ||
-                        firstSiteAvailability === 'unrestricted'
-                          ? palette.success
-                          : firstSiteAvailability === 'upcoming'
-                            ? palette.warning
-                            : palette.textMuted
-                      }
-                    />
-                    <Text style={styles.detailText}>
-                      {AVAILABILITY_LABELS[firstSiteAvailability]} ·{' '}
-                      {getAvailabilityDescription(
-                        firstSite,
-                        firstSiteAvailability,
-                        Date.now(),
-                        sitesUpdatedAt,
-                      )}
-                    </Text>
-                  </View>
-                )}
-                {sites.length > 1 && (
-                  <Text style={styles.additionalSites}>+{sites.length - 1} công trình khác được phép chấm công</Text>
+                <View style={styles.detailLine}>
+                  <Ionicons name={dashboard?.checkin?.open ? 'radio-button-on-outline' : 'checkmark-circle-outline'} size={17} color={dashboard?.checkin?.open ? palette.success : palette.textMuted} />
+                  <Text style={styles.detailText}>
+                    {!dashboard?.checkin
+                      ? 'Chưa check-in hôm nay'
+                      : dashboard.checkin.open
+                        ? `Đang trong ca · ${CHECKIN_STATUS_LABELS[dashboard.checkin.status]}`
+                        : `Đã kết thúc · ${CHECKIN_STATUS_LABELS[dashboard.checkin.status]} · ${dashboard.checkin.workMinutes ?? 0} phút`}
+                  </Text>
+                </View>
+                {todayShifts.length > 1 && (
+                  <Text style={styles.additionalSites}>+{todayShifts.length - 1} ca/công trình khác hôm nay</Text>
                 )}
               </View>
             ) : (
@@ -268,10 +261,28 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Mở màn hình chấm công"
             >
-              <Text style={styles.shiftActionText}>Mở chấm công</Text>
+              <Text style={styles.shiftActionText}>{dashboard?.checkin?.open ? 'Mở check-out' : 'Mở chấm công'}</Text>
               <Ionicons name="arrow-forward" size={18} color={palette.white} />
             </Pressable>
           </View>
+
+          {dashboard?.monthlyAttendance && (
+            <View style={styles.monthCard}>
+              <View style={styles.monthHeader}>
+                <View><Text style={styles.sectionEyebrow}>CÔNG THÁNG {dashboard.monthlyAttendance.month}</Text><Text style={styles.monthTotal}>{Math.floor(dashboard.monthlyAttendance.totalWorkMinutes / 60)} giờ làm việc</Text></View>
+                <Pressable onPress={() => router.push('/(tabs)/attendance')}><Text style={styles.monthLink}>Xem chi tiết</Text></Pressable>
+              </View>
+              <View style={styles.metricGrid}>
+                {[
+                  ['Ngày công', dashboard.monthlyAttendance.presentDays],
+                  ['Đi muộn', dashboard.monthlyAttendance.lateDays],
+                  ['Về sớm', dashboard.monthlyAttendance.earlyLeaveDays],
+                  ['OT', `${dashboard.monthlyAttendance.totalOtMinutes} phút`],
+                ].map(([label, value]) => <View key={String(label)} style={styles.metric}><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>)}
+              </View>
+              {dashboard.monthlyAttendance.missingCheckoutDays > 0 && <Text style={styles.monthWarning}>{dashboard.monthlyAttendance.missingCheckoutDays} ngày thiếu check-out cần kiểm tra</Text>}
+            </View>
+          )}
 
           <View style={styles.sectionHeading}>
             <Text style={styles.sectionTitle}>Truy cập nhanh</Text>
@@ -358,6 +369,10 @@ const styles = StyleSheet.create({
   alertCopy: { flex: 1 },
   alertTitle: { color: palette.danger, fontSize: 14, lineHeight: 20, fontWeight: '800' },
   alertText: { color: palette.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 2 },
+  taskCard: { backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg, gap: spacing.sm },
+  taskTitle: { color: palette.text, fontSize: 16, fontWeight: '800', marginBottom: spacing.xs },
+  taskRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.md, backgroundColor: palette.surfaceMuted, paddingHorizontal: spacing.md },
+  taskText: { flex: 1, color: palette.textSecondary, fontSize: 13, lineHeight: 18, fontWeight: '600' },
   shiftCard: {
     backgroundColor: palette.surface,
     borderRadius: radius.xl,
@@ -396,6 +411,15 @@ const styles = StyleSheet.create({
   },
   shiftActionPressed: { backgroundColor: palette.primaryPressed },
   shiftActionText: { color: palette.white, fontSize: 15, fontWeight: '700' },
+  monthCard: { marginTop: spacing.lg, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border, borderRadius: radius.xl, padding: spacing.xl, ...shadows.card },
+  monthHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
+  monthTotal: { color: palette.text, fontSize: 20, lineHeight: 27, fontWeight: '800', marginTop: spacing.xs },
+  monthLink: { color: palette.primary, fontSize: 12, fontWeight: '700' },
+  metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg },
+  metric: { flexGrow: 1, flexBasis: '45%', borderRadius: radius.md, backgroundColor: palette.surfaceMuted, padding: spacing.md },
+  metricValue: { color: palette.text, fontSize: 17, fontWeight: '800' },
+  metricLabel: { color: palette.textMuted, fontSize: 11, marginTop: 2 },
+  monthWarning: { color: palette.warning, backgroundColor: palette.warningSoft, borderRadius: radius.md, padding: spacing.sm, fontSize: 12, fontWeight: '600', marginTop: spacing.md },
   sectionHeading: { marginTop: spacing.xxl, marginBottom: spacing.md },
   sectionTitle: { color: palette.text, fontSize: 19, lineHeight: 25, fontWeight: '800' },
   sectionSubtitle: { color: palette.textMuted, fontSize: 13, lineHeight: 19, marginTop: 2 },

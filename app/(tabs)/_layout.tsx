@@ -96,6 +96,7 @@ export default function TabLayout() {
       <Tabs.Screen name="site" options={{ href: null }} />
       <Tabs.Screen name="checkin-history" options={{ href: null }} />
       <Tabs.Screen name="exceptions" options={{ href: null }} />
+      <Tabs.Screen name="supervisor-dashboard" options={{ href: null }} />
       <Tabs.Screen name="sessions" options={{ href: null }} />
     </Tabs>
   );
