@@ -9,6 +9,7 @@ import { resolveAuthenticatedSession } from "@/features/auth/session";
 import { useAuthStore } from "@/features/auth/store";
 import { useCheckinStore } from "@/features/checkin/store/checkin.store";
 import {
+  formatForegroundPushMessage,
   getRandomCheckIdFromPush,
   getPushEventType,
   isRandomCheckPush,
@@ -108,13 +109,20 @@ function AppInit() {
       else unsubscribeRefresh = unsubscribe;
     });
     void subscribeToForegroundPush((message) => {
+      const randomCheck = isRandomCheckPush(message);
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      if (isRandomCheckPush(message)) {
+      if (randomCheck) {
         void queryClient.invalidateQueries({ queryKey: ['random-check'] });
-        showToast('Có yêu cầu kiểm tra ngẫu nhiên mới', 'info');
-      } else {
-        showToast(message.title || 'Bạn có thông báo mới', 'info');
       }
+      showToast(
+        formatForegroundPushMessage(
+          message,
+          randomCheck
+            ? 'Có yêu cầu kiểm tra ngẫu nhiên mới'
+            : 'Bạn có thông báo mới',
+        ),
+        'info',
+      );
     }).then((unsubscribe) => {
       if (disposed) unsubscribe();
       else unsubscribeForeground = unsubscribe;
