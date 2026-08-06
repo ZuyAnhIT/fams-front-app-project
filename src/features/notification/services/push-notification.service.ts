@@ -122,13 +122,17 @@ export async function subscribeToNotificationOpen(
 }
 
 export function isRandomCheckPush(message: PushMessage): boolean {
-  const eventType = String(
-    message.data?.eventType ?? message.data?.type ?? message.data?.notificationType ?? '',
-  ).toUpperCase();
+  const eventType = getPushEventType(message);
   if (eventType === 'RANDOM_CHECK_SENT') return true;
 
   const title = message.title?.toLocaleLowerCase('vi-VN') ?? '';
   return title.includes('kiểm tra ngẫu nhiên') || title.includes('random check');
+}
+
+export function getPushEventType(message: PushMessage): string {
+  return String(
+    message.data?.eventType ?? message.data?.type ?? message.data?.notificationType ?? '',
+  ).toUpperCase();
 }
 
 /** Reads the flat String→String FCM data contract, with a legacy nested fallback. */

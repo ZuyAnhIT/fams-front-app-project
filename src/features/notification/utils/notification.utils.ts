@@ -11,21 +11,14 @@ export function isNotificationRead(
   return notification.readAt !== null || notification.read || notification.isRead;
 }
 
-/** Best-effort — Swagger không công bố danh sách eventType cố định. */
+/** Nhãn cho inbox; catalog chính thức được Backend trả riêng ở màn cài đặt. */
 const EVENT_TYPE_LABELS: Record<string, string> = {
   random_check: 'Kiểm tra ngẫu nhiên',
   random_check_sent: 'Kiểm tra ngẫu nhiên',
-  violation: 'Vi phạm',
-  system_alert: 'Hệ thống',
-  assignment: 'Phân công',
-  checkin: 'Chấm công',
-  attendance: 'Công',
 };
 
-const DEFAULT_LABEL = 'Thông báo';
-
 export function getEventTypeLabel(eventType: string): string {
-  return EVENT_TYPE_LABELS[eventType.toLowerCase()] ?? DEFAULT_LABEL;
+  return EVENT_TYPE_LABELS[eventType.toLowerCase()] ?? eventType;
 }
 
 export function isRandomCheckNotification(eventType: string): boolean {

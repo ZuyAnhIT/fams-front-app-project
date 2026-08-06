@@ -1,4 +1,5 @@
 import { apiClient } from '@/services/api-client';
+import * as Crypto from 'expo-crypto';
 
 import { refreshAccessToken } from './api';
 import { useAuthStore } from './store';
@@ -85,6 +86,11 @@ export function setupAuthInterceptors(
     const { accessToken } = useAuthStore.getState();
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    // Correlates client errors with backend audit/log entries. Backend echoes
+    // this value in X-Request-Id, so support can trace the exact operation.
+    if (!config.headers['X-Request-Id']) {
+      config.headers['X-Request-Id'] = Crypto.randomUUID();
     }
     return config;
   });

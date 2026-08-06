@@ -10,12 +10,14 @@ import { useAuthStore } from "@/features/auth/store";
 import { useCheckinStore } from "@/features/checkin/store/checkin.store";
 import {
   getRandomCheckIdFromPush,
+  getPushEventType,
   isRandomCheckPush,
   registerCurrentPushDevice,
   subscribeToForegroundPush,
   subscribeToNotificationOpen,
   subscribeToPushTokenRefresh,
 } from "@/features/notification/services/push-notification.service";
+import { resolveNotificationHref } from '@/features/notification/utils/notification-navigation';
 
 /** Shared QueryClient instance – lives for the lifetime of the app */
 const queryClient = new QueryClient({
@@ -110,6 +112,8 @@ function AppInit() {
       if (isRandomCheckPush(message)) {
         void queryClient.invalidateQueries({ queryKey: ['random-check'] });
         showToast('Có yêu cầu kiểm tra ngẫu nhiên mới', 'info');
+      } else {
+        showToast(message.title || 'Bạn có thông báo mới', 'info');
       }
     }).then((unsubscribe) => {
       if (disposed) unsubscribe();
@@ -130,7 +134,13 @@ function AppInit() {
         } else {
           router.push('/(tabs)/random-check');
         }
+        return;
       }
+      const href = resolveNotificationHref(
+        getPushEventType(message),
+        message.data as Record<string, unknown> | undefined,
+      );
+      if (href) router.push(href);
     }).then((unsubscribe) => {
       if (disposed) unsubscribe();
       else unsubscribeOpen = unsubscribe;

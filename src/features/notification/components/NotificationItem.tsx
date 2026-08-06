@@ -14,9 +14,12 @@ import {
 interface NotificationItemProps {
   notification: NotificationItemType;
   onPress: (notification: NotificationItemType) => void;
+  onLongPress?: (notification: NotificationItemType) => void;
+  selectionMode?: boolean;
+  selected?: boolean;
 }
 
-export function NotificationItem({ notification, onPress }: NotificationItemProps) {
+export function NotificationItem({ notification, onPress, onLongPress, selectionMode = false, selected = false }: NotificationItemProps) {
   const read = isNotificationRead(notification);
   const typeLabel = getEventTypeLabel(notification.eventType);
   const normalizedEventType = notification.eventType.toLowerCase();
@@ -34,6 +37,7 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
   return (
     <Pressable
       onPress={() => onPress(notification)}
+      onLongPress={() => onLongPress?.(notification)}
       style={({ pressed }) => [
         styles.container,
         !read && styles.unread,
@@ -41,6 +45,7 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
       ]}
       accessibilityRole="button"
       accessibilityLabel={`${read ? '' : 'Chưa đọc. '}${notification.title}. ${notification.body}`}
+      accessibilityState={{ selected }}
       accessibilityHint={
         opensRelatedScreen
           ? 'Mở nội dung liên quan'
@@ -49,6 +54,11 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
             : 'Đánh dấu thông báo là đã đọc'
       }
     >
+      {selectionMode && (
+        <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
+          {selected && <Ionicons name="checkmark" size={15} color={palette.white} />}
+        </View>
+      )}
       <View style={styles.iconWrap}>
         <Ionicons name={icon} size={21} color={palette.primary} />
       </View>
@@ -140,5 +150,19 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: palette.primary,
     marginTop: 6,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: palette.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  checkboxSelected: {
+    borderColor: palette.primary,
+    backgroundColor: palette.primary,
   },
 });
