@@ -65,6 +65,36 @@ function flushQueue(error: unknown, token: string | null = null) {
   failedQueue = [];
 }
 
+function attachSupportReference(error: unknown): void {
+  if (!error || typeof error !== 'object' || !('response' in error)) return;
+
+  const axiosLikeError = error as {
+    response?: {
+      status?: number;
+      headers?: { get?: (name: string) => unknown; [key: string]: unknown };
+      data?: unknown;
+    };
+    config?: { headers?: { get?: (name: string) => unknown; [key: string]: unknown } };
+  };
+  const status = axiosLikeError.response?.status;
+  if (!status || status < 500) return;
+
+  const responseHeaders = axiosLikeError.response?.headers;
+  const requestHeaders = axiosLikeError.config?.headers;
+  const responseRequestId = responseHeaders?.get?.('x-request-id') ?? responseHeaders?.['x-request-id'];
+  const clientRequestId = requestHeaders?.get?.('X-Request-Id') ?? requestHeaders?.['X-Request-Id'];
+  const requestId = responseRequestId ?? clientRequestId;
+  if (typeof requestId !== 'string' || !requestId.trim()) return;
+
+  const data = axiosLikeError.response?.data;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return;
+  const body = data as Record<string, unknown>;
+  const userMessage = typeof body.userMessage === 'string' ? body.userMessage.trim() : '';
+  if (userMessage.includes('Mã hỗ trợ:')) return;
+
+  body.userMessage = `${userMessage || 'Đã có lỗi xảy ra phía máy chủ. Vui lòng thử lại sau.'}\nMã hỗ trợ: ${requestId}`;
+}
+
 /**
  * Attaches auth interceptors to apiClient. Call this once on app start.
  *
@@ -99,6 +129,10 @@ export function setupAuthInterceptors(
   const responseInterceptorId = apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
+      // Only surface a correlation ID for server failures. Validation/business
+      // errors stay concise; 5xx errors gain a copyable reference for support
+      // to trace through audit logs without exposing the audit viewer in App.
+      attachSupportReference(error);
       const originalRequest = error.config as (typeof error.config & {
         _retry?: boolean;
       }) | undefined;

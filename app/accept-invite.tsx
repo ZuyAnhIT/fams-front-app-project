@@ -23,7 +23,7 @@ import { getAuthLinkToken } from '@/features/auth/deep-link';
 import { navigateAfterAuth, resolveAuthenticatedSession } from '@/features/auth/session';
 import { useAuthStore } from '@/features/auth/store';
 import { useAuthTheme } from '@/features/auth/theme';
-import { parseAuthError } from '@/features/auth/utils';
+import { getAuthErrorCode, parseAuthError } from '@/features/auth/utils';
 import {
   acceptInvitation,
   validateInvitation,
@@ -74,6 +74,13 @@ const schema = z
   });
 
 type FormData = z.infer<typeof schema>;
+
+function parseInvitationAcceptanceError(error: unknown): string {
+  if (getAuthErrorCode(error) === 'PLAN_LIMIT_EXCEEDED') {
+    return 'Công ty hiện đã đạt giới hạn số nhân viên của gói dịch vụ. Vui lòng liên hệ HR hoặc người đã gửi lời mời để được hỗ trợ.';
+  }
+  return parseAuthError(error);
+}
 
 export default function AcceptInviteScreen() {
   const theme = useAuthTheme();
@@ -283,7 +290,7 @@ export default function AcceptInviteScreen() {
 
             {acceptance.isError && (
               <Text style={[styles.error, { color: theme.error }]}>
-                {parseAuthError(acceptance.error)}
+                {parseInvitationAcceptanceError(acceptance.error)}
               </Text>
             )}
 
