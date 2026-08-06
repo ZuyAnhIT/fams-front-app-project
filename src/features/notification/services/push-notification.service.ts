@@ -123,16 +123,27 @@ export async function subscribeToNotificationOpen(
 
 export function isRandomCheckPush(message: PushMessage): boolean {
   const eventType = getPushEventType(message);
-  if (eventType === 'RANDOM_CHECK_SENT') return true;
-
-  const title = message.title?.toLocaleLowerCase('vi-VN') ?? '';
-  return title.includes('kiểm tra ngẫu nhiên') || title.includes('random check');
+  // Never infer navigation from localized/customizable template text.
+  return eventType === 'RANDOM_CHECK_SENT' || eventType === 'RANDOM_CHECK';
 }
 
 export function getPushEventType(message: PushMessage): string {
   return String(
     message.data?.eventType ?? message.data?.type ?? message.data?.notificationType ?? '',
   ).toUpperCase();
+}
+
+/**
+ * Foreground messages are rendered by the App instead of the OS tray. Preserve
+ * the backend-rendered template so foreground/background content stays equal.
+ */
+export function formatForegroundPushMessage(
+  message: PushMessage,
+  fallbackTitle = 'Bạn có thông báo mới',
+): string {
+  const title = message.title?.trim() || fallbackTitle;
+  const body = message.body?.trim();
+  return body ? `${title}\n${body}` : title;
 }
 
 /** Reads the flat String→String FCM data contract, with a legacy nested fallback. */

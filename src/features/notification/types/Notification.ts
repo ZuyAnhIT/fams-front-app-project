@@ -8,7 +8,7 @@ export interface NotificationItem {
   id: string;
   tenantId: string;
   userId: string;
-  /** Không có enum cố định từ Swagger — backend có thể trả bất kỳ string nào. */
+  /** Catalog có event chính thức; tenant vẫn có thể lưu event tùy chỉnh. */
   eventType: string;
   title: string;
   body: string;
