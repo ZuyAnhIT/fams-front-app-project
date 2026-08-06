@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/toast';
 import {
   markAllNotificationsAsRead,
   markNotificationAsRead,
+  markNotificationsAsRead,
 } from '../services/notification.service';
 import type { NotificationItem, NotificationListResponse } from '../types/Notification';
 import { notificationKeys } from './useNotifications';
@@ -13,10 +14,13 @@ import { notificationKeys } from './useNotifications';
 export interface UseMarkAsReadResult {
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
+  markSelectedAsRead: (ids: string[]) => void;
   isMarkingRead: boolean;
   isMarkingAllRead: boolean;
+  isMarkingSelectedRead: boolean;
   markReadError: unknown;
   markAllReadError: unknown;
+  markSelectedReadError: unknown;
 }
 
 function patchListsCache(
@@ -86,12 +90,34 @@ export function useMarkAsRead(): UseMarkAsReadResult {
     },
   });
 
+  const markSelectedMutation = useMutation({
+    mutationFn: (ids: string[]) => markNotificationsAsRead(tenantId!, ids),
+    onSuccess: (result, ids) => {
+      const selected = new Set(ids);
+      const now = new Date().toISOString();
+      patchListsCache(queryClient, tenantId!, (item) =>
+        selected.has(item.id)
+          ? { ...item, read: true, isRead: true, readAt: item.readAt ?? now }
+          : item,
+      );
+      if (result.markedCount > 0) {
+        showToast(`Đã đánh dấu ${result.markedCount} thông báo là đã đọc`, 'success');
+      }
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.badge(tenantId!) });
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.lists(tenantId!) });
+    },
+    onError: () => showToast('Không thể đánh dấu nhóm thông báo đã đọc', 'error'),
+  });
+
   return {
     markAsRead: markReadMutation.mutate,
     markAllAsRead: markAllMutation.mutate,
+    markSelectedAsRead: markSelectedMutation.mutate,
     isMarkingRead: markReadMutation.isPending,
     isMarkingAllRead: markAllMutation.isPending,
+    isMarkingSelectedRead: markSelectedMutation.isPending,
     markReadError: markReadMutation.error,
     markAllReadError: markAllMutation.error,
+    markSelectedReadError: markSelectedMutation.error,
   };
 }

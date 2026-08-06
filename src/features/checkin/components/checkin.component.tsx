@@ -27,6 +27,7 @@ import { useCheckinSubmit } from '../hooks/use-checkin-submit';
 import { useCheckoutSubmit } from '../hooks/use-checkout-submit';
 import { useOfflineCheckinSync } from '../hooks/use-offline-checkin-sync';
 import { useCheckinStore } from '../store/checkin.store';
+import { CheckinLocationMap } from './CheckinLocationMap';
 import type {
   AvailableSite,
   CheckinAvailabilityStatus,
@@ -595,6 +596,8 @@ export function CheckinHome() {
               )}
             </View>
           )}
+
+          {!hasOpenShift && selectedSite && <CheckinLocationMap site={selectedSite} />}
 
           {!hasOpenShift && selectedRequiresFace && (
             <View

@@ -16,12 +16,15 @@ import { palette, radius, spacing } from '@/theme/tokens';
 import { useMarkAsRead } from '../hooks/useMarkAsRead';
 import { useNotifications } from '../hooks/useNotifications';
 import type { NotificationItem as NotificationItemType } from '../types/Notification';
-import { isNotificationRead, isRandomCheckNotification } from '../utils/notification.utils';
+import { isNotificationRead } from '../utils/notification.utils';
+import { resolveNotificationHref } from '../utils/notification-navigation';
 import { NotificationItem } from './NotificationItem';
 
 export function NotificationList() {
   const router = useRouter();
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const {
     notifications,
@@ -35,34 +38,33 @@ export function NotificationList() {
     refetch,
   } = useNotifications({ unreadOnly });
 
-  const { markAsRead, markAllAsRead, isMarkingAllRead } = useMarkAsRead();
+  const { markAsRead, markAllAsRead, markSelectedAsRead, isMarkingAllRead, isMarkingSelectedRead } = useMarkAsRead();
+
+  const toggleSelection = useCallback((notification: NotificationItemType) => {
+    if (isNotificationRead(notification)) return;
+    setSelectionMode(true);
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(notification.id)) next.delete(notification.id);
+      else next.add(notification.id);
+      return next;
+    });
+  }, []);
 
   const handlePress = useCallback(
     (notification: NotificationItemType) => {
+      if (selectionMode) {
+        toggleSelection(notification);
+        return;
+      }
       if (!isNotificationRead(notification)) {
         markAsRead(notification.id);
       }
 
-      if (isRandomCheckNotification(notification.eventType)) {
-        const checkId = notification.metadata?.checkId;
-        if (typeof checkId === 'string' && checkId.trim()) {
-          router.push({
-            pathname: '/(tabs)/random-check',
-            params: { checkId },
-          });
-        } else {
-          // Fallback for notification rows created before metadata was added.
-          router.push('/(tabs)/random-check');
-        }
-      } else if (notification.eventType === 'assignment') {
-        // App employees must use the self-service available-sites contract.
-        // The assignment list is an HR/Supervisor management API and may 403.
-        router.push('/(tabs)/checkin');
-      } else if (notification.eventType === 'checkin' || notification.eventType === 'attendance') {
-        router.push('/(tabs)/checkin-history');
-      }
+      const href = resolveNotificationHref(notification.eventType, notification.metadata);
+      if (href) router.push(href);
     },
-    [markAsRead, router],
+    [markAsRead, router, selectionMode, toggleSelection],
   );
 
   const handleEndReached = useCallback(() => {
@@ -97,7 +99,36 @@ export function NotificationList() {
   return (
     <View style={styles.container}>
       <View style={styles.toolbar}>
-        <Pressable
+        {selectionMode ? (
+          <View style={styles.selectionToolbar}>
+            <Pressable onPress={() => { setSelectionMode(false); setSelectedIds(new Set()); }} style={styles.toolbarButton} accessibilityRole="button">
+              <Text style={styles.toolbarButtonText}>Huỷ</Text>
+            </Pressable>
+            <Text style={styles.selectionCount}>Đã chọn {selectedIds.size}</Text>
+            <Pressable
+              onPress={() => {
+                const unreadIds = notifications.filter((item) => !isNotificationRead(item)).map((item) => item.id);
+                setSelectedIds(new Set(unreadIds));
+              }}
+              style={styles.toolbarButton}
+              accessibilityRole="button"
+            >
+              <Text style={styles.toolbarButtonText}>Chọn chưa đọc</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                markSelectedAsRead([...selectedIds]);
+                setSelectionMode(false);
+                setSelectedIds(new Set());
+              }}
+              disabled={selectedIds.size === 0 || isMarkingSelectedRead}
+              style={[styles.markSelectedButton, selectedIds.size === 0 && styles.disabledButton]}
+              accessibilityRole="button"
+            >
+              {isMarkingSelectedRead ? <ActivityIndicator size="small" color={palette.white} /> : <Text style={styles.markSelectedText}>Đã đọc</Text>}
+            </Pressable>
+          </View>
+        ) : <><Pressable
           onPress={() => setUnreadOnly((prev) => !prev)}
           style={[styles.filterChip, unreadOnly && styles.filterChipActive]}
           accessibilityRole="button"
@@ -109,7 +140,11 @@ export function NotificationList() {
         </Pressable>
 
         {hasUnread && (
-          <Pressable
+          <View style={styles.defaultActions}>
+            <Pressable onPress={() => setSelectionMode(true)} style={styles.markAllButton} accessibilityRole="button">
+              <Text style={styles.markAllText}>Chọn</Text>
+            </Pressable>
+            <Pressable
             onPress={() => markAllAsRead()}
             disabled={isMarkingAllRead}
             style={styles.markAllButton}
@@ -120,10 +155,11 @@ export function NotificationList() {
             {isMarkingAllRead ? (
               <ActivityIndicator size="small" color={palette.primary} />
             ) : (
-              <Text style={styles.markAllText}>Đánh dấu đã đọc</Text>
+              <Text style={styles.markAllText}>Đọc tất cả</Text>
             )}
-          </Pressable>
-        )}
+            </Pressable>
+          </View>
+        )}</>}
       </View>
 
       <FlatList
@@ -131,7 +167,13 @@ export function NotificationList() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.listContent, notifications.length === 0 && styles.emptyList]}
         renderItem={({ item }) => (
-          <NotificationItem notification={item} onPress={handlePress} />
+          <NotificationItem
+            notification={item}
+            onPress={handlePress}
+            onLongPress={toggleSelection}
+            selectionMode={selectionMode}
+            selected={selectedIds.has(item.id)}
+          />
         )}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={palette.primary} />
@@ -206,6 +248,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     justifyContent: 'center',
   },
+  defaultActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  selectionToolbar: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  selectionCount: { flex: 1, color: palette.text, fontSize: 13, fontWeight: '700' },
+  toolbarButton: { minHeight: 40, justifyContent: 'center', paddingHorizontal: spacing.xs },
+  toolbarButtonText: { color: palette.primary, fontSize: 12, fontWeight: '700' },
+  markSelectedButton: { minHeight: 38, minWidth: 66, paddingHorizontal: spacing.md, borderRadius: radius.md, backgroundColor: palette.primary, alignItems: 'center', justifyContent: 'center' },
+  markSelectedText: { color: palette.white, fontSize: 12, fontWeight: '700' },
+  disabledButton: { opacity: 0.45 },
   markAllText: {
     fontSize: 13,
     fontWeight: '600',

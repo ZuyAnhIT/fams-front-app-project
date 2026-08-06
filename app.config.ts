@@ -52,6 +52,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const iosGoogleServicesFile =
     process.env.EXPO_IOS_GOOGLE_SERVICES_FILE?.trim() ||
     './GoogleService-Info.plist';
+  const androidGoogleMapsApiKey =
+    process.env.EXPO_ANDROID_GOOGLE_MAPS_API_KEY?.trim();
   const hasAndroidGoogleServicesFile = existsSync(
     resolve(process.cwd(), androidGoogleServicesFile),
   );
@@ -85,6 +87,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     plugins: configureGoogleIosUrlScheme(config.plugins),
     android: {
       ...androidConfig,
+      config: {
+        ...androidConfig.config,
+        ...(androidGoogleMapsApiKey
+          ? { googleMaps: { apiKey: androidGoogleMapsApiKey } }
+          : {}),
+      },
       ...(authIntentFilter
         ? {
             intentFilters: [

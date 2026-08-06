@@ -39,3 +39,22 @@ export interface NotificationListResponse {
 export interface MarkAllReadResponse {
   markedCount: number;
 }
+
+export interface NotificationSetting {
+  /** Null khi người dùng đang dùng giá trị mặc định từ catalog. */
+  id: string | null;
+  userId: string;
+  eventType: string;
+  /** Null với event type tùy chỉnh riêng tenant, không nằm trong catalog hệ thống. */
+  label: string | null;
+  inAppEnabled: boolean;
+  pushEnabled: boolean;
+  customized: boolean;
+  /** Null khi người dùng chưa từng lưu tùy chỉnh. */
+  updatedAt: string | null;
+}
+
+export interface UpdateNotificationSettingRequest {
+  inAppEnabled: boolean;
+  pushEnabled: boolean;
+}
