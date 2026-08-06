@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '@/components/ui/app-header';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { palette, radius, spacing } from '@/theme/tokens';
-
+import { useSitePresenceReport, type SitePresenceEntry } from '@/features/report/site-presence';
 import { useSupervisorDashboard } from '../hooks/use-dashboard';
 import type { SupervisedSiteStatus } from '../types/dashboard.type';
 
@@ -14,15 +14,18 @@ function time(value: string) {
   return new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 }
 
-function SiteCard({ site }: { site: SupervisedSiteStatus }) {
-  const ratio = site.expectedToday > 0 ? Math.min(1, site.onSiteNow / site.expectedToday) : 0;
+function SiteCard({ site, presence }: { site: SupervisedSiteStatus; presence?: SitePresenceEntry }) {
+  const assigned = presence?.assignedCount ?? site.expectedToday;
+  const present = presence?.presentCount ?? site.onSiteNow;
+  const absent = presence?.absentCount ?? Math.max(0, assigned - present);
+  const ratio = assigned > 0 ? Math.min(1, present / assigned) : 0;
   return (
     <View style={styles.card}>
       <View style={styles.siteHeader}>
         <View style={styles.siteIcon}><Ionicons name="business-outline" size={21} color={palette.primary} /></View>
         <View style={styles.siteCopy}>
           <Text style={styles.siteName}>{site.siteName}</Text>
-          <Text style={styles.siteCount}>{site.onSiteNow}/{site.expectedToday} nhân viên đang có mặt</Text>
+          <Text style={styles.siteCount}>{present}/{assigned} nhân viên đang có mặt · {absent} chưa có mặt</Text>
         </View>
       </View>
       <View style={styles.track}><View style={[styles.progress, { width: `${ratio * 100}%` }]} /></View>
@@ -39,18 +42,33 @@ function SiteCard({ site }: { site: SupervisedSiteStatus }) {
           <View style={styles.onlineDot} />
         </View>
       ))}
+      <Text style={[styles.listTitle, styles.absentTitle]}>CHƯA CÓ MẶT</Text>
+      {!presence || presence.absentEmployees.length === 0 ? (
+        <Text style={styles.emptyText}>{presence ? 'Tất cả nhân viên được phân công đã có mặt.' : 'Chưa tải được danh sách nhân viên vắng mặt.'}</Text>
+      ) : presence.absentEmployees.map((employee) => (
+        <View key={employee.employeeId} style={styles.employeeRow}>
+          <View style={[styles.avatar, styles.absentAvatar]}><Text style={styles.absentAvatarText}>{employee.employeeName.charAt(0).toUpperCase()}</Text></View>
+          <View style={styles.employeeCopy}>
+            <Text style={styles.employeeName}>{employee.employeeName}</Text>
+            <Text style={styles.employeeMeta}>{employee.employeeCode || 'Chưa có mã nhân viên'}</Text>
+          </View>
+          <Ionicons name="time-outline" size={18} color={palette.warning} />
+        </View>
+      ))}
     </View>
   );
 }
 
 export function SupervisorDashboardScreen() {
   const query = useSupervisorDashboard();
+  const presenceQuery = useSitePresenceReport();
   const sites = query.data?.supervisedSites ?? [];
+  const presenceBySite = new Map((presenceQuery.data?.sites.content ?? []).map((site) => [site.siteId, site]));
   const isMissingEmployee = (query.error as { response?: { status?: number } } | null)?.response?.status === 404;
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
       <AppHeader title="Hiện trường của tôi" subtitle="Tự làm mới mỗi 60 giây" onBack={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/home')} />
-      {query.isLoading ? (
+      {query.isLoading || presenceQuery.isLoading ? (
         <View style={styles.loading}><ActivityIndicator size="large" color={palette.primary} /><Text style={styles.muted}>Đang tải tình hình công trình...</Text></View>
       ) : query.isError ? (
         <FeedbackState
@@ -64,9 +82,10 @@ export function SupervisorDashboardScreen() {
         <FlatList
           data={sites}
           keyExtractor={(item) => item.siteId}
-          renderItem={({ item }) => <SiteCard site={item} />}
-          refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} tintColor={palette.primary} />}
+          renderItem={({ item }) => <SiteCard site={item} presence={presenceBySite.get(item.siteId)} />}
+          refreshControl={<RefreshControl refreshing={query.isRefetching || presenceQuery.isRefetching} onRefresh={() => { void query.refetch(); void presenceQuery.refetch(); }} tintColor={palette.primary} />}
           contentContainerStyle={[styles.list, sites.length === 0 && styles.emptyList]}
+          ListHeaderComponent={presenceQuery.data ? <View style={styles.snapshot}><Text style={styles.snapshotTitle}>Hiện diện trong phạm vi phụ trách</Text><Text style={styles.snapshotValue}>{presenceQuery.data.totalPresent}/{presenceQuery.data.totalAssigned} có mặt · {presenceQuery.data.totalAbsent} thiếu</Text><Text style={styles.snapshotTime}>Snapshot {new Date(presenceQuery.data.reportedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</Text></View> : presenceQuery.isError ? <View style={styles.reportWarning}><Text style={styles.reportWarningText}>Không tải được báo cáo hiện diện. Kéo xuống để thử lại.</Text></View> : null}
           ListEmptyComponent={<FeedbackState icon="calendar-outline" title="Chưa có công trình giám sát hôm nay" description="Đây là trạng thái bình thường khi bạn chưa có assignment supervisor đang hiệu lực trong ngày." />}
         />
       )}
@@ -81,6 +100,12 @@ const styles = StyleSheet.create({
   list: { width: '100%', maxWidth: 760, alignSelf: 'center', padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.lg },
   emptyList: { flexGrow: 1 },
   card: { backgroundColor: palette.surface, borderRadius: radius.xl, borderWidth: 1, borderColor: palette.border, padding: spacing.lg },
+  snapshot: { backgroundColor: palette.primary, borderRadius: radius.xl, padding: spacing.lg },
+  snapshotTitle: { color: '#DBEAFE', fontSize: 12, fontWeight: '700' },
+  snapshotValue: { color: palette.white, fontSize: 20, fontWeight: '800', marginTop: spacing.xs },
+  snapshotTime: { color: '#BFDBFE', fontSize: 11, marginTop: spacing.xs },
+  reportWarning: { borderRadius: radius.md, backgroundColor: '#FEF3C7', padding: spacing.md },
+  reportWarningText: { color: '#92400E', fontSize: 12 },
   siteHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   siteIcon: { width: 42, height: 42, borderRadius: radius.md, backgroundColor: palette.surfaceBrand, alignItems: 'center', justifyContent: 'center' },
   siteCopy: { flex: 1 },
@@ -89,10 +114,13 @@ const styles = StyleSheet.create({
   track: { height: 8, borderRadius: 4, backgroundColor: palette.surfaceMuted, overflow: 'hidden', marginTop: spacing.lg },
   progress: { height: '100%', borderRadius: 4, backgroundColor: palette.success },
   listTitle: { color: palette.textMuted, fontSize: 10, letterSpacing: 0.8, fontWeight: '800', marginTop: spacing.xl, marginBottom: spacing.sm },
+  absentTitle: { color: palette.warning },
   emptyText: { color: palette.textMuted, fontSize: 13, lineHeight: 19 },
   employeeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: palette.border },
   avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: palette.primarySoft, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: palette.primary, fontSize: 14, fontWeight: '800' },
+  absentAvatar: { backgroundColor: '#FEF3C7' },
+  absentAvatarText: { color: '#92400E', fontSize: 14, fontWeight: '800' },
   employeeCopy: { flex: 1 },
   employeeName: { color: palette.text, fontSize: 14, fontWeight: '700' },
   employeeMeta: { color: palette.textMuted, fontSize: 11, marginTop: 2 },
