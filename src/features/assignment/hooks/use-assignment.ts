@@ -2,9 +2,9 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 
 import { useAuthStore } from '@/features/auth/store';
-import { getSiteDetail } from '@/features/site/services/site.service';
+import { getEmployeeSummary, getSiteDetail } from '@/features/site/services/site.service';
 
-import { getAssignments, getEmployee, getSitesForFilter } from '../services/assignment.service';
+import { getAssignments, getSitesForFilter } from '../services/assignment.service';
 import type { Assignment, AssignmentListParams, Site } from '../types/assignment.type';
 
 export const assignmentKeys = {
@@ -91,7 +91,7 @@ export function useAssignmentList(
   const employeeQueries = useQueries({
     queries: assignments.map((assignment) => ({
       queryKey: ['employees', tenantId, assignment.employeeId] as const,
-      queryFn: () => getEmployee(tenantId!, assignment.employeeId),
+      queryFn: () => getEmployeeSummary(tenantId!, assignment.employeeId),
       enabled: !!tenantId,
       staleTime: 5 * 60 * 1000,
     })),

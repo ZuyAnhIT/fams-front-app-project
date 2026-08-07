@@ -35,11 +35,9 @@ export interface UseSiteListResult {
  * Danh sách công trình. Quyền `sites:list` được enforce ở backend
  * (TENANT_ADMIN, HR_MANAGER, SITE_SUPERVISOR đều có quyền này theo seed data
  * thật — không có khái niệm "chỉ xem site được assign" ở backend hiện tại).
- * FE không tự chặn theo role vì `UserRole` hệ thống của FE
- * ('employee'|'manager'|'admin'|'hr') không khớp với role code backend
- * (PLATFORM_ADMIN/TENANT_ADMIN/HR_MANAGER/SITE_SUPERVISOR/EMPLOYEE) và
- * `/auth/me` không trả permissions. Dựa vào lỗi 403 từ backend để hiển thị
- * trạng thái không có quyền. Xem "Cần xác nhận thêm".
+ * Profile pre-gates the navigation using permissions returned by `/roles/me`
+ * for better UX. This hook still treats backend 403 as authoritative because
+ * permissions can change after the menu was rendered or the tenant can switch.
  */
 export function useSiteList(params: SiteListParams = {}): UseSiteListResult {
   const tenantId = useAuthStore((s) => s.activeTenantId);

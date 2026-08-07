@@ -2,7 +2,7 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 
 import { useAuthStore } from '@/features/auth/store';
 
-import { getEmployee, getSiteAssignments } from '../services/site.service';
+import { getEmployeeSummary, getSiteAssignments } from '../services/site.service';
 import type { Assignment } from '../types/Site';
 import { siteKeys } from './use-site-list';
 
@@ -46,7 +46,7 @@ export function useSiteSupervisors(siteId: string): UseSiteSupervisorsResult {
   const employeeQueries = useQueries({
     queries: assignments.map((assignment) => ({
       queryKey: ['employees', tenantId, assignment.employeeId] as const,
-      queryFn: () => getEmployee(tenantId!, assignment.employeeId),
+      queryFn: () => getEmployeeSummary(tenantId!, assignment.employeeId),
       enabled: !!tenantId,
       staleTime: 5 * 60 * 1000,
     })),

@@ -42,7 +42,27 @@ export async function getSiteAssignments(
 }
 
 /** Không có endpoint batch-by-ids; phải gọi từng employeeId một (N+1). */
-export async function getEmployee(tenantId: string, employeeId: string): Promise<EmployeeSummary> {
+interface EmployeeDetailLookupResponse extends EmployeeSummary {
+  email: string | null;
+  phone: string | null;
+  piiMasked: boolean;
+}
+
+/**
+ * The supervisor/assignment UI only needs a display name. Deliberately project
+ * the employee detail response before React Query caches it so email/phone are
+ * not retained by the mobile app, regardless of whether the backend returned
+ * masked or unmasked PII for the caller.
+ */
+export async function getEmployeeSummary(
+  tenantId: string,
+  employeeId: string,
+): Promise<EmployeeSummary> {
   const { data } = await apiClient.get(`/tenants/${tenantId}/employees/${employeeId}`);
-  return unwrapApiData<EmployeeSummary>(data);
+  const employee = unwrapApiData<EmployeeDetailLookupResponse>(data);
+  return {
+    id: employee.id,
+    firstName: employee.firstName,
+    lastName: employee.lastName,
+  };
 }

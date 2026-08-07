@@ -4,7 +4,6 @@ import { unwrapApiData } from '@/services/api-response';
 import type {
   AssignmentListParams,
   AssignmentListResponse,
-  EmployeeSummary,
   SiteListParams,
   SiteListResponse,
 } from '../types/assignment.type';
@@ -32,13 +31,4 @@ export async function getSitesForFilter(
 ): Promise<SiteListResponse> {
   const { data } = await apiClient.get(`/tenants/${tenantId}/sites`, { params });
   return unwrapApiData<SiteListResponse>(data);
-}
-
-/** Không có endpoint batch-by-ids; phải gọi từng employeeId một (N+1). */
-export async function getEmployee(
-  tenantId: string,
-  employeeId: string,
-): Promise<EmployeeSummary> {
-  const { data } = await apiClient.get(`/tenants/${tenantId}/employees/${employeeId}`);
-  return unwrapApiData<EmployeeSummary>(data);
 }
