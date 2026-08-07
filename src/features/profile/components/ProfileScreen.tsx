@@ -132,6 +132,10 @@ export function ProfileScreen() {
         assignment.tenantId === null ||
         assignment.tenantId === (activeTenantId || profile.tenant_id),
     ) ?? [];
+  const canViewManagedSites = visibleRoles.some((assignment) =>
+    assignment.permissions.some((permission) =>
+      permission === 'sites:list' || permission === 'sites:read'),
+  );
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -301,18 +305,20 @@ export function ProfileScreen() {
 
           <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
 
-          <ProfileSettingsRow
-            icon="business-outline"
-            label="Công trình"
-            sublabel="Danh sách và chi tiết công trình"
-            onPress={() =>
-              // expo-router typed routes chỉ nhận diện `/site` sau khi chạy `expo start`
-              // một lần để regenerate `.expo/types`; cast tạm thời cho đến khi đó.
-              router.push('/site' as unknown as Parameters<typeof router.push>[0])
-            }
-            theme={theme}
-          />
-          <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+          {canViewManagedSites && (
+            <>
+              <ProfileSettingsRow
+                icon="business-outline"
+                label="Công trình quản lý"
+                sublabel="Chỉ hiện theo quyền trong công ty đang chọn"
+                onPress={() =>
+                  router.push('/site' as unknown as Parameters<typeof router.push>[0])
+                }
+                theme={theme}
+              />
+              <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+            </>
+          )}
 
           <ProfileSettingsRow
             icon="calendar-outline"
@@ -338,6 +344,17 @@ export function ProfileScreen() {
               />
             </>
           )}
+        </View>
+
+        <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Trợ giúp</Text>
+          <ProfileSettingsRow
+            icon="help-buoy-outline"
+            label="Hướng dẫn sử dụng"
+            sublabel="Chấm công, Face ID, thông báo và xử lý lỗi"
+            onPress={() => router.push('/help' as never)}
+            theme={theme}
+          />
         </View>
 
         <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
