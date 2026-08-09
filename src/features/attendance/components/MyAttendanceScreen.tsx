@@ -119,13 +119,17 @@ function WarningBanner({
 
 function DailyCard({ item }: { item: AttendanceSummary }) {
   const [expanded, setExpanded] = useState(false);
+  const otWarningLabel = [
+    item.otDailyLimitExceeded ? 'vượt giới hạn OT ngày' : null,
+    item.otWeeklyLimitExceeded ? 'vượt giới hạn OT tuần' : null,
+  ].filter(Boolean).join(', ');
 
   return (
     <Pressable
       onPress={() => setExpanded((current) => !current)}
       style={({ pressed }) => [styles.dayCard, pressed && styles.pressed]}
       accessibilityRole="button"
-      accessibilityLabel={`${formatDay(item.attendanceDate)}, ${formatMinutes(item.totalWorkMinutes)}`}
+      accessibilityLabel={`${formatDay(item.attendanceDate)}, ${formatMinutes(item.totalWorkMinutes)}${otWarningLabel ? `, ${otWarningLabel}` : ''}`}
       accessibilityHint={expanded ? 'Thu gọn chi tiết' : 'Mở chi tiết bảng công ngày'}
       accessibilityState={{ expanded }}
     >
@@ -159,6 +163,16 @@ function DailyCard({ item }: { item: AttendanceSummary }) {
         {item.hasRandomCheckFailure && (
           <View style={[styles.badge, styles.randomCheckBadge]}>
             <Text style={[styles.badgeText, { color: palette.warning }]}>Random check chưa đạt</Text>
+          </View>
+        )}
+        {item.otDailyLimitExceeded && (
+          <View style={[styles.badge, styles.otWarningBadge]}>
+            <Text style={[styles.badgeText, { color: palette.warning }]}>Vượt giới hạn OT ngày</Text>
+          </View>
+        )}
+        {item.otWeeklyLimitExceeded && (
+          <View style={[styles.badge, styles.otWarningBadge]}>
+            <Text style={[styles.badgeText, { color: palette.warning }]}>Vượt giới hạn OT tuần</Text>
           </View>
         )}
         {item.missingCheckout && (
@@ -196,8 +210,23 @@ function DailyCard({ item }: { item: AttendanceSummary }) {
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Trong đó OT</Text>
-            <Text style={styles.detailValue}>{formatMinutes(item.otMinutes)}</Text>
+            <Text
+              style={[
+                styles.detailValue,
+                (item.otDailyLimitExceeded || item.otWeeklyLimitExceeded) && styles.warningValue,
+              ]}
+            >
+              {formatMinutes(item.otMinutes)}
+            </Text>
           </View>
+          {(item.otDailyLimitExceeded || item.otWeeklyLimitExceeded) && (
+            <View style={styles.otWarningNote} accessibilityRole="alert">
+              <Ionicons name="warning-outline" size={17} color={palette.warning} />
+              <Text style={styles.otWarningText}>
+                Cảnh báo để bạn và HR đối soát. Hệ thống vẫn giữ nguyên số phút OT và không khóa check-out.
+              </Text>
+            </View>
+          )}
           {item.adjustmentReason && (
             <View style={styles.adjustmentReason}>
               <Text style={styles.adjustmentLabel}>Lý do HR điều chỉnh</Text>
@@ -431,6 +460,7 @@ const styles = StyleSheet.create({
   rejectedBadge: { backgroundColor: palette.dangerSoft },
   adjustedBadge: { backgroundColor: palette.primarySoft },
   randomCheckBadge: { backgroundColor: palette.warningSoft },
+  otWarningBadge: { backgroundColor: palette.warningSoft },
   badgeText: { fontSize: 10, lineHeight: 14, fontWeight: '800' },
   timeLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   timeText: { color: palette.textSecondary, fontSize: 12, lineHeight: 18, fontWeight: '600' },
@@ -440,6 +470,9 @@ const styles = StyleSheet.create({
   detailLabel: { color: palette.textMuted, fontSize: 12, lineHeight: 18 },
   detailValue: { color: palette.text, fontSize: 12, lineHeight: 18, fontWeight: '700' },
   negativeValue: { color: palette.warning },
+  warningValue: { color: palette.warning },
+  otWarningNote: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: palette.warningSoft, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
+  otWarningText: { flex: 1, color: palette.textSecondary, fontSize: 11, lineHeight: 17 },
   adjustmentReason: { backgroundColor: palette.surfaceBrand, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
   adjustmentLabel: { color: palette.primary, fontSize: 10, lineHeight: 15, fontWeight: '800' },
   adjustmentText: { color: palette.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 2 },
