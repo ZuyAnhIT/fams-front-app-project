@@ -45,6 +45,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     items: [
       'Lịch sử chấm công hiển thị từng lần vào/ra và trạng thái xử lý.',
       'Bảng công hiển thị tổng giờ, đi muộn, về sớm và OT do Backend tổng hợp.',
+      'Badge vượt giới hạn OT ngày/tuần chỉ là cảnh báo đối soát; không làm mất số phút OT và không khóa check-out.',
       'App không tự sửa hoặc tự tính lại công; dữ liệu chưa đúng cần gửi giải trình để HR xử lý.',
     ],
   },

@@ -18,6 +18,10 @@ export interface AttendanceSummary {
   earlyLeave: boolean;
   earlyLeaveMinutes: number;
   otMinutes: number;
+  /** Warning only; checkout and calculated OT remain unchanged. */
+  otDailyLimitExceeded: boolean;
+  /** Warning only; aggregated across all sites in the employee's ISO week. */
+  otWeeklyLimitExceeded: boolean;
   missingCheckout: boolean;
   hasPendingReviewSession: boolean;
   hasRejectedSession: boolean;
