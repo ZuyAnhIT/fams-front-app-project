@@ -26,7 +26,10 @@ export function isRandomCheckNotification(eventType: string): boolean {
   return normalized === 'random_check' || normalized === 'random_check_sent';
 }
 
-export function formatNotificationTime(isoDate: string): string {
+export function formatNotificationTime(
+  isoDate: string,
+  formatDate?: (value: string) => string,
+): string {
   const date = new Date(isoDate);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -41,6 +44,7 @@ export function formatNotificationTime(isoDate: string): string {
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) return `${diffDays} ngày trước`;
 
+  if (formatDate) return formatDate(isoDate);
   return date.toLocaleDateString('vi-VN', {
     day: '2-digit',
     month: '2-digit',

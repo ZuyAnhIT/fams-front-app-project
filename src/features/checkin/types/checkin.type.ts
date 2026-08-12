@@ -137,7 +137,7 @@ export interface OfflineSyncResultItem {
   checkinRecordId: string | null;
 }
 
-export type OfflineQueueStatus = 'pending' | 'rejected' | 'conflict';
+export type OfflineQueueStatus = 'pending' | 'rejected' | 'conflict' | 'expired';
 
 export interface OfflineCheckinQueueItem {
   clientNonce: string;

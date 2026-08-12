@@ -61,6 +61,24 @@ export interface TenantSettings {
   random_check_enabled: boolean;
 }
 
+/**
+ * Current backend contract of GET /tenants/{tenantId}/settings. This is kept
+ * separate from the legacy tenant-creation form model above so the employee
+ * App cannot accidentally send obsolete operational fields to the settings API.
+ */
+export interface TenantDisplaySettings {
+  id?: string;
+  tenantId?: string;
+  dateFormat: string;
+  timeFormat: string;
+  brandPrimaryColor?: string | null;
+  brandSecondaryColor?: string | null;
+  brandAccentColor?: string | null;
+  employeeCodePrefix?: string | null;
+  employeeCodePadding?: number | null;
+  updatedAt?: string;
+}
+
 export interface Subscription {
   plan: SubscriptionPlan;
   /** ISO 8601 */
@@ -105,7 +123,16 @@ export interface UpdateTenantRequest {
   industry?: TenantIndustry;
 }
 
-export type UpdateTenantSettingsRequest = Partial<TenantSettings>;
+export type UpdateTenantSettingsRequest = Partial<
+  Pick<
+    TenantDisplaySettings,
+    | 'dateFormat'
+    | 'timeFormat'
+    | 'brandPrimaryColor'
+    | 'brandSecondaryColor'
+    | 'brandAccentColor'
+  >
+>;
 
 // ─── Response Types ───────────────────────────────────────────────────────────
 

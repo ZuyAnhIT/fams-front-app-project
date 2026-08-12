@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useAuthStore } from '@/features/auth/store';
 import { useUnreadCount } from '@/features/notification/hooks/useUnreadCount';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 import { palette } from '@/theme/tokens';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
@@ -26,6 +27,7 @@ export default function TabLayout() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isHydrating = useAuthStore((state) => state.isHydrating);
   const { unreadCount } = useUnreadCount();
+  const { primaryColor } = useTenantPreferences();
 
   if (isHydrating) {
     return (
@@ -46,7 +48,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: palette.primary,
+        tabBarActiveTintColor: primaryColor,
         tabBarInactiveTintColor: palette.textMuted,
         tabBarHideOnKeyboard: true,
         tabBarStyle: styles.tabBar,

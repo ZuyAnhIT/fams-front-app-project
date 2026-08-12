@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 
 import { layout, palette, radius, spacing } from '@/theme/tokens';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 type ButtonVariant = 'primary' | 'secondary' | 'dark' | 'danger' | 'ghost';
 
@@ -34,7 +35,12 @@ export function AppButton({
   style,
   accessibilityHint,
 }: AppButtonProps) {
-  const colors = variantStyles[variant];
+  const { primaryColor } = useTenantPreferences();
+  const colors = variant === 'primary'
+    ? { ...variantStyles.primary, background: primaryColor, border: primaryColor }
+    : variant === 'ghost'
+      ? { ...variantStyles.ghost, text: primaryColor }
+      : variantStyles[variant];
   const inactive = disabled || loading;
 
   return (

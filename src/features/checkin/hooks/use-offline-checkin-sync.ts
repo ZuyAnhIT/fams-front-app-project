@@ -63,7 +63,7 @@ export function useOfflineCheckinSync(
         }
       } catch {
         if (announce) {
-          showToast('Chưa thể đồng bộ. Dữ liệu vẫn được lưu an toàn trên máy.', 'error');
+          showToast('Chưa thể đồng bộ. Dữ liệu vẫn nằm trong vùng riêng của ứng dụng.', 'error');
         }
       } finally {
         setIsSyncing(false);

@@ -15,6 +15,12 @@ const ipArgumentIndex = args.indexOf('--ip');
 const requestedIp = ipArgumentIndex >= 0 ? args[ipArgumentIndex + 1] : undefined;
 const syncEas = args.includes('--eas');
 const dryRun = args.includes('--dry-run');
+const expoGo = args.includes('--expo-go');
+const developmentBuild = args.includes('--dev-client');
+
+if (expoGo && developmentBuild) {
+  throw new Error('Chỉ chọn một trong --expo-go hoặc --dev-client.');
+}
 
 function isValidIpv4(value) {
   if (!value) return false;
@@ -122,12 +128,20 @@ const apiUrl = `http://${lanIp}:8080/api/v1`;
 const frontendUrl = `http://${lanIp}:3000`;
 const backendUrl = `http://${lanIp}:8080`;
 const avatarUrl = `http://${lanIp}:9000/fams-avatars`;
+const mobileLoginUrl = expoGo
+  ? `exp://${lanIp}:8082/--/login`
+  : developmentBuild
+    ? 'famsfrontappproject://login'
+    : undefined;
 
 const targets = [
   {
     label: 'Expo app',
     path: join(appRoot, '.env'),
-    values: { EXPO_PUBLIC_API_URL: apiUrl },
+    values: {
+      EXPO_PUBLIC_API_URL: apiUrl,
+      ...(mobileLoginUrl ? { EXPO_PUBLIC_MOBILE_LOGIN_URL: mobileLoginUrl } : {}),
+    },
   },
   {
     label: 'Next.js web',
@@ -153,6 +167,7 @@ for (const target of targets) {
 console.log(`  API app: ${apiUrl}`);
 console.log(`  Link email: ${frontendUrl}`);
 console.log(`  Avatar: ${avatarUrl}`);
+if (mobileLoginUrl) console.log(`  Quay lại App: ${mobileLoginUrl}`);
 
 if (syncEas && !dryRun) {
   console.log('Đang đồng bộ EXPO_PUBLIC_API_URL lên EAS development...');

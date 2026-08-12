@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '@/components/ui/app-header';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { palette, radius, spacing } from '@/theme/tokens';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 import { useMyExceptions, useSubmitExceptionExplanation } from '../hooks/use-my-exceptions';
 import type { MyExceptionItem } from '../types/exception.type';
@@ -31,19 +32,11 @@ const REASON_LABELS: Record<string, string> = {
   location_fail: 'Vị trí không đạt',
   face_fail: 'Face ID không đạt',
   liveness_fail: 'Xác thực người thật không đạt',
+  face_verify_timeout: 'AI xác thực quá hạn',
 };
 
-function formatDate(value: string | null): string {
-  if (!value) return 'Không rõ ngày';
-  return new Date(`${value}T00:00:00`).toLocaleDateString('vi-VN', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
-
 export function MyExceptionsScreen() {
+  const { formatDate } = useTenantPreferences();
   const query = useMyExceptions();
   const explanation = useSubmitExceptionExplanation();
   const [selected, setSelected] = useState<MyExceptionItem | null>(null);
@@ -144,7 +137,7 @@ export function MyExceptionsScreen() {
                   </View>
                   <View style={styles.cardTitleWrap}>
                     <Text style={styles.cardTitle}>{REASON_LABELS[item.reasonType] ?? item.reasonType}</Text>
-                    <Text style={styles.cardDate}>{formatDate(item.date)}</Text>
+                    <Text style={styles.cardDate}>{item.date ? formatDate(item.date) : 'Không rõ ngày'}</Text>
                   </View>
                   <View style={styles.sourceBadge}>
                     <Text style={styles.sourceText}>{isViolation ? 'Vi phạm' : 'Chấm công'}</Text>

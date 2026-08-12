@@ -18,6 +18,7 @@ import { useFaceIdStatus } from '@/features/face/hooks/use-face-id';
 import { useGps } from '@/features/gps/hooks/use-gps';
 import { FacePhotoCapture } from '@/features/profile/components/FacePhotoCapture';
 import { palette, radius, shadows, spacing } from '@/theme/tokens';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 import { useMyPendingRandomChecks, useSubmitRandomCheck } from '../hooks/use-random-check';
 import type { EmployeePendingCheck, RandomCheckMode } from '../types/random-check.type';
@@ -29,15 +30,6 @@ import {
   randomCheckRequiresLiveness,
   secondsLeft,
 } from '../utils/random-check.utils';
-
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-  });
-}
 
 function formatCountdown(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -51,12 +43,14 @@ function CheckCard({
   selected,
   onSelect,
   syncedAt,
+  formatDateTime,
 }: {
   item: EmployeePendingCheck;
   now: number;
   selected: boolean;
   onSelect: () => void;
   syncedAt: number;
+  formatDateTime: (value: string) => string;
 }) {
   const mode = getRandomCheckMode(item.configSnapshot);
   const remaining = secondsLeft(item, now, syncedAt);
@@ -110,6 +104,7 @@ function CheckCard({
 }
 
 export function RandomCheckScreen() {
+  const { formatDateTime } = useTenantPreferences();
   const params = useLocalSearchParams<{ checkId?: string }>();
   const [now, setNow] = useState(Date.now());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -238,6 +233,7 @@ export function RandomCheckScreen() {
                   item={item}
                   now={now}
                   syncedAt={query.dataUpdatedAt}
+                  formatDateTime={formatDateTime}
                   selected={item.id === selectedId}
                   onSelect={() => setSelectedId(item.id)}
                 />

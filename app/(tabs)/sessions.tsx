@@ -19,12 +19,7 @@ import { useAuthSessions } from '@/features/auth/hooks/use-auth-sessions';
 import { useAuthTheme } from '@/features/auth/theme';
 import type { AuthSession } from '@/features/auth/types';
 import { shadows } from '@/theme/tokens';
-
-function formatDate(value?: string) {
-  if (!value) return 'Không rõ';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('vi-VN');
-}
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 function deviceLabel(session: AuthSession) {
   if (session.user_agent) {
@@ -39,6 +34,7 @@ function deviceLabel(session: AuthSession) {
 
 export default function SessionsScreen() {
   const theme = useAuthTheme();
+  const { formatDateTime } = useTenantPreferences();
   const [target, setTarget] = useState<AuthSession | null>(null);
   const [confirmOthers, setConfirmOthers] = useState(false);
   const {
@@ -78,7 +74,7 @@ export default function SessionsScreen() {
                       )}
                     </View>
                   </View>
-                  <Text style={[styles.meta, { color: theme.textSecondary }]}>Hoạt động gần nhất: {formatDate(session.last_used_at)}</Text>
+                  <Text style={[styles.meta, { color: theme.textSecondary }]}>Hoạt động gần nhất: {session.last_used_at ? formatDateTime(session.last_used_at) : 'Không rõ'}</Text>
                   <Text style={[styles.meta, { color: theme.textSecondary }]}>Địa chỉ IP: {session.ip_address || 'Không rõ'}</Text>
                   {!session.current && (
                     <TouchableOpacity
