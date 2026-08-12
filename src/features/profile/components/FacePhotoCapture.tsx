@@ -115,7 +115,7 @@ export function FacePhotoCapture({
         />
         <Text style={[styles.noticeText, { color: theme.textSecondary }]}>
           {offlineReviewNotice
-            ? 'Không có mạng: ảnh sẽ được lưu riêng trên máy và bản ghi liveness sẽ chờ HR duyệt sau khi đồng bộ.'
+            ? 'Không có mạng: ảnh chỉ là bằng chứng ngoại lệ, không được coi là liveness thành công. Ảnh được giữ tối đa 24 giờ và bản ghi luôn chờ HR duyệt sau khi đồng bộ.'
             : 'Nhìn thẳng, đủ sáng, tháo khẩu trang/kính râm và chỉ để một khuôn mặt trong khung.'}
         </Text>
       </View>

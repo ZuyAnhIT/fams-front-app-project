@@ -9,6 +9,7 @@ import { useProfile } from '@/features/auth/hooks/use-profile';
 import { useEmployeeDashboard, useIsCurrentTenantSupervisor } from '@/features/dashboard/hooks/use-dashboard';
 import { useMyPendingRandomChecks } from '@/features/random-check/hooks/use-random-check';
 import { secondsLeft } from '@/features/random-check/utils/random-check.utils';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 import { palette, radius, shadows, spacing } from '@/theme/tokens';
 
 interface QuickAction {
@@ -27,16 +28,6 @@ function greeting(): string {
   return 'Chào buổi tối';
 }
 
-function formatToday(): string {
-  const text = new Date().toLocaleDateString('vi-VN', {
-    weekday: 'long',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 const CHECKIN_STATUS_LABELS = {
   valid: 'Hợp lệ',
   pending_review: 'Chờ HR duyệt',
@@ -44,6 +35,7 @@ const CHECKIN_STATUS_LABELS = {
 } as const;
 
 export default function HomeScreen() {
+  const { formatDate } = useTenantPreferences();
   const {
     profile,
     isLoading: isLoadingProfile,
@@ -149,7 +141,7 @@ export default function HomeScreen() {
             <View style={styles.profileCopy}>
               <Text style={styles.eyebrow}>{greeting()}</Text>
               <Text style={styles.name} numberOfLines={1}>{firstName}</Text>
-              <Text style={styles.date}>{formatToday()}</Text>
+              <Text style={styles.date}>Hôm nay · {formatDate(new Date())}</Text>
             </View>
 
             <Pressable

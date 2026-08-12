@@ -8,7 +8,7 @@ import type {
   Tenant,
   TenantListParams,
   TenantListResponse,
-  TenantSettings,
+  TenantDisplaySettings,
   UpdateTenantRequest,
   UpdateTenantSettingsRequest,
 } from './types';
@@ -73,21 +73,21 @@ export async function updateTenant(
 // ─── Tenant Settings ──────────────────────────────────────────────────────────
 
 /** Get the settings for a tenant */
-export async function getTenantSettings(id: string): Promise<TenantSettings> {
-  const { data } = await apiClient.get<TenantSettings>(`${BASE}/${id}/settings`);
-  return unwrapApiData<TenantSettings>(data);
+export async function getTenantSettings(id: string): Promise<TenantDisplaySettings> {
+  const { data } = await apiClient.get<TenantDisplaySettings>(`${BASE}/${id}/settings`);
+  return unwrapApiData<TenantDisplaySettings>(data);
 }
 
 /** Partial update to tenant settings */
 export async function updateTenantSettings(
   id: string,
   body: UpdateTenantSettingsRequest,
-): Promise<TenantSettings> {
-  const { data } = await apiClient.patch<TenantSettings>(
+): Promise<TenantDisplaySettings> {
+  const { data } = await apiClient.patch<TenantDisplaySettings>(
     `${BASE}/${id}/settings`,
     body,
   );
-  return unwrapApiData<TenantSettings>(data);
+  return unwrapApiData<TenantDisplaySettings>(data);
 }
 
 // ─── Subscription ─────────────────────────────────────────────────────────────

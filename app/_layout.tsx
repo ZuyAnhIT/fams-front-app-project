@@ -19,6 +19,7 @@ import {
   subscribeToPushTokenRefresh,
 } from "@/features/notification/services/push-notification.service";
 import { resolveNotificationHref } from '@/features/notification/utils/notification-navigation';
+import { TenantPreferencesProvider } from '@/features/tenant/tenant-preferences';
 
 /** Shared QueryClient instance – lives for the lifetime of the app */
 const queryClient = new QueryClient({
@@ -168,14 +169,16 @@ function AppInit() {
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <StatusBar style="dark" />
-        <AppInit />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="modal/checkin-result" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="modal/random-check-result" options={{ presentation: 'modal' }} />
-        </Stack>
-      </ToastProvider>
+      <TenantPreferencesProvider>
+        <ToastProvider>
+          <StatusBar style="dark" />
+          <AppInit />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="modal/checkin-result" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="modal/random-check-result" options={{ presentation: 'modal' }} />
+          </Stack>
+        </ToastProvider>
+      </TenantPreferencesProvider>
     </QueryClientProvider>
   );
 }

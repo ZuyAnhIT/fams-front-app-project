@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '@/components/ui/app-header';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { palette, radius, spacing } from '@/theme/tokens';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 import { useCheckinHistory } from '../hooks/use-checkin-history';
 import type { CheckinResponse, CheckinStatus } from '../types/checkin.type';
@@ -19,19 +20,6 @@ const STATUS_BACKGROUNDS: Record<CheckinStatus, string> = {
   rejected: palette.dangerSoft,
 };
 
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString('vi-VN', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
-
-function formatTime(value: string): string {
-  return new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-}
-
 function faceState(value: boolean | null, expected: boolean): string {
   if (!expected) return 'Không yêu cầu';
   if (value === true) return 'Đạt';
@@ -42,6 +30,7 @@ function faceState(value: boolean | null, expected: boolean): string {
 /** Employee attendance history with explicit navigation and readable daily cards. */
 export function CheckinHistory() {
   const router = useRouter();
+  const { formatDate, formatTime } = useTenantPreferences();
   const [page, setPage] = useState(0);
   const { records, totalPages, isLoading, isRefetching, isError, refetch } = useCheckinHistory({
     page,

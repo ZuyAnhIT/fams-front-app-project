@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { palette, radius, spacing } from '@/theme/tokens';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 import type { NotificationItem as NotificationItemType } from '../types/Notification';
 import {
@@ -20,6 +21,7 @@ interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification, onPress, onLongPress, selectionMode = false, selected = false }: NotificationItemProps) {
+  const { formatDate } = useTenantPreferences();
   const read = isNotificationRead(notification);
   const typeLabel = getEventTypeLabel(notification.eventType);
   const normalizedEventType = notification.eventType.toLowerCase();
@@ -66,7 +68,7 @@ export function NotificationItem({ notification, onPress, onLongPress, selection
       <View style={styles.content}>
         <View style={styles.headerRow}>
           <Text style={styles.typeLabel}>{typeLabel}</Text>
-          <Text style={styles.time}>{formatNotificationTime(notification.createdAt)}</Text>
+          <Text style={styles.time}>{formatNotificationTime(notification.createdAt, formatDate)}</Text>
         </View>
 
         <Text style={[styles.title, !read && styles.titleUnread]} numberOfLines={1}>

@@ -75,6 +75,9 @@ const FAILURE_LABELS: Record<string, string> = {
   location_mismatch: 'Vị trí hiện tại không nằm trong phạm vi công trình.',
   face_fail: 'Khuôn mặt không khớp với hồ sơ Face ID đã đăng ký.',
   liveness_fail: 'Không xác minh được người thật từ ảnh vừa chụp.',
+  // 2026-08-12: kết quả xác thực AI không về kịp trong thời gian chờ — có thể do lỗi hạ tầng,
+  // không hẳn là nhân viên xác thực sai. HR sẽ xem lại trước khi xác nhận vi phạm.
+  face_verify_timeout: 'Hệ thống AI xác thực không phản hồi kịp thời gian chờ.',
 };
 
 export function randomCheckFailureLabel(reason: string | null): string {

@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { palette, radius, shadows, spacing } from '@/theme/tokens';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 import { useMyMonthlyAttendance } from '../hooks/use-my-monthly-attendance';
 import type { AttendanceSummary } from '../types/attendance.type';
@@ -54,23 +55,6 @@ function formatMinutes(value: number): string {
   if (hours === 0) return `${minutes} phút`;
   if (minutes === 0) return `${hours} giờ`;
   return `${hours} giờ ${minutes} phút`;
-}
-
-function formatDay(value: string): string {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('vi-VN', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-  });
-}
-
-function formatTime(value: string | null): string {
-  if (!value) return '--:--';
-  return new Date(value).toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 function Metric({
@@ -117,7 +101,15 @@ function WarningBanner({
   );
 }
 
-function DailyCard({ item }: { item: AttendanceSummary }) {
+function DailyCard({
+  item,
+  formatDate,
+  formatTime,
+}: {
+  item: AttendanceSummary;
+  formatDate: (value: string) => string;
+  formatTime: (value: string | number | Date) => string;
+}) {
   const [expanded, setExpanded] = useState(false);
   const otWarningLabel = [
     item.otDailyLimitExceeded ? 'vượt giới hạn OT ngày' : null,
@@ -129,7 +121,7 @@ function DailyCard({ item }: { item: AttendanceSummary }) {
       onPress={() => setExpanded((current) => !current)}
       style={({ pressed }) => [styles.dayCard, pressed && styles.pressed]}
       accessibilityRole="button"
-      accessibilityLabel={`${formatDay(item.attendanceDate)}, ${formatMinutes(item.totalWorkMinutes)}${otWarningLabel ? `, ${otWarningLabel}` : ''}`}
+      accessibilityLabel={`${formatDate(item.attendanceDate)}, ${formatMinutes(item.totalWorkMinutes)}${otWarningLabel ? `, ${otWarningLabel}` : ''}`}
       accessibilityHint={expanded ? 'Thu gọn chi tiết' : 'Mở chi tiết bảng công ngày'}
       accessibilityState={{ expanded }}
     >
@@ -139,7 +131,7 @@ function DailyCard({ item }: { item: AttendanceSummary }) {
             <Ionicons name="calendar-outline" size={18} color={palette.primary} />
           </View>
           <View>
-            <Text style={styles.dayDate}>{formatDay(item.attendanceDate)}</Text>
+            <Text style={styles.dayDate}>{formatDate(item.attendanceDate)}</Text>
             <Text style={styles.siteName} numberOfLines={1}>{item.siteName}</Text>
           </View>
         </View>
@@ -188,9 +180,9 @@ function DailyCard({ item }: { item: AttendanceSummary }) {
       </View>
 
       <View style={styles.timeLine}>
-        <Text style={styles.timeText}>Vào {formatTime(item.firstCheckinAt)}</Text>
+        <Text style={styles.timeText}>Vào {item.firstCheckinAt ? formatTime(item.firstCheckinAt) : '--:--'}</Text>
         <Ionicons name="arrow-forward" size={14} color={palette.textMuted} />
-        <Text style={styles.timeText}>Ra {formatTime(item.lastCheckoutAt)}</Text>
+        <Text style={styles.timeText}>Ra {item.lastCheckoutAt ? formatTime(item.lastCheckoutAt) : '--:--'}</Text>
         <Text style={styles.sessionText}>{item.sessionCount} phiên</Text>
       </View>
 
@@ -245,6 +237,7 @@ function DailyCard({ item }: { item: AttendanceSummary }) {
 }
 
 export function MyAttendanceScreen() {
+  const { formatDate, formatTime } = useTenantPreferences();
   const [period, setPeriod] = useState(() => monthFromDate(new Date()));
   const currentPeriod = monthFromDate(new Date());
   const query = useMyMonthlyAttendance(period);
@@ -380,7 +373,14 @@ export function MyAttendanceScreen() {
               </View>
               {days.length > 0 ? (
                 <View style={styles.dayList}>
-                  {days.map((item) => <DailyCard key={item.id} item={item} />)}
+                  {days.map((item) => (
+                    <DailyCard
+                      key={item.id}
+                      item={item}
+                      formatDate={formatDate}
+                      formatTime={formatTime}
+                    />
+                  ))}
                 </View>
               ) : (
                 <FeedbackState

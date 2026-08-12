@@ -1,7 +1,16 @@
 function getApiBaseUrl(): string {
-  const value =
-    process.env.EXPO_PUBLIC_API_URL?.trim() ||
-    'http://localhost:8080/api/v1';
+  const configuredValue = process.env.EXPO_PUBLIC_API_URL?.trim();
+
+  // A localhost fallback is useful while developing in a simulator, but it is
+  // dangerous in a shipped build: a missing EAS variable would otherwise look
+  // like an ordinary "server unavailable" incident on every real device.
+  if (!configuredValue && !__DEV__) {
+    throw new Error(
+      'Thiếu EXPO_PUBLIC_API_URL cho bản build. Hãy cấu hình URL API HTTPS trong EAS environment.',
+    );
+  }
+
+  const value = configuredValue || 'http://localhost:8080/api/v1';
 
   if (/\s/.test(value)) {
     throw new Error(

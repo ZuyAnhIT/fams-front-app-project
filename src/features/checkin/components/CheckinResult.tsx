@@ -9,6 +9,7 @@ import { AppHeader } from '@/components/ui/app-header';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { palette, radius, spacing } from '@/theme/tokens';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 import { useCheckinExplain } from '../hooks/use-checkin-explain';
 import { useCheckinResult } from '../hooks/use-checkin-result';
@@ -25,16 +26,6 @@ const STATUS_META: Record<CheckinStatus, { icon: keyof typeof Ionicons.glyphMap;
   pending_review: { icon: 'time-outline', background: palette.warningSoft },
   rejected: { icon: 'alert-circle-outline', background: palette.dangerSoft },
 };
-
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
 
 function DetailRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
   return (
@@ -62,6 +53,7 @@ function scoreSuffix(score: number | null): string {
 }
 
 export function CheckinResult({ checkinId, policy }: CheckinResultProps) {
+  const { formatDateTime } = useTenantPreferences();
   const { result, isLoading, isError, refetch } = useCheckinResult(checkinId);
   const { submitExplanation, isSubmitting } = useCheckinExplain(checkinId);
   const [showExplainForm, setShowExplainForm] = useState(false);

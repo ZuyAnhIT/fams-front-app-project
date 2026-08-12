@@ -7,6 +7,7 @@ import { shadows } from '@/theme/tokens';
 import type { FaceIdStatusDto } from '@/features/face/types/FaceId';
 import { requiresFaceIdReEnrollment } from '@/features/face/utils/face-id.utils';
 import { formatFaceStatusLabel } from '@/features/face/utils/face-quality';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 interface FaceStatusCardProps {
   faceStatus?: FaceIdStatusDto;
@@ -32,6 +33,7 @@ export function FaceStatusCard({
   isDeleting,
 }: FaceStatusCardProps) {
   const theme = useAuthTheme();
+  const { formatDate, formatDateTime } = useTenantPreferences();
 
   if (isLoading) {
     return (
@@ -71,17 +73,17 @@ export function FaceStatusCard({
 
       {faceStatus?.consentGiven && faceStatus.consentGivenAt && (
         <Text style={[styles.meta, { color: theme.textMuted }]}>
-          Đồng ý: {new Date(faceStatus.consentGivenAt).toLocaleDateString('vi-VN')}
+          Đồng ý: {formatDate(faceStatus.consentGivenAt)}
         </Text>
       )}
       {isEnrolled && faceStatus?.enrolledAt && (
         <Text style={[styles.meta, { color: theme.textMuted }]}>
-          Đăng ký: {new Date(faceStatus.enrolledAt).toLocaleDateString('vi-VN')}
+          Đăng ký: {formatDate(faceStatus.enrolledAt)}
         </Text>
       )}
       {faceStatus?.submittedAt && isPendingReview && (
         <Text style={[styles.meta, { color: theme.textMuted }]}>
-          Gửi duyệt: {new Date(faceStatus.submittedAt).toLocaleString('vi-VN')}
+          Gửi duyệt: {formatDateTime(faceStatus.submittedAt)}
         </Text>
       )}
       {isPendingReview && isEnrolled && (

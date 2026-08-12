@@ -136,6 +136,10 @@ export function ProfileScreen() {
     assignment.permissions.some((permission) =>
       permission === 'sites:list' || permission === 'sites:read'),
   );
+  const canViewAssignments = canViewManagedSites && visibleRoles.some((assignment) =>
+    assignment.permissions.some((permission) =>
+      permission === 'assignments:list' || permission === 'assignments:read'),
+  );
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -314,6 +318,19 @@ export function ProfileScreen() {
                 onPress={() =>
                   router.push('/site' as unknown as Parameters<typeof router.push>[0])
                 }
+                theme={theme}
+              />
+              <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+            </>
+          )}
+
+          {canViewAssignments && (
+            <>
+              <ProfileSettingsRow
+                icon="clipboard-outline"
+                label="Phân công tại công trình"
+                sublabel="Danh sách nhân sự và ca trong phạm vi được giao"
+                onPress={() => router.push('/assignment' as never)}
                 theme={theme}
               />
               <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />

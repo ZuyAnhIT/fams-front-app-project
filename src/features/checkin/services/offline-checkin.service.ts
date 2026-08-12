@@ -9,9 +9,21 @@ import type {
   OfflineSyncResultItem,
 } from '../types/checkin.type';
 import { syncOfflineCheckins } from './checkin.service';
+import {
+  isOfflineEvidenceExpired,
+  OFFLINE_EVIDENCE_TTL_MS,
+} from '../utils/offline-checkin-policy';
 
 const QUEUE_PREFIX = '@fams_offline_checkins';
 const EVIDENCE_DIRECTORY = `${FileSystem.documentDirectory ?? ''}offline-checkin-evidence`;
+/**
+ * Biometric evidence must not live indefinitely on the device. A 24-hour
+ * window covers a normal weak-network shift while keeping the exposure small.
+ * The backend remains authoritative and may reject an older timestamp sooner.
+ */
+export { OFFLINE_EVIDENCE_TTL_MS };
+const EXPIRED_REASON =
+  'Lượt offline đã quá 24 giờ nên bằng chứng trên thiết bị được xóa để bảo vệ dữ liệu. Vui lòng liên hệ HR nếu cần điều chỉnh công.';
 
 function queueKey(userId: string, tenantId: string): string {
   return `${QUEUE_PREFIX}:${encodeURIComponent(userId)}:${encodeURIComponent(tenantId)}`;
@@ -37,6 +49,43 @@ async function writeQueue(
   items: OfflineCheckinQueueItem[],
 ): Promise<void> {
   await AsyncStorage.setItem(queueKey(userId, tenantId), JSON.stringify(items));
+}
+
+async function pruneExpiredEvidence(
+  userId: string,
+  tenantId: string,
+  items: OfflineCheckinQueueItem[],
+  now = Date.now(),
+): Promise<OfflineCheckinQueueItem[]> {
+  let changed = false;
+  const next = await Promise.all(
+    items.map(async (item) => {
+      if (
+        item.status === 'expired' ||
+        !isOfflineEvidenceExpired(item.checkinAt, now)
+      ) {
+        return item;
+      }
+
+      changed = true;
+      await deleteFaceEvidence(item.faceEvidenceFileUri);
+      return {
+        ...item,
+        faceEvidenceFileUri: undefined,
+        status: 'expired' as const,
+        reason: EXPIRED_REASON,
+      };
+    }),
+  );
+  if (changed) await writeQueue(userId, tenantId, next);
+  return next;
+}
+
+async function readActiveQueue(
+  userId: string,
+  tenantId: string,
+): Promise<OfflineCheckinQueueItem[]> {
+  return pruneExpiredEvidence(userId, tenantId, await readQueue(userId, tenantId));
 }
 
 async function persistFaceEvidence(
@@ -108,7 +157,7 @@ export async function enqueueOfflineCheckin(
     attempts: 0,
   };
 
-  const queue = await readQueue(input.userId, input.tenantId);
+  const queue = await readActiveQueue(input.userId, input.tenantId);
   await writeQueue(input.userId, input.tenantId, [...queue, item]);
   return item;
 }
@@ -117,7 +166,7 @@ export async function getOfflineCheckinQueue(
   userId: string,
   tenantId: string,
 ): Promise<OfflineCheckinQueueItem[]> {
-  return readQueue(userId, tenantId);
+  return readActiveQueue(userId, tenantId);
 }
 
 export async function removeOfflineCheckin(
@@ -125,7 +174,7 @@ export async function removeOfflineCheckin(
   tenantId: string,
   clientNonce: string,
 ): Promise<void> {
-  const queue = await readQueue(userId, tenantId);
+  const queue = await readActiveQueue(userId, tenantId);
   const removed = queue.find((item) => item.clientNonce === clientNonce);
   await deleteFaceEvidence(removed?.faceEvidenceFileUri);
   await writeQueue(
@@ -153,7 +202,7 @@ export async function flushOfflineCheckins(
   userId: string,
   tenantId: string,
 ): Promise<OfflineSyncSummary> {
-  const queue = await readQueue(userId, tenantId);
+  const queue = await readActiveQueue(userId, tenantId);
   const pending = queue.filter((item) => item.status === 'pending');
   if (pending.length === 0) {
     return {

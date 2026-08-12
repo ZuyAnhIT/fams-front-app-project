@@ -1,4 +1,5 @@
 import { palette } from '@/theme/tokens';
+import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 export const authColors = {
   light: {
@@ -45,5 +46,9 @@ export function useAuthTheme(): AuthTheme {
   // theo OS color scheme ở đây sẽ khiến riêng các màn dùng useAuthTheme()
   // (Profile, Auth, Face ID...) lật sang tối khi máy bật Dark Mode, lệch với
   // phần còn lại của app. Cố định light cho tới khi toàn app hỗ trợ dark mode.
-  return authColors.light;
+  const { primaryColor } = useTenantPreferences();
+  return {
+    ...authColors.light,
+    primary: primaryColor,
+  } as AuthTheme;
 }

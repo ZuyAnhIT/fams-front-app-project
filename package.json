@@ -2,6 +2,9 @@
   "name": "fams-front-app-project",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20.19.4 <25"
+  },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -52,13 +55,14 @@
     "@types/react": "~19.1.10",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~10.0.0",
+    "tsx": "^4.23.12",
     "typescript": "~5.9.2"
   },
   "scripts": {
     "start": "expo start",
-    "start:go:lan": "expo start --go --lan --clear --port 8082",
+    "start:go:lan": "node scripts/sync-lan-env.mjs --expo-go && expo start --go --lan --clear --port 8082",
     "start:dev-client": "expo start --dev-client",
-    "start:dev-client:lan": "expo start --dev-client --lan --clear --port 8082",
+    "start:dev-client:lan": "node scripts/sync-lan-env.mjs --dev-client && expo start --dev-client --lan --clear --port 8082",
     "start:web:auth:lan": "expo start --web --lan --clear --port 3000",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
@@ -71,7 +75,8 @@
     "sync:lan:eas": "node scripts/sync-lan-env.mjs --eas",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "quality": "npm run lint && npm run typecheck"
+    "quality": "npm run lint && npm run typecheck && npm test",
+    "test": "tsx --test tests/**/*.test.ts"
   },
   "private": true
 }
