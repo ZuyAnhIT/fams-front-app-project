@@ -47,7 +47,7 @@ Các file scaffold auth rỗng và mock adapter cũ đã được xóa; nguồn 
 | POST | `/auth/refresh-token` | `{ refreshToken }` | `RefreshTokenResponse` | `api-interceptors.ts` (tự động khi 401) |
 | POST | `/auth/switch-tenant` | `{ tenantId, refreshToken }` + Bearer access token | `LoginResponse` mới | `use-select-tenant.ts` |
 | POST | `/auth/logout`, `/auth/logout/all` | `{ refreshToken }` / không body | `void` | `use-logout.ts` |
-| POST | `/auth/totp/setup` | — | `{ setup_token, qr_code_url, secret }` | `use2FASetup` |
+| POST | `/auth/totp/setup` | — | `{ setup_token, otpauth_uri, secret, expires_at }` | `use2FASetup`; QR được vẽ cục bộ, không dùng trang HTML deprecated |
 | POST | `/auth/totp/verify` | `{ setupToken, code }` | `void` | `use2FAConfirmSetup` |
 | POST | `/auth/totp/disable` | — | `{ message }` | `use2FADisable` |
 | POST | `/auth/forgot-password` | `{ email }` | `{ message }` | `use-forgot-password.ts` |

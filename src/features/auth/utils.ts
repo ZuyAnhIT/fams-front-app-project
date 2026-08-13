@@ -135,6 +135,16 @@ export function getAuthErrorCode(error: unknown): string | undefined {
   return typeof code === 'string' ? code : undefined;
 }
 
+/** True when a stale profile lets the user request setup after TOTP was enabled elsewhere. */
+export function isTotpAlreadyEnabledError(error: unknown): boolean {
+  if (!isAxiosError(error) || error.response?.status !== 409) return false;
+  const data = error.response.data as Record<string, unknown> | undefined;
+  const message = [data?.message, data?.userMessage, data?.errorCode]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ');
+  return /totp|2fa|two.factor/i.test(message) && /already|enabled|đã bật/i.test(message);
+}
+
 /** Converts VN local phone (0xxxxxxxxx) to E.164 (+84xxxxxxxxx) for the backend. */
 export function normalizePhoneForBackend(phone: string): string {
   const digits = phone.trim().replace(/[^\d+]/g, '');
