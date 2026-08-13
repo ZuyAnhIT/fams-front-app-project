@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import QRCode from 'react-native-qrcode-svg';
 import {
   ActivityIndicator,
   Modal,
@@ -19,7 +19,7 @@ import { useToast } from '@/components/ui/toast';
 
 import { use2FAConfirmSetup, use2FADisable, use2FASetup } from '../hooks/use-2fa';
 import { useAuthTheme } from '../theme';
-import { parseAuthError } from '../utils';
+import { formatCountdown, isTotpAlreadyEnabledError, parseAuthError } from '../utils';
 import { OTPInput } from './OTPInput';
 
 interface TwoFASetupModalProps {
@@ -42,6 +42,7 @@ export function TwoFASetupModal({
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [disableMethod, setDisableMethod] = useState<'password' | 'code' | 'backup'>('password');
   const [disableProof, setDisableProof] = useState('');
+  const [setupRemainingSeconds, setSetupRemainingSeconds] = useState<number | null>(null);
 
   const setup2FAMutation = use2FASetup();
   const { confirm, isPending: confirming, error: confirmError, reset: resetConfirm } =
@@ -52,6 +53,26 @@ export function TwoFASetupModal({
   const setupData = setup2FAMutation.data;
   const setupError = setup2FAMutation.error;
   const error = setupError ?? confirmError ?? disableError;
+  const setupExpired = setupRemainingSeconds === 0;
+
+  useEffect(() => {
+    if (!visible || !setupData?.expires_at) {
+      setSetupRemainingSeconds(null);
+      return;
+    }
+
+    const updateRemaining = () => {
+      const expiresAt = Date.parse(setupData.expires_at);
+      setSetupRemainingSeconds(
+        Number.isFinite(expiresAt)
+          ? Math.max(0, Math.ceil((expiresAt - Date.now()) / 1_000))
+          : 0,
+      );
+    };
+    updateRemaining();
+    const timer = setInterval(updateRemaining, 1_000);
+    return () => clearInterval(timer);
+  }, [setupData?.expires_at, visible]);
 
   const handleClose = (force = false) => {
     if (step === 'backup' && !force) {
@@ -62,6 +83,7 @@ export function TwoFASetupModal({
     setBackupCodes([]);
     setDisableProof('');
     setDisableMethod('password');
+    setSetupRemainingSeconds(null);
     setStep('init');
     setup2FAMutation.reset();
     resetConfirm();
@@ -72,12 +94,28 @@ export function TwoFASetupModal({
   const handleStartSetup = () => {
     setup2FAMutation.mutate(undefined, {
       onSuccess: () => setStep('scan'),
-      onError: () => showToast('Không thể khởi tạo 2FA', 'error'),
+      onError: (setupRequestError) => {
+        if (isTotpAlreadyEnabledError(setupRequestError)) {
+          showToast('Tài khoản đã bật 2FA. Trạng thái hồ sơ đang được cập nhật.', 'info');
+          onSuccess();
+          handleClose(true);
+          return;
+        }
+        showToast(parseAuthError(setupRequestError), 'error');
+      },
     });
   };
 
+  const restartSetup = () => {
+    setCode('');
+    resetConfirm();
+    setup2FAMutation.reset();
+    setSetupRemainingSeconds(null);
+    setStep('init');
+  };
+
   const handleConfirmSetup = () => {
-    if (!setupData?.setup_token || code.length !== 6) return;
+    if (!setupData?.setup_token || code.length !== 6 || setupExpired) return;
     confirm(
       { setup_token: setupData.setup_token, code },
       {
@@ -236,18 +274,27 @@ export function TwoFASetupModal({
             {!isEnabled && step === 'scan' && setupData && (
               <View style={styles.body}>
                 <Text style={[styles.description, { color: theme.textSecondary }]}>
-                  Mở mã QR để quét từ thiết bị khác, hoặc dùng khóa thủ công bên dưới
-                  khi ứng dụng xác thực nằm trên chính điện thoại này.
+                  Quét mã QR bằng ứng dụng Authenticator trên thiết bị khác, hoặc
+                  nhập khóa thủ công nếu Authenticator nằm trên chính điện thoại này.
                 </Text>
-                <View style={[styles.qrWrapper, { backgroundColor: theme.inputBg }]}>
-                  <Ionicons name="qr-code-outline" size={72} color={theme.primary} />
-                  <TouchableOpacity
-                    style={[styles.qrButton, { borderColor: theme.primary }]}
-                    onPress={() => void WebBrowser.openBrowserAsync(setupData.qr_code_url)}
-                  >
-                    <Text style={[styles.qrButtonText, { color: theme.primary }]}>Mở trang mã QR</Text>
-                  </TouchableOpacity>
+                <View style={styles.qrWrapper}>
+                  <QRCode
+                    value={setupData.otpauth_uri}
+                    size={210}
+                    backgroundColor="#FFFFFF"
+                    color="#000000"
+                  />
                 </View>
+                <Text
+                  style={[
+                    styles.expiryText,
+                    { color: setupExpired ? theme.error : theme.textSecondary },
+                  ]}
+                >
+                  {setupExpired
+                    ? 'Phiên thiết lập đã hết hạn'
+                    : `Mã thiết lập hết hạn sau ${formatCountdown(setupRemainingSeconds ?? 0)}`}
+                </Text>
                 <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
                   Hoặc nhập thủ công:
                 </Text>
@@ -256,12 +303,21 @@ export function TwoFASetupModal({
                     {setupData.secret}
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-                  onPress={() => setStep('confirm')}
-                >
-                  <Text style={styles.primaryButtonText}>Đã quét xong →</Text>
-                </TouchableOpacity>
+                {setupExpired ? (
+                  <TouchableOpacity
+                    style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+                    onPress={restartSetup}
+                  >
+                    <Text style={styles.primaryButtonText}>Tạo mã thiết lập mới</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+                    onPress={() => setStep('confirm')}
+                  >
+                    <Text style={styles.primaryButtonText}>Đã quét xong →</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
 
@@ -270,16 +326,26 @@ export function TwoFASetupModal({
                 <Text style={[styles.description, { color: theme.textSecondary }]}>
                   Nhập mã 6 chữ số từ ứng dụng xác thực để hoàn tất kích hoạt.
                 </Text>
+                <Text
+                  style={[
+                    styles.expiryText,
+                    { color: setupExpired ? theme.error : theme.textSecondary },
+                  ]}
+                >
+                  {setupExpired
+                    ? 'Phiên thiết lập đã hết hạn. Mã Authenticator này không còn hiệu lực.'
+                    : `Còn ${formatCountdown(setupRemainingSeconds ?? 0)} để xác nhận`}
+                </Text>
                 <OTPInput value={code} onChange={setCode} hasError={!!error} autoFocus />
                 {error && <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>}
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
                     { backgroundColor: theme.primary },
-                    (confirming || code.length < 6) && { backgroundColor: theme.primaryDisabled },
+                    (confirming || code.length < 6 || setupExpired) && { backgroundColor: theme.primaryDisabled },
                   ]}
                   onPress={handleConfirmSetup}
-                  disabled={confirming || code.length < 6}
+                  disabled={confirming || code.length < 6 || setupExpired}
                 >
                   {confirming ? (
                     <ActivityIndicator color="#fff" size="small" />
@@ -287,6 +353,13 @@ export function TwoFASetupModal({
                     <Text style={styles.primaryButtonText}>Kích hoạt 2FA</Text>
                   )}
                 </TouchableOpacity>
+                {setupExpired && (
+                  <TouchableOpacity onPress={restartSetup} style={styles.backButton}>
+                    <Text style={[styles.backButtonText, { color: theme.primary }]}>
+                      Tạo mã thiết lập mới
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={() => setStep('scan')} style={styles.backButton}>
                   <Text style={[styles.backButtonText, { color: theme.textSecondary }]}>
                     ← Quay lại
@@ -368,10 +441,10 @@ const styles = StyleSheet.create({
   qrWrapper: {
     alignItems: 'center',
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
+    backgroundColor: '#FFFFFF',
   },
-  qrButton: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
-  qrButtonText: { fontSize: 14, fontWeight: '700' },
+  expiryText: { fontSize: 13, lineHeight: 19, fontWeight: '600', textAlign: 'center' },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '600',

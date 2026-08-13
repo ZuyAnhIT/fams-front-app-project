@@ -69,8 +69,10 @@ interface BackendUserProfile {
 
 interface BackendTotpSetupResponse {
   setupToken?: string;
+  otpauthUri?: string;
   qrCodeUrl?: string;
   manualEntryKey?: string;
+  expiresAt?: string;
 }
 
 interface BackendTotpEnableResponse {
@@ -142,10 +144,16 @@ export function mapUserProfile(
 }
 
 export function mapTotpSetupResponse(raw: BackendTotpSetupResponse): TwoFASetupResponse {
+  if (!raw.setupToken || !raw.otpauthUri || !raw.manualEntryKey || !raw.expiresAt) {
+    throw new Error('Phản hồi khởi tạo 2FA từ máy chủ không đầy đủ. Vui lòng thử lại.');
+  }
+
   return {
-    setup_token: raw.setupToken ?? '',
-    qr_code_url: raw.qrCodeUrl ?? '',
-    secret: raw.manualEntryKey ?? '',
+    setup_token: raw.setupToken,
+    otpauth_uri: raw.otpauthUri,
+    secret: raw.manualEntryKey,
+    expires_at: raw.expiresAt,
+    qr_code_url: raw.qrCodeUrl,
   };
 }
 

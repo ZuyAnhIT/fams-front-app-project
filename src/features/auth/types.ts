@@ -131,10 +131,14 @@ export interface SwitchTenantResponse extends TokenPair {
 export interface TwoFASetupResponse {
   /** Short-lived token required when confirming setup via /totp/verify */
   setup_token: string;
-  /** URL to the backend QR page (scan with Authenticator app) */
-  qr_code_url: string;
+  /** RFC otpauth URI used to render the QR locally; never send it to third parties. */
+  otpauth_uri: string;
   /** Base32 secret for manual entry into authenticator apps */
   secret: string;
+  /** Server-authoritative expiry of the Redis-backed setup session. */
+  expires_at: string;
+  /** @deprecated Compatibility only. New clients render `otpauth_uri` locally. */
+  qr_code_url?: string;
 }
 
 export interface TwoFAConfirmSetupRequest {
