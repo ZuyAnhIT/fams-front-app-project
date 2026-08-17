@@ -6,6 +6,9 @@ import type { AttendanceMonthly } from '../types/attendance.type';
 export interface AttendanceMonth {
   year: number;
   month: number;
+  /** #85 (2026-08-17): lets an employee working multiple sites narrow their own timesheet down
+   *  to one site instead of always seeing every site merged together. */
+  siteId?: string;
 }
 
 export async function getMyMonthlyAttendance(

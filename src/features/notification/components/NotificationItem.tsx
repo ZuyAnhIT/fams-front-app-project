@@ -67,7 +67,28 @@ export function NotificationItem({ notification, onPress, onLongPress, selection
 
       <View style={styles.content}>
         <View style={styles.headerRow}>
-          <Text style={styles.typeLabel}>{typeLabel}</Text>
+          <View style={styles.headerLeft}>
+            <Text style={styles.typeLabel}>{typeLabel}</Text>
+            {/* #89 (2026-08-17): priority is now a real backend field — only badge high/critical
+                to avoid cluttering the common normal/low case. */}
+            {(notification.priority === 'critical' || notification.priority === 'high') && (
+              <View
+                style={[
+                  styles.priorityBadge,
+                  notification.priority === 'critical' ? styles.priorityCritical : styles.priorityHigh,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.priorityBadgeText,
+                    { color: notification.priority === 'critical' ? palette.danger : palette.warning },
+                  ]}
+                >
+                  {notification.priority === 'critical' ? 'Khẩn cấp' : 'Quan trọng'}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.time}>{formatNotificationTime(notification.createdAt, formatDate)}</Text>
         </View>
 
@@ -120,13 +141,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
   typeLabel: {
     fontSize: 11,
     fontWeight: '700',
     color: palette.primary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    flex: 1,
+  },
+  priorityBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  priorityCritical: {
+    backgroundColor: palette.dangerSoft,
+  },
+  priorityHigh: {
+    backgroundColor: palette.warningSoft,
+  },
+  priorityBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   time: {
     fontSize: 11,

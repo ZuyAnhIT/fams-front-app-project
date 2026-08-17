@@ -2,8 +2,8 @@
 
 ## 1. Trạng thái đã chuẩn bị tự động
 
-- IP LAN hiện tại: `192.168.1.13`.
-- App local: `http://192.168.1.13:8080/api/v1`.
+- IP LAN hiện tại: `192.168.1.14`.
+- App local: `http://192.168.1.14:8080/api/v1`.
 - EAS Development đã được cập nhật sang cùng API URL.
 - Backend, PostgreSQL, Redis, AI và MinIO đang chạy; `/api/v1/auth/health`
   trả HTTP 200.
