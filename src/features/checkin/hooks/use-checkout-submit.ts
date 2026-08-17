@@ -102,7 +102,9 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
         gpsAccuracy: payload.accuracy ?? undefined,
         deviceId: Device.osInternalBuildId ?? Device.modelId ?? undefined,
         employeePhotoBase64: payload.employeePhotoBase64,
-        requiresLiveness: !!payload.livenessChallengeId,
+        // See use-checkin-submit.ts — same fix: request passive liveness on plain-photo
+        // submissions too, not just when an active challenge was completed.
+        requiresLiveness: !!(payload.livenessChallengeId || payload.employeePhotoBase64),
         livenessChallengeId: payload.livenessChallengeId,
       }),
     onSuccess: async (result) => {
