@@ -44,7 +44,7 @@ login/phone-login
   -> expo-crypto
 ```
 
-`expo-crypto` từ chối origin LAN HTTP `http://192.168.1.155:3000`.
+`expo-crypto` từ chối origin LAN HTTP `http://192.168.1.135:3000`.
 
 ### Cách sửa
 
@@ -62,7 +62,7 @@ Link email mở trong Safari/Chrome nên router web không thể tự hiểu r�
 lại Expo Go. Frontend thêm biến:
 
 ```env
-EXPO_PUBLIC_MOBILE_LOGIN_URL=exp://192.168.1.155:8082/--/login
+EXPO_PUBLIC_MOBILE_LOGIN_URL=exp://192.168.1.135:8082/--/login
 ```
 
 Khi mở `/verify-email` trên web LAN:

@@ -344,6 +344,14 @@ export function ProfileScreen() {
             onPress={() => router.push('/checkin' as never)}
             theme={theme}
           />
+          <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />
+          <ProfileSettingsRow
+            icon="clipboard-outline"
+            label="Phân công của tôi"
+            sublabel="Toàn bộ phân công của bạn, mọi công trình"
+            onPress={() => router.push('/my-assignments' as never)}
+            theme={theme}
+          />
           {tenantsQuery.data && tenantsQuery.data.length > 1 && (
             <>
               <View style={[styles.separator, { backgroundColor: theme.borderLight }]} />

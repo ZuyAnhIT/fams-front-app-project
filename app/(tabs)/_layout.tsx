@@ -96,6 +96,7 @@ export default function TabLayout() {
           "site" and "assignment" are nested Stack navigators (see their
           _layout.tsx) so list->detail keeps native swipe-back. */}
       <Tabs.Screen name="site" options={{ href: null }} />
+      <Tabs.Screen name="my-assignments" options={{ href: null }} />
       <Tabs.Screen name="checkin-history" options={{ href: null }} />
       <Tabs.Screen name="exceptions" options={{ href: null }} />
       <Tabs.Screen name="supervisor-dashboard" options={{ href: null }} />
