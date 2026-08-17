@@ -183,6 +183,8 @@ export interface ExplanationResponse {
 // ─── history / list ─────────────────────────────────────────────────────────────
 
 export interface CheckinHistoryParams {
+  siteId?: string;
+  status?: CheckinStatus;
   from?: string;
   to?: string;
   page?: number;

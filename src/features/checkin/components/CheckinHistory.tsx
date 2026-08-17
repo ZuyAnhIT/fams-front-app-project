@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/ui/app-header';
@@ -10,6 +10,7 @@ import { palette, radius, spacing } from '@/theme/tokens';
 import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 import { useCheckinHistory } from '../hooks/use-checkin-history';
+import { useCheckinSiteOptions } from '../hooks/use-checkin-site-options';
 import type { CheckinResponse, CheckinStatus } from '../types/checkin.type';
 import { CHECKIN_STATUS_COLORS, CHECKIN_STATUS_LABELS, formatWorkMinutes } from '../utils/checkin.mapper';
 
@@ -19,6 +20,26 @@ const STATUS_BACKGROUNDS: Record<CheckinStatus, string> = {
   pending_review: palette.warningSoft,
   rejected: palette.dangerSoft,
 };
+const STATUS_FILTER_OPTIONS: { value: CheckinStatus | undefined; label: string }[] = [
+  { value: undefined, label: 'Tất cả' },
+  { value: 'valid', label: 'Hợp lệ' },
+  { value: 'pending_review', label: 'Đang chờ' },
+  { value: 'rejected', label: 'Từ chối' },
+];
+
+function monthFromDate(date: Date) {
+  return { year: date.getFullYear(), month: date.getMonth() + 1 };
+}
+
+function moveMonth(period: { year: number; month: number }, offset: number) {
+  return monthFromDate(new Date(period.year, period.month - 1 + offset, 1));
+}
+
+function monthRangeIso(period: { year: number; month: number }) {
+  const from = new Date(Date.UTC(period.year, period.month - 1, 1));
+  const to = new Date(Date.UTC(period.year, period.month, 1));
+  return { from: from.toISOString(), to: to.toISOString() };
+}
 
 function faceState(value: boolean | null, expected: boolean): string {
   if (!expected) return 'Không yêu cầu';
@@ -32,10 +53,27 @@ export function CheckinHistory() {
   const router = useRouter();
   const { formatDate, formatTime } = useTenantPreferences();
   const [page, setPage] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<CheckinStatus | undefined>(undefined);
+  const [siteFilter, setSiteFilter] = useState<string | undefined>(undefined);
+  const [useMonthFilter, setUseMonthFilter] = useState(false);
+  const [period, setPeriod] = useState(() => monthFromDate(new Date()));
+  const { options: siteOptions } = useCheckinSiteOptions();
+
+  const dateRange = useMonthFilter ? monthRangeIso(period) : {};
   const { records, totalPages, isLoading, isRefetching, isError, refetch } = useCheckinHistory({
     page,
     size: PAGE_SIZE,
+    status: statusFilter,
+    siteId: siteFilter,
+    ...dateRange,
   });
+
+  const resetFilters = () => {
+    setStatusFilter(undefined);
+    setSiteFilter(undefined);
+    setUseMonthFilter(false);
+    setPage(0);
+  };
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -54,9 +92,113 @@ export function CheckinHistory() {
     } as never);
   };
 
+  const hasActiveFilters = !!statusFilter || !!siteFilter || useMonthFilter;
+
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
       <AppHeader title="Lịch sử chấm công" onBack={goBack} />
+
+      <View style={styles.filters}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {STATUS_FILTER_OPTIONS.map((option) => {
+            const active = statusFilter === option.value;
+            return (
+              <Pressable
+                key={option.label}
+                onPress={() => {
+                  setStatusFilter(option.value);
+                  setPage(0);
+                }}
+                style={[styles.chip, active && styles.chipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{option.label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {siteOptions.length > 1 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+            <Pressable
+              onPress={() => {
+                setSiteFilter(undefined);
+                setPage(0);
+              }}
+              style={[styles.chip, !siteFilter && styles.chipActive]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: !siteFilter }}
+            >
+              <Text style={[styles.chipText, !siteFilter && styles.chipTextActive]}>Mọi công trình</Text>
+            </Pressable>
+            {siteOptions.map((option) => {
+              const active = siteFilter === option.siteId;
+              return (
+                <Pressable
+                  key={option.siteId}
+                  onPress={() => {
+                    setSiteFilter(option.siteId);
+                    setPage(0);
+                  }}
+                  style={[styles.chip, active && styles.chipActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{option.siteName}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        <View style={styles.monthRow}>
+          <Pressable
+            onPress={() => {
+              setUseMonthFilter((value) => !value);
+              setPage(0);
+            }}
+            style={[styles.chip, useMonthFilter && styles.chipActive]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: useMonthFilter }}
+          >
+            <Text style={[styles.chipText, useMonthFilter && styles.chipTextActive]}>
+              {useMonthFilter ? `Tháng ${period.month}/${period.year}` : 'Mọi thời gian'}
+            </Text>
+          </Pressable>
+          {useMonthFilter && (
+            <>
+              <Pressable
+                onPress={() => {
+                  setPeriod((value) => moveMonth(value, -1));
+                  setPage(0);
+                }}
+                style={styles.monthNavButton}
+                accessibilityRole="button"
+                accessibilityLabel="Tháng trước"
+              >
+                <Ionicons name="chevron-back" size={18} color={palette.primary} />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setPeriod((value) => moveMonth(value, 1));
+                  setPage(0);
+                }}
+                style={styles.monthNavButton}
+                accessibilityRole="button"
+                accessibilityLabel="Tháng sau"
+              >
+                <Ionicons name="chevron-forward" size={18} color={palette.primary} />
+              </Pressable>
+            </>
+          )}
+          {hasActiveFilters && (
+            <Pressable onPress={resetFilters} style={styles.clearButton} accessibilityRole="button">
+              <Text style={styles.clearButtonText}>Xóa lọc</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
 
       {isLoading ? (
         <View style={styles.centered}>
@@ -189,6 +331,41 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: palette.canvas },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
   loadingText: { color: palette.textMuted, fontSize: 14 },
+  filters: {
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: palette.border,
+  },
+  filterRow: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+  chip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.surface,
+  },
+  chipActive: { backgroundColor: palette.primary, borderColor: palette.primary },
+  chipText: { color: palette.textSecondary, fontSize: 12, fontWeight: '700' },
+  chipTextActive: { color: palette.white },
+  monthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  monthNavButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.surfaceBrand,
+  },
+  clearButton: { marginLeft: 'auto', paddingVertical: 6, paddingHorizontal: spacing.sm },
+  clearButtonText: { color: palette.danger, fontSize: 12, fontWeight: '700' },
   listContent: {
     width: '100%',
     maxWidth: 720,
