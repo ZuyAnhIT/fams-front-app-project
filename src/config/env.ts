@@ -25,7 +25,7 @@ function getApiBaseUrl(): string {
     }
   } catch {
     throw new Error(
-      'EXPO_PUBLIC_API_URL không hợp lệ. Ví dụ: http://192.168.1.155:8080/api/v1',
+      'EXPO_PUBLIC_API_URL không hợp lệ. Ví dụ: http://192.168.1.135:8080/api/v1',
     );
   }
 

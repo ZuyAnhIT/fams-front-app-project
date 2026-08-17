@@ -56,7 +56,7 @@ Backend nằm tại:
 Trạng thái đã xác minh:
 
 - `GET http://127.0.0.1:8080/api/v1/auth/health`: hoạt động.
-- `GET http://192.168.1.155:8080/api/v1/auth/health`: hoạt động qua LAN.
+- `GET http://192.168.1.135:8080/api/v1/auth/health`: hoạt động qua LAN.
 - MinIO tại cổng `9000`: healthy.
 - Spring Boot không khai báo `server.address`, vì vậy mặc định đã lắng nghe trên các interface; không cần sửa thành `0.0.0.0`.
 - CORS local đã hỗ trợ `localhost`, `127.0.0.1`, `192.168.*.*` và `10.*.*.*`.
@@ -82,7 +82,7 @@ Không ghi giá trị credential đầy đủ vào tài liệu này. Trạng th�
 
 | Cấu hình | Trạng thái |
 |---|---|
-| `EXPO_PUBLIC_API_URL` | Đã cấu hình tới `http://192.168.1.155:8080/api/v1` |
+| `EXPO_PUBLIC_API_URL` | Đã cấu hình tới `http://192.168.1.135:8080/api/v1` |
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Đã cấu hình |
 | `EXPO_PUBLIC_AVATAR_UPLOAD_URL` | `/auth/profile/avatar` |
 | `google-services.json` | Có local, package `com.fams.mobile`, đang gitignore |
@@ -203,7 +203,7 @@ Lưu ý: Face ID cần AI service/backend face endpoint hoạt động; Phone OT
 ```bash
 npm run quality
 npx expo export --platform android --output-dir /tmp/fams-android-export --clear
-curl http://192.168.1.155:8080/api/v1/auth/health
+curl http://192.168.1.135:8080/api/v1/auth/health
 ```
 
 Không ghi build artifact vào repository. Dùng `/tmp` cho export kiểm tra.

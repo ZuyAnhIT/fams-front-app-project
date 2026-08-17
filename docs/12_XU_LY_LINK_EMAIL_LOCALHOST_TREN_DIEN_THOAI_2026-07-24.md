@@ -18,8 +18,8 @@ trỏ tới chính điện thoại chứ không phải máy tính đang chạy F
 Ở lần kiểm tra lại lúc 14:23, link mới đã dùng đúng hai origin LAN:
 
 ```text
-Frontend: http://192.168.1.155:3000
-Backend:  http://192.168.1.155:8080
+Frontend: http://192.168.1.135:3000
+Backend:  http://192.168.1.135:8080
 ```
 
 Hai link frontend vẫn lỗi `ERR_CONNECTION_REFUSED` vì khi đó không có tiến trình
@@ -50,11 +50,11 @@ máy tính.
 
 ### Backend `.env`
 
-Với IP máy tính hiện tại là `192.168.1.155`:
+Với IP máy tính hiện tại là `192.168.1.135`:
 
 ```env
-APP_BASE_URL=http://192.168.1.155:8080
-APP_FRONTEND_URL=http://192.168.1.155:3000
+APP_BASE_URL=http://192.168.1.135:8080
+APP_FRONTEND_URL=http://192.168.1.135:3000
 CORS_ALLOWED_ORIGIN_PATTERNS=http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*,http://10.*.*.*:*
 ```
 
@@ -79,7 +79,7 @@ Không đóng Metro native đang chạy ở cổng `8082`. Trước khi yêu c�
 mở trên trình duyệt điện thoại:
 
 ```text
-http://192.168.1.155:3000/reset-password?token=test
+http://192.168.1.135:3000/reset-password?token=test
 ```
 
 Đạt khi thấy màn hình FAMS báo token không hợp lệ, thay vì lỗi không kết nối.
@@ -212,14 +212,14 @@ không phải HTTP/HTTPS. Vì vậy:
 ## 6. Checklist kiểm tra lại
 
 1. Từ Chrome/Safari điện thoại mở
-   `http://192.168.1.155:8080/api/v1/auth/health` và nhận HTTP 200.
-2. Mở `http://192.168.1.155:3000/reset-password?token=test` và thấy UI FAMS.
+   `http://192.168.1.135:8080/api/v1/auth/health` và nhận HTTP 200.
+2. Mở `http://192.168.1.135:3000/reset-password?token=test` và thấy UI FAMS.
 3. Restart backend sau khi tự cập nhật biến môi trường.
 4. Yêu cầu một email hoàn toàn mới; không dùng lại email đã gửi trước đó.
 5. Đăng ký email: link là `/verify-email?token=...`, không có `/api/v1`.
 6. Quên mật khẩu: link là `/reset-password?token=...`, không có `/api/v1`.
 7. Đổi email:
-   - nếu chưa sửa source: link API dùng host `192.168.1.155:8080`;
+   - nếu chưa sửa source: link API dùng host `192.168.1.135:8080`;
    - nếu đã áp dụng phương án khuyến nghị: link là
      `/verify-email?token=...&mode=email-change`.
 8. Mở link, hoàn tất luồng, sau đó thử đăng nhập bằng email/mật khẩu mới.
