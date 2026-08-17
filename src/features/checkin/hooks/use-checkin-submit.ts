@@ -72,7 +72,11 @@ export function useCheckinSubmit(): UseCheckinSubmitResult {
         gpsAccuracy: payload.accuracy ?? undefined,
         deviceId: Device.osInternalBuildId ?? Device.modelId ?? undefined,
         employeePhotoBase64: payload.employeePhotoBase64,
-        requiresLiveness: !!payload.livenessChallengeId,
+        // A plain-photo submission (no active challenge) still gets the AI worker's passive
+        // single-frame liveness check — previously this was only requested when an active
+        // challenge was completed, so gps_face (without _liveness) sites had NO liveness signal
+        // at all: a static/printed photo could pass face match unchallenged.
+        requiresLiveness: !!(payload.livenessChallengeId || payload.employeePhotoBase64),
         livenessChallengeId: payload.livenessChallengeId,
       }),
     onSuccess: async (result, payload) => {
