@@ -16,6 +16,7 @@ import { FeedbackState } from '@/components/ui/feedback-state';
 import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { useFaceIdStatus } from '@/features/face/hooks/use-face-id';
 import { useGps } from '@/features/gps/hooks/use-gps';
+import { FaceLivenessCamera } from '@/features/profile/components/FaceLivenessCamera';
 import { FacePhotoCapture } from '@/features/profile/components/FacePhotoCapture';
 import { palette, radius, shadows, spacing } from '@/theme/tokens';
 import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
@@ -159,7 +160,7 @@ export function RandomCheckScreen() {
     }
   }, [checks, params.checkId, query.dataUpdatedAt, query.isFetching, query.isLoading]);
 
-  const send = async (employeePhotoBase64?: string) => {
+  const send = async (extra?: { employeePhotoBase64?: string; livenessChallengeId?: string }) => {
     if (!selected || selectedExpired) return;
     const coords = await gps.requestLocation();
     if (!coords) return;
@@ -175,7 +176,8 @@ export function RandomCheckScreen() {
           latitude: coords.latitude,
           longitude: coords.longitude,
           accuracyMeters: coords.accuracy ?? undefined,
-          employeePhotoBase64,
+          employeePhotoBase64: extra?.employeePhotoBase64,
+          livenessChallengeId: extra?.livenessChallengeId,
         },
       });
       const processing = isRandomCheckProcessing(selectedMode, response);
@@ -269,8 +271,22 @@ export function RandomCheckScreen() {
                       </Pressable>
                     </View>
                   </View>
+                ) : randomCheckRequiresLiveness(selectedMode) ? (
+                  // #104 (2026-08-18): active-liveness challenge (head-pose/blink sequence),
+                  // upgraded from the old passive single-photo FacePhotoCapture by explicit
+                  // user decision — same component check-in already uses for gps_face_liveness.
+                  <FaceLivenessCamera
+                    employeeId={selected.employeeId}
+                    purpose="random_check"
+                    siteId={selected.siteId}
+                    onPassed={(challengeId) => send({ livenessChallengeId: challengeId })}
+                    isFinalizing={submission.isSubmitting || gps.isLocating}
+                  />
                 ) : (
-                  <FacePhotoCapture onSubmit={send} isSubmitting={submission.isSubmitting || gps.isLocating} />
+                  <FacePhotoCapture
+                    onSubmit={(employeePhotoBase64) => send({ employeePhotoBase64 })}
+                    isSubmitting={submission.isSubmitting || gps.isLocating}
+                  />
                 )
               ) : (
                 <Pressable

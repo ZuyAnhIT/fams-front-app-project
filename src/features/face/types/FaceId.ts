@@ -57,7 +57,7 @@ export interface FaceEnrollActions {
 
 // ─── Active liveness ─────────────────────────────────────────────────────────
 
-export type FaceLivenessPurpose = 'enroll' | 'checkin' | 'checkout';
+export type FaceLivenessPurpose = 'enroll' | 'checkin' | 'checkout' | 'random_check';
 export type FaceLivenessAction =
   | 'center'
   | 'turn_left'
