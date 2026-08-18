@@ -71,7 +71,7 @@ SHA-256: C2:84:50:54:C6:F0:D7:E0:92:4F:AE:E0:C6:49:8A:49:44:03:65:D0:8E:8E:AC:87
 
 Đã tạo EAS Development environment:
 
-- `EXPO_PUBLIC_API_URL=http://192.168.1.13:8080/api/v1`
+- `EXPO_PUBLIC_API_URL=http://192.168.1.14:8080/api/v1`
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` khớp `GOOGLE_CLIENT_ID` backend
 - `EXPO_PUBLIC_AVATAR_UPLOAD_URL=/auth/profile/avatar`
 - `EXPO_PUBLIC_MOBILE_LOGIN_URL=famsfrontappproject://login`

@@ -17,6 +17,7 @@ export interface NotificationItem {
   read: boolean;
   isRead: boolean;
   metadata: Record<string, unknown> | null;
+  priority: "low" | "normal" | "high" | "critical";
 }
 
 export interface NotificationListParams {

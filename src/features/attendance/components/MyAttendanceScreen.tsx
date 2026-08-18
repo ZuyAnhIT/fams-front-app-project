@@ -18,6 +18,7 @@ import { palette, radius, shadows, spacing } from '@/theme/tokens';
 import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
 
 import { useMyMonthlyAttendance } from '../hooks/use-my-monthly-attendance';
+import { useMyAttendanceSiteOptions } from '../hooks/use-my-attendance-site-options';
 import type { AttendanceSummary } from '../types/attendance.type';
 
 function attendanceErrorCopy(error: unknown): { title: string; description: string } {
@@ -239,8 +240,10 @@ function DailyCard({
 export function MyAttendanceScreen() {
   const { formatDate, formatTime } = useTenantPreferences();
   const [period, setPeriod] = useState(() => monthFromDate(new Date()));
+  const [siteId, setSiteId] = useState<string | undefined>(undefined);
   const currentPeriod = monthFromDate(new Date());
-  const query = useMyMonthlyAttendance(period);
+  const query = useMyMonthlyAttendance({ ...period, siteId });
+  const { options: siteOptions } = useMyAttendanceSiteOptions(period);
   const data = query.data;
   const isCurrentOrFuture =
     period.year > currentPeriod.year ||
@@ -302,6 +305,41 @@ export function MyAttendanceScreen() {
               />
             </Pressable>
           </View>
+
+          {siteOptions.length > 1 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.siteFilterRow}
+            >
+              <Pressable
+                onPress={() => setSiteId(undefined)}
+                style={[styles.siteChip, siteId === undefined && styles.siteChipActive]}
+                accessibilityRole="button"
+                accessibilityLabel="Tất cả site"
+              >
+                <Text style={[styles.siteChipText, siteId === undefined && styles.siteChipTextActive]}>
+                  Tất cả
+                </Text>
+              </Pressable>
+              {siteOptions.map((option) => (
+                <Pressable
+                  key={option.siteId}
+                  onPress={() => setSiteId(option.siteId)}
+                  style={[styles.siteChip, siteId === option.siteId && styles.siteChipActive]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Lọc theo site ${option.siteName}`}
+                >
+                  <Text
+                    style={[styles.siteChipText, siteId === option.siteId && styles.siteChipTextActive]}
+                    numberOfLines={1}
+                  >
+                    {option.siteName}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
 
           {query.isLoading ? (
             <View style={styles.loading}>
@@ -425,6 +463,21 @@ const styles = StyleSheet.create({
   monthLabel: { color: palette.text, fontSize: 16, lineHeight: 22, fontWeight: '800' },
   monthHint: { color: palette.textMuted, fontSize: 10, lineHeight: 15 },
   disabled: { opacity: 0.55 },
+  siteFilterRow: { gap: spacing.sm, paddingBottom: spacing.lg },
+  siteChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill ?? 999,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.surface,
+  },
+  siteChipActive: {
+    borderColor: palette.primary,
+    backgroundColor: palette.primarySoft,
+  },
+  siteChipText: { color: palette.textMuted, fontSize: 13, fontWeight: '600' },
+  siteChipTextActive: { color: palette.primary },
   pressed: { opacity: 0.72 },
   loading: { minHeight: 320, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   loadingText: { color: palette.textMuted, fontSize: 14 },

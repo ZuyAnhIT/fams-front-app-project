@@ -159,9 +159,9 @@ Giá trị `availabilityStatus`: `open | upcoming | closed | unrestricted`:
 - Expo export Android: đạt.
 - Expo export iOS: đạt.
 - Sau khi đổi IP LAN, export lần đầu còn dùng Metro cache chứa IP cũ
-  `192.168.1.13`. Đã export lại với `--clear` và kiểm tra trực tiếp bundle Android
-  lẫn iOS đều chứa đúng `192.168.1.13:8080`.
-- `GET /api/v1/auth/health` qua IP LAN hiện tại `192.168.1.13:8080`: HTTP
+  `192.168.1.14`. Đã export lại với `--clear` và kiểm tra trực tiếp bundle Android
+  lẫn iOS đều chứa đúng `192.168.1.14:8080`.
+- `GET /api/v1/auth/health` qua IP LAN hiện tại `192.168.1.14:8080`: HTTP
   200, backend đang hoạt động.
 - Gọi route `available-sites` không có token: HTTP 401 đúng lớp bảo vệ; chưa thể
   kiểm chứng payload có dữ liệu nếu không dùng phiên đăng nhập nhân viên thật.
