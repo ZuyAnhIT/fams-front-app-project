@@ -34,6 +34,8 @@ export interface SupervisedSiteStatus {
     siteName: string;
     expectedToday: number;
     onSiteNow: number;
+    randomCheckPending: number;
+    unresolvedViolations: number;
     onSiteEmployees: {
       employeeId: string;
       firstName: string;

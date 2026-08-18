@@ -29,6 +29,22 @@ function SiteCard({ site, presence }: { site: SupervisedSiteStatus; presence?: S
         </View>
       </View>
       <View style={styles.track}><View style={[styles.progress, { width: `${ratio * 100}%` }]} /></View>
+      {(site.randomCheckPending > 0 || site.unresolvedViolations > 0) && (
+        <View style={styles.alertRow}>
+          {site.randomCheckPending > 0 && (
+            <View style={[styles.alertPill, styles.alertPillWarning]}>
+              <Ionicons name="alert-circle-outline" size={14} color="#92400E" />
+              <Text style={styles.alertPillWarningText}>{site.randomCheckPending} random check chờ phản hồi</Text>
+            </View>
+          )}
+          {site.unresolvedViolations > 0 && (
+            <View style={[styles.alertPill, styles.alertPillDanger]}>
+              <Ionicons name="shield-outline" size={14} color="#991B1B" />
+              <Text style={styles.alertPillDangerText}>{site.unresolvedViolations} vi phạm chưa xử lý</Text>
+            </View>
+          )}
+        </View>
+      )}
       <Text style={styles.listTitle}>ĐANG CÓ MẶT</Text>
       {site.onSiteEmployees.length === 0 ? (
         <Text style={styles.emptyText}>Chưa có nhân viên check-in tại công trình hôm nay.</Text>
@@ -113,6 +129,12 @@ const styles = StyleSheet.create({
   siteCount: { color: palette.textSecondary, fontSize: 12, marginTop: 2 },
   track: { height: 8, borderRadius: 4, backgroundColor: palette.surfaceMuted, overflow: 'hidden', marginTop: spacing.lg },
   progress: { height: '100%', borderRadius: 4, backgroundColor: palette.success },
+  alertRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  alertPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: radius.md, paddingVertical: 4, paddingHorizontal: spacing.sm },
+  alertPillWarning: { backgroundColor: '#FEF3C7' },
+  alertPillWarningText: { color: '#92400E', fontSize: 11, fontWeight: '700' },
+  alertPillDanger: { backgroundColor: '#FEE2E2' },
+  alertPillDangerText: { color: '#991B1B', fontSize: 11, fontWeight: '700' },
   listTitle: { color: palette.textMuted, fontSize: 10, letterSpacing: 0.8, fontWeight: '800', marginTop: spacing.xl, marginBottom: spacing.sm },
   absentTitle: { color: palette.warning },
   emptyText: { color: palette.textMuted, fontSize: 13, lineHeight: 19 },
