@@ -66,6 +66,10 @@ export interface SubmitRandomCheckPayload {
   longitude: number;
   accuracyMeters?: number;
   employeePhotoBase64?: string;
+  /** Required for location_face_liveness mode as of #104 (2026-08-18) — a passed, purpose=
+   *  random_check active-liveness challengeId from POST .../face-id/liveness-challenge, started
+   *  at this check's siteId. employeePhotoBase64 is no longer accepted for that mode. */
+  livenessChallengeId?: string;
 }
 
 export interface RandomCheckSnapshot {

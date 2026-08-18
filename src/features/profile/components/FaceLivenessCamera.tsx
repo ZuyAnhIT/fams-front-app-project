@@ -138,7 +138,7 @@ type FaceLivenessCameraProps = FaceLivenessCameraBaseProps &
   (
     | { purpose: Extract<FaceLivenessPurpose, 'enroll'>; siteId?: never }
     | {
-        purpose: Extract<FaceLivenessPurpose, 'checkin' | 'checkout'>;
+        purpose: Extract<FaceLivenessPurpose, 'checkin' | 'checkout' | 'random_check'>;
         siteId: string;
       }
   );
