@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { FeedbackState } from '@/components/ui/feedback-state';
@@ -33,20 +34,25 @@ export function NotificationSettings() {
         const update = (request: { inAppEnabled: boolean; pushEnabled: boolean }) => mutation.mutate({ eventType: setting.eventType, request });
         return (
           <View key={setting.eventType} style={styles.card}>
-            <Text style={styles.title}>{setting.label ?? customEventLabel(setting.eventType)}</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{setting.label ?? customEventLabel(setting.eventType)}</Text>
+              {setting.mandatory && <Ionicons name="lock-closed" size={14} color={palette.textMuted} />}
+            </View>
             <Text style={styles.description}>
-              {setting.label
-                ? 'Chọn cách bạn muốn nhận loại thông báo này.'
-                : `Loại thông báo riêng của công ty (${setting.eventType}).`}
+              {setting.mandatory
+                ? 'Thông báo bắt buộc — không thể tắt.'
+                : setting.label
+                  ? 'Chọn cách bạn muốn nhận loại thông báo này.'
+                  : `Loại thông báo riêng của công ty (${setting.eventType}).`}
             </Text>
             <View style={styles.row}>
               <View style={styles.rowCopy}><Text style={styles.rowTitle}>Trong ứng dụng</Text><Text style={styles.rowHint}>Hiện trong hộp thư FAMS</Text></View>
-              <Switch value={setting.inAppEnabled} disabled={pending} onValueChange={(value) => update({ inAppEnabled: value, pushEnabled: setting.pushEnabled })} trackColor={{ false: '#CBD5E1', true: '#93C5FD' }} thumbColor={setting.inAppEnabled ? palette.primary : '#F8FAFC'} />
+              <Switch value={setting.inAppEnabled} disabled={pending || setting.mandatory} onValueChange={(value) => update({ inAppEnabled: value, pushEnabled: setting.pushEnabled })} trackColor={{ false: '#CBD5E1', true: '#93C5FD' }} thumbColor={setting.inAppEnabled ? palette.primary : '#F8FAFC'} />
             </View>
             <View style={styles.separator} />
             <View style={styles.row}>
               <View style={styles.rowCopy}><Text style={styles.rowTitle}>Push trên thiết bị</Text><Text style={styles.rowHint}>Hiện ngay cả khi App đang đóng</Text></View>
-              {pending ? <ActivityIndicator color={palette.primary} /> : <Switch value={setting.pushEnabled} onValueChange={(value) => update({ inAppEnabled: setting.inAppEnabled, pushEnabled: value })} trackColor={{ false: '#CBD5E1', true: '#93C5FD' }} thumbColor={setting.pushEnabled ? palette.primary : '#F8FAFC'} />}
+              {pending ? <ActivityIndicator color={palette.primary} /> : <Switch value={setting.pushEnabled} disabled={setting.mandatory} onValueChange={(value) => update({ inAppEnabled: setting.inAppEnabled, pushEnabled: value })} trackColor={{ false: '#CBD5E1', true: '#93C5FD' }} thumbColor={setting.pushEnabled ? palette.primary : '#F8FAFC'} />}
             </View>
           </View>
         );
@@ -63,6 +69,7 @@ const styles = StyleSheet.create({
   noteTitle: { color: palette.primary, fontSize: 14, fontWeight: '800' },
   noteText: { color: palette.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 4 },
   card: { backgroundColor: palette.surface, borderRadius: radius.xl, borderWidth: 1, borderColor: palette.border, padding: spacing.lg, ...shadows.card },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { color: palette.text, fontSize: 16, fontWeight: '800' },
   description: { color: palette.textMuted, fontSize: 12, lineHeight: 18, marginTop: 4, marginBottom: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 58, gap: spacing.md },
