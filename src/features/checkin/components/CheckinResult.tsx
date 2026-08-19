@@ -107,6 +107,25 @@ export function CheckinResult({ checkinId, policy }: CheckinResultProps) {
           result.checkoutFaceVerifyScore === null;
         const mayNeedReEnrollment =
           checkinMayNeedReEnrollment || checkoutMayNeedReEnrollment;
+
+        // #129 (2026-08-18): AC calls for actionable suggestions tied to the specific failure
+        // cause, not just a raw pass/fail label — previously the result screen only showed
+        // "Ngoài phạm vi cho phép" / "Không đạt" with no guidance on what to do next.
+        const outsideGeofence =
+          result.checkInInsideGeofence === false ||
+          (result.checkOutAt !== null && result.checkOutInsideGeofence === false);
+        // Retake-photo suggestion is distinct from the re-enrollment card above: that one only
+        // fires for the stale-embedding heuristic (faceVerifyScore === null); a normal face/
+        // liveness fail WITH a score just means the attempt itself didn't match well enough —
+        // retaking under better conditions is the right first suggestion, not re-enrolling.
+        const faceOrLivenessFailedWithScore =
+          !mayNeedReEnrollment &&
+          ((result.faceVerified === false && result.faceVerifyScore !== null) ||
+            result.livenessVerified === false ||
+            (result.checkOutAt !== null &&
+              result.checkoutFaceVerified === false &&
+              result.checkoutFaceVerifyScore !== null) ||
+            (result.checkOutAt !== null && result.checkoutLivenessVerified === false));
         return (
         <KeyboardAvoidingView
           style={styles.flex}
@@ -199,6 +218,41 @@ export function CheckinResult({ checkinId, policy }: CheckinResultProps) {
                 </View>
               </View>
 
+              {outsideGeofence && (
+                <View style={styles.suggestionCard}>
+                  <View style={styles.explanationHeader}>
+                    <View style={styles.suggestionIcon}>
+                      <Ionicons name="walk-outline" size={21} color={palette.warning} />
+                    </View>
+                    <View style={styles.explanationCopy}>
+                      <Text style={styles.explanationTitle}>Di chuyển gần công trình hơn</Text>
+                      <Text style={styles.explanationDescription}>
+                        Vị trí ghi nhận nằm ngoài phạm vi cho phép của công trình. Lần chấm công
+                        tiếp theo, hãy đứng gần khu vực công trình hơn và đảm bảo GPS đang bật để
+                        có độ chính xác tốt nhất.
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {faceOrLivenessFailedWithScore && (
+                <View style={styles.suggestionCard}>
+                  <View style={styles.explanationHeader}>
+                    <View style={styles.suggestionIcon}>
+                      <Ionicons name="camera-reverse-outline" size={21} color={palette.warning} />
+                    </View>
+                    <View style={styles.explanationCopy}>
+                      <Text style={styles.explanationTitle}>Chụp lại ảnh khuôn mặt</Text>
+                      <Text style={styles.explanationDescription}>
+                        Xác thực khuôn mặt/người thật chưa đạt. Lần chấm công tiếp theo, hãy chụp
+                        lại ở nơi đủ sáng, nhìn thẳng vào camera và bỏ khẩu trang/kính râm nếu có.
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
               {mayNeedReEnrollment && (
                 <View style={styles.faceUpgradeCard}>
                   <View style={styles.explanationHeader}>
@@ -271,12 +325,22 @@ export function CheckinResult({ checkinId, policy }: CheckinResultProps) {
                       </View>
                     </View>
                   ) : (
-                    <AppButton
-                      label="Viết giải trình"
-                      variant="secondary"
-                      icon="create-outline"
-                      onPress={() => setShowExplainForm(true)}
-                    />
+                    <View style={styles.formActions}>
+                      <AppButton
+                        label="Viết giải trình"
+                        variant="secondary"
+                        icon="create-outline"
+                        onPress={() => setShowExplainForm(true)}
+                        style={styles.formButton}
+                      />
+                      <AppButton
+                        label="Liên hệ HR"
+                        variant="ghost"
+                        icon="call-outline"
+                        onPress={() => router.push('/help' as never)}
+                        style={styles.formButton}
+                      />
+                    </View>
                   )}
                 </View>
               )}
@@ -330,6 +394,22 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
     padding: spacing.lg,
     gap: spacing.lg,
+  },
+  suggestionCard: {
+    marginTop: spacing.lg,
+    backgroundColor: palette.warningSoft,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: palette.warning,
+    padding: spacing.lg,
+  },
+  suggestionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    backgroundColor: palette.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   faceUpgradeCard: {
     marginTop: spacing.lg,
