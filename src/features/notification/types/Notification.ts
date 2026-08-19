@@ -51,6 +51,10 @@ export interface NotificationSetting {
   inAppEnabled: boolean;
   pushEnabled: boolean;
   customized: boolean;
+  /** True với eventType priority=critical (VD: RANDOM_CHECK_SENT) — backend từ chối tắt
+   *  inAppEnabled/pushEnabled cho loại này (422 MANDATORY_NOTIFICATION), nên UI phải khóa switch
+   *  thay vì để người dùng bấm rồi gặp lỗi. */
+  mandatory: boolean;
   /** Null khi người dùng chưa từng lưu tùy chỉnh. */
   updatedAt: string | null;
 }
