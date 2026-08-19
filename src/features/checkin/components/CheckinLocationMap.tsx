@@ -25,6 +25,11 @@ export function CheckinLocationMap({ site }: { site: AvailableSite }) {
   const distance = current && site.site.latitude != null && site.site.longitude != null
     ? Math.round(distanceMeters(current.latitude, current.longitude, site.site.latitude, site.site.longitude))
     : null;
+  // #130 (2026-08-18): AC calls for warning the employee about low GPS accuracy before they
+  // check in — previously accuracy was only shown as a plain number, no threshold/warning.
+  // 50m mirrors the backend's own "medium risk" cutoff (CheckinService GPS risk scoring) so the
+  // warning shown here lines up with what would actually get flagged for HR review server-side.
+  const lowAccuracy = current?.accuracy != null && current.accuracy > 50;
   const locate = async () => {
     const coords = await requestLocation();
     if (coords) setCurrent(coords);
@@ -50,6 +55,15 @@ export function CheckinLocationMap({ site }: { site: AvailableSite }) {
         {current && <><Marker coordinate={current} title="Vị trí của bạn" pinColor={palette.success} />{current.accuracy != null && current.accuracy > 0 && <Circle center={current} radius={current.accuracy} strokeColor="rgba(22,163,74,0.7)" fillColor="rgba(22,163,74,0.12)" />}</>}
       </MapView>
       <View style={styles.legend}><Text style={styles.legendText}>Xanh dương: geofence/site</Text><Text style={styles.legendText}>Xanh lá: vị trí hiện tại</Text></View>
+      {lowAccuracy && (
+        <View style={styles.accuracyWarning} accessibilityRole="alert">
+          <Ionicons name="warning-outline" size={16} color={palette.warning} />
+          <Text style={styles.accuracyWarningText}>
+            Độ chính xác GPS thấp (±{Math.round(current!.accuracy!)} m) — hãy ra khu vực trống trải
+            hơn hoặc chờ tín hiệu GPS ổn định trước khi chấm công để tránh bị đánh dấu chờ duyệt.
+          </Text>
+        </View>
+      )}
       {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
       <Text style={styles.disclaimer}>Bản đồ chỉ hỗ trợ định hướng; Backend vẫn là nguồn quyết định vị trí hợp lệ.</Text>
     </View>
@@ -67,5 +81,7 @@ const styles = StyleSheet.create({
   legend: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   legendText: { color: palette.textMuted, fontSize: 10 },
   error: { color: palette.danger, fontSize: 12, lineHeight: 18 },
+  accuracyWarning: { flexDirection: 'row', gap: spacing.sm, backgroundColor: palette.warningSoft, borderRadius: radius.md, padding: spacing.md },
+  accuracyWarningText: { flex: 1, color: palette.text, fontSize: 11, lineHeight: 16 },
   disclaimer: { color: palette.textMuted, fontSize: 10, lineHeight: 15 },
 });

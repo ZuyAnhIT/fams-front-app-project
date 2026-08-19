@@ -140,6 +140,14 @@ export function RandomCheckResult(props: RandomCheckResultProps) {
             <Pressable onPress={() => router.replace('/(tabs)/attendance')} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]} accessibilityRole="button">
               <Text style={styles.secondaryText}>Mở bảng công</Text>
             </Pressable>
+            {/* #129 (2026-08-18): a failed check with no clear self-recovery path (not a
+                transient processing state) should offer a direct way to reach HR, not just
+                the failure label — previously there was no action here at all. */}
+            {!processing && !finalPass && (
+              <Pressable onPress={() => router.push('/help' as never)} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]} accessibilityRole="button">
+                <Text style={styles.secondaryText}>Liên hệ HR</Text>
+              </Pressable>
+            )}
           </View>
         </ResponsiveContainer>
       </ScrollView>
