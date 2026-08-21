@@ -18,7 +18,13 @@ export const assignmentKeys = {
 };
 
 /** Danh sách site để đổ vào dropdown chọn "site cần xem phân công". */
-export function useSiteOptions(): { sites: Site[]; isLoading: boolean } {
+export function useSiteOptions(): {
+  sites: Site[];
+  isLoading: boolean;
+  isError: boolean;
+  isForbidden: boolean;
+  refetch: () => void;
+} {
   const tenantId = useAuthStore((s) => s.activeTenantId);
 
   const query = useQuery({
@@ -28,7 +34,15 @@ export function useSiteOptions(): { sites: Site[]; isLoading: boolean } {
     staleTime: 5 * 60 * 1000,
   });
 
-  return { sites: query.data?.content ?? [], isLoading: query.isLoading };
+  return {
+    sites: query.data?.content ?? [],
+    isLoading: query.isLoading,
+    isError: query.isError,
+    isForbidden: isAxiosError(query.error) && query.error.response?.status === 403,
+    refetch: () => {
+      void query.refetch();
+    },
+  };
 }
 
 /** Tên ca (shift) của site đang chọn, để hiển thị thay vì chỉ shiftId. */
@@ -115,12 +129,15 @@ export function useAssignmentList(
     totalPages: query.data?.totalPages ?? 0,
     totalElements: query.data?.totalElements ?? 0,
     isLoading: query.isLoading,
-    isRefetching: query.isRefetching,
+    isRefetching: query.isRefetching || employeeQueries.some((item) => item.isRefetching),
     isError: query.isError,
     isForbidden,
     error: query.error,
     refetch: () => {
-      void query.refetch();
+      void Promise.all([
+        query.refetch(),
+        ...employeeQueries.map((employeeQuery) => employeeQuery.refetch()),
+      ]);
     },
   };
 }

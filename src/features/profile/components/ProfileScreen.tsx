@@ -29,6 +29,7 @@ import type { UserProfile } from '@/features/auth/types';
 import { shadows } from '@/theme/tokens';
 import { useMyRoles } from '@/features/rbac/use-my-roles';
 import { useAvailableTenants } from '@/features/rbac/use-available-tenants';
+import { hasTenantPermission } from '@/features/rbac/permissions';
 
 import { ProfileFaceSection } from './ProfileFaceSection';
 import { ProfileSettingsRow } from './ProfileSettingsRow';
@@ -132,13 +133,16 @@ export function ProfileScreen() {
         assignment.tenantId === null ||
         assignment.tenantId === (activeTenantId || profile.tenant_id),
     ) ?? [];
-  const canViewManagedSites = visibleRoles.some((assignment) =>
-    assignment.permissions.some((permission) =>
-      permission === 'sites:list' || permission === 'sites:read'),
+  const currentTenantId = activeTenantId || profile.tenant_id || null;
+  const canViewManagedSites = hasTenantPermission(
+    rolesQuery.data,
+    currentTenantId,
+    ['sites:list', 'sites:read'],
   );
-  const canViewAssignments = canViewManagedSites && visibleRoles.some((assignment) =>
-    assignment.permissions.some((permission) =>
-      permission === 'assignments:list' || permission === 'assignments:read'),
+  const canViewAssignments = canViewManagedSites && hasTenantPermission(
+    rolesQuery.data,
+    currentTenantId,
+    ['assignments:list', 'assignments:read'],
   );
 
   return (
@@ -278,6 +282,13 @@ export function ProfileScreen() {
             <View style={styles.roleLoading}>
               <ActivityIndicator size="small" color={theme.primary} />
               <Text style={{ color: theme.textSecondary }}>Đang tải vai trò...</Text>
+            </View>
+          ) : rolesQuery.isError ? (
+            <View style={styles.roleError} accessibilityRole="alert">
+              <Text style={[styles.roleErrorText, { color: theme.error }]}>Không thể xác minh vai trò trong công ty đang chọn.</Text>
+              <TouchableOpacity onPress={() => void rolesQuery.refetch()} style={styles.roleRetry}>
+                <Text style={[styles.roleRetryText, { color: theme.primary }]}>Thử lại</Text>
+              </TouchableOpacity>
             </View>
           ) : visibleRoles.length ? (
             visibleRoles.map((assignment, index) => (
@@ -652,6 +663,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  roleError: { paddingVertical: 12, gap: 8 },
+  roleErrorText: { fontSize: 13, lineHeight: 19 },
+  roleRetry: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center' },
+  roleRetryText: { fontSize: 13, fontWeight: '700' },
   roleAssignment: {
     minHeight: 58,
     paddingHorizontal: 16,

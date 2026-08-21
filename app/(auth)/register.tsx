@@ -32,7 +32,7 @@ export default function RegisterScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Back
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={navigateBackToLogin} style={styles.backBtn}>
             <Text style={styles.backBtnText}>← Quay lại</Text>
           </TouchableOpacity> */}
 

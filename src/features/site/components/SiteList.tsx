@@ -42,8 +42,14 @@ export function SiteList() {
 
   const debouncedSetSearch = useCallback((value: string) => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    const normalized = value.trim();
+    if (!normalized) {
+      setSearch('');
+      setPage(0);
+      return;
+    }
     searchDebounceRef.current = setTimeout(() => {
-      setSearch(value);
+      setSearch(normalized);
       setPage(0);
     }, 400);
   }, []);
@@ -60,8 +66,14 @@ export function SiteList() {
     [page, search, status, sortDesc],
   );
 
-  const { sites, totalPages, isLoading, isRefetching, isError, isForbidden, refetch } =
+  const { sites, totalPages, totalElements, isLoading, isRefetching, isError, isForbidden, refetch } =
     useSiteList(params);
+
+  useEffect(() => {
+    if (!isLoading && page > 0 && page >= totalPages) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [isLoading, page, totalPages]);
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -129,7 +141,11 @@ export function SiteList() {
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
-      <AppHeader title="Công trình" subtitle={`${sites.length} kết quả trên trang này`} onBack={goBack} />
+      <AppHeader
+        title="Công trình"
+        subtitle={`${totalElements} kết quả${totalPages > 1 ? ` · trang ${page + 1}/${totalPages}` : ''}`}
+        onBack={goBack}
+      />
       <View style={styles.toolbar}>
         <TextInput
           style={styles.searchInput}
@@ -137,6 +153,8 @@ export function SiteList() {
           placeholderTextColor={palette.textMuted}
           value={searchInput}
           onChangeText={handleSearchChange}
+          returnKeyType="search"
+          autoCorrect={false}
           accessibilityLabel="Tìm kiếm công trình"
         />
         <ScrollView
@@ -305,7 +323,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
     borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   pageButtonDisabled: {
     backgroundColor: '#CBD5E1',

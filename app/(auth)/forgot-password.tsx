@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { useForgotPassword } from '@/features/auth/hooks/use-forgot-password';
+import { navigateBackToLogin } from '@/features/auth/navigation';
 import { useAuthTheme } from '@/features/auth/theme';
 import { shadows } from '@/theme/tokens';
 
@@ -58,7 +59,7 @@ export default function ForgotPasswordScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={navigateBackToLogin} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={18} color={theme.primary} />
             <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>
@@ -84,7 +85,7 @@ export default function ForgotPasswordScreen() {
                 </Text>
                 <TouchableOpacity
                   style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-                  onPress={() => router.back()}
+                  onPress={navigateBackToLogin}
                 >
                   <Text style={styles.primaryButtonText}>Quay lại đăng nhập</Text>
                 </TouchableOpacity>

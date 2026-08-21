@@ -23,6 +23,16 @@ export function NotificationSettings() {
     return <FeedbackState icon="cloud-offline-outline" title="Không thể tải cài đặt thông báo" description="Kiểm tra kết nối rồi thử lại." actionLabel="Thử lại" onAction={() => void query.refetch()} />;
   }
 
+  if (!query.data?.length) {
+    return (
+      <FeedbackState
+        icon="notifications-off-outline"
+        title="Chưa có loại thông báo để cấu hình"
+        description="Các loại thông báo khả dụng sẽ xuất hiện tại đây khi hệ thống được cấu hình."
+      />
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.note}>
@@ -31,6 +41,7 @@ export function NotificationSettings() {
       </View>
       {(query.data ?? []).map((setting) => {
         const pending = mutation.isPending && mutation.variables?.eventType === setting.eventType;
+        const disabled = mutation.isPending || setting.mandatory;
         const update = (request: { inAppEnabled: boolean; pushEnabled: boolean }) => mutation.mutate({ eventType: setting.eventType, request });
         return (
           <View key={setting.eventType} style={styles.card}>
@@ -47,12 +58,32 @@ export function NotificationSettings() {
             </Text>
             <View style={styles.row}>
               <View style={styles.rowCopy}><Text style={styles.rowTitle}>Trong ứng dụng</Text><Text style={styles.rowHint}>Hiện trong hộp thư FAMS</Text></View>
-              <Switch value={setting.inAppEnabled} disabled={pending || setting.mandatory} onValueChange={(value) => update({ inAppEnabled: value, pushEnabled: setting.pushEnabled })} trackColor={{ false: '#CBD5E1', true: '#93C5FD' }} thumbColor={setting.inAppEnabled ? palette.primary : '#F8FAFC'} />
+              <Switch
+                value={setting.inAppEnabled}
+                disabled={disabled}
+                onValueChange={(value) => update({ inAppEnabled: value, pushEnabled: setting.pushEnabled })}
+                trackColor={{ false: '#CBD5E1', true: '#93C5FD' }}
+                thumbColor={setting.inAppEnabled ? palette.primary : '#F8FAFC'}
+                accessibilityLabel={`${setting.label ?? setting.eventType}: thông báo trong ứng dụng`}
+                accessibilityHint={setting.mandatory ? 'Thông báo bắt buộc, không thể tắt' : undefined}
+                accessibilityState={{ disabled, checked: setting.inAppEnabled, busy: pending }}
+              />
             </View>
             <View style={styles.separator} />
             <View style={styles.row}>
               <View style={styles.rowCopy}><Text style={styles.rowTitle}>Push trên thiết bị</Text><Text style={styles.rowHint}>Hiện ngay cả khi App đang đóng</Text></View>
-              {pending ? <ActivityIndicator color={palette.primary} /> : <Switch value={setting.pushEnabled} disabled={setting.mandatory} onValueChange={(value) => update({ inAppEnabled: setting.inAppEnabled, pushEnabled: value })} trackColor={{ false: '#CBD5E1', true: '#93C5FD' }} thumbColor={setting.pushEnabled ? palette.primary : '#F8FAFC'} />}
+              {pending ? <ActivityIndicator color={palette.primary} /> : (
+                <Switch
+                  value={setting.pushEnabled}
+                  disabled={disabled}
+                  onValueChange={(value) => update({ inAppEnabled: setting.inAppEnabled, pushEnabled: value })}
+                  trackColor={{ false: '#CBD5E1', true: '#93C5FD' }}
+                  thumbColor={setting.pushEnabled ? palette.primary : '#F8FAFC'}
+                  accessibilityLabel={`${setting.label ?? setting.eventType}: push trên thiết bị`}
+                  accessibilityHint={setting.mandatory ? 'Thông báo bắt buộc, không thể tắt' : undefined}
+                  accessibilityState={{ disabled, checked: setting.pushEnabled }}
+                />
+              )}
             </View>
           </View>
         );

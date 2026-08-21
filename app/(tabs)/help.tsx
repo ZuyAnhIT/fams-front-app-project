@@ -7,12 +7,17 @@ import { EmployeeHelpScreen } from '@/features/help/components/EmployeeHelpScree
 import { palette } from '@/theme/tokens';
 
 export default function HelpScreen() {
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/profile');
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <AppHeader
         title="Hướng dẫn sử dụng"
         subtitle="Chấm công, Face ID và bảo mật"
-        onBack={() => router.back()}
+        onBack={goBack}
       />
       <EmployeeHelpScreen />
     </SafeAreaView>

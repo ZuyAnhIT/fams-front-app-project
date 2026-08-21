@@ -7,7 +7,7 @@ import { AppHeader } from '@/components/ui/app-header';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { palette, radius, spacing } from '@/theme/tokens';
 import { useSitePresenceReport, type SitePresenceEntry } from '@/features/report/site-presence';
-import { useSupervisorDashboard } from '../hooks/use-dashboard';
+import { useIsCurrentTenantSupervisor, useSupervisorDashboard } from '../hooks/use-dashboard';
 import type { SupervisedSiteStatus } from '../types/dashboard.type';
 
 function time(value: string) {
@@ -76,15 +76,32 @@ function SiteCard({ site, presence }: { site: SupervisedSiteStatus; presence?: S
 }
 
 export function SupervisorDashboardScreen() {
-  const query = useSupervisorDashboard();
-  const presenceQuery = useSitePresenceReport();
+  const role = useIsCurrentTenantSupervisor();
+  const query = useSupervisorDashboard(role.isSupervisor);
+  const presenceQuery = useSitePresenceReport(role.isSupervisor);
   const sites = query.data?.supervisedSites ?? [];
   const presenceBySite = new Map((presenceQuery.data?.sites.content ?? []).map((site) => [site.siteId, site]));
   const isMissingEmployee = (query.error as { response?: { status?: number } } | null)?.response?.status === 404;
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
       <AppHeader title="Hiện trường của tôi" subtitle="Tự làm mới mỗi 60 giây" onBack={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/home')} />
-      {query.isLoading || presenceQuery.isLoading ? (
+      {role.isLoading ? (
+        <View style={styles.loading}><ActivityIndicator size="large" color={palette.primary} /><Text style={styles.muted}>Đang xác minh quyền giám sát...</Text></View>
+      ) : role.isError ? (
+        <FeedbackState
+          icon="cloud-offline-outline"
+          title="Không thể xác minh quyền giám sát"
+          description="Kiểm tra kết nối rồi thử lại. Dữ liệu hiện trường chưa được tải để bảo vệ phạm vi công trình."
+          actionLabel="Thử lại"
+          onAction={() => void role.refetch()}
+        />
+      ) : !role.isSupervisor ? (
+        <FeedbackState
+          icon="lock-closed-outline"
+          title="Bạn không có quyền mở màn hình này"
+          description="Màn hình hiện trường chỉ dành cho Site Supervisor trong công ty đang chọn."
+        />
+      ) : query.isLoading || presenceQuery.isLoading ? (
         <View style={styles.loading}><ActivityIndicator size="large" color={palette.primary} /><Text style={styles.muted}>Đang tải tình hình công trình...</Text></View>
       ) : query.isError ? (
         <FeedbackState

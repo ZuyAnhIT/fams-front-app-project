@@ -112,18 +112,25 @@ export function NotificationList() {
               }}
               style={styles.toolbarButton}
               accessibilityRole="button"
+              accessibilityLabel="Chọn tất cả thông báo chưa đọc đã tải"
             >
-              <Text style={styles.toolbarButtonText}>Chọn chưa đọc</Text>
+              <Text style={styles.toolbarButtonText}>Chọn đã tải</Text>
             </Pressable>
             <Pressable
-              onPress={() => {
-                markSelectedAsRead([...selectedIds]);
-                setSelectionMode(false);
-                setSelectedIds(new Set());
-              }}
+              onPress={() => void (async () => {
+                try {
+                  await markSelectedAsRead([...selectedIds]);
+                  setSelectionMode(false);
+                  setSelectedIds(new Set());
+                } catch {
+                  // Keep the selection so the user can retry after the hook shows the error.
+                }
+              })()}
               disabled={selectedIds.size === 0 || isMarkingSelectedRead}
               style={[styles.markSelectedButton, selectedIds.size === 0 && styles.disabledButton]}
               accessibilityRole="button"
+              accessibilityLabel="Đánh dấu các thông báo đã chọn là đã đọc"
+              accessibilityState={{ disabled: selectedIds.size === 0 || isMarkingSelectedRead, busy: isMarkingSelectedRead }}
             >
               {isMarkingSelectedRead ? <ActivityIndicator size="small" color={palette.white} /> : <Text style={styles.markSelectedText}>Đã đọc</Text>}
             </Pressable>

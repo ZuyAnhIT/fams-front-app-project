@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/features/auth/store';
+import { hasTenantRole } from '@/features/rbac/permissions';
 import { useMyRoles } from '@/features/rbac/use-my-roles';
 import { getEmployeeDashboard, getSupervisorDashboard } from '../services/dashboard.service';
 
@@ -32,8 +33,9 @@ export function useIsCurrentTenantSupervisor() {
   const tenantId = useAuthStore((state) => state.activeTenantId);
   const roles = useMyRoles();
   return {
-    isSupervisor: Boolean(roles.data?.some((role) =>
-      role.tenantId === tenantId && role.roleName === 'SITE_SUPERVISOR')),
+    isSupervisor: hasTenantRole(roles.data, tenantId, 'SITE_SUPERVISOR'),
     isLoading: roles.isLoading,
+    isError: roles.isError,
+    refetch: roles.refetch,
   };
 }

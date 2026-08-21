@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -57,16 +57,33 @@ export function CheckinHistory() {
   const [siteFilter, setSiteFilter] = useState<string | undefined>(undefined);
   const [useMonthFilter, setUseMonthFilter] = useState(false);
   const [period, setPeriod] = useState(() => monthFromDate(new Date()));
-  const { options: siteOptions } = useCheckinSiteOptions();
+  const { options: siteOptions, isLoading: isLoadingSiteOptions } = useCheckinSiteOptions();
 
   const dateRange = useMonthFilter ? monthRangeIso(period) : {};
-  const { records, totalPages, isLoading, isRefetching, isError, refetch } = useCheckinHistory({
+  const { records, totalPages, totalElements, isLoading, isRefetching, isError, refetch } = useCheckinHistory({
     page,
     size: PAGE_SIZE,
     status: statusFilter,
     siteId: siteFilter,
     ...dateRange,
   });
+
+  useEffect(() => {
+    if (
+      !isLoadingSiteOptions &&
+      siteFilter &&
+      !siteOptions.some((option) => option.siteId === siteFilter)
+    ) {
+      setSiteFilter(undefined);
+      setPage(0);
+    }
+  }, [isLoadingSiteOptions, siteFilter, siteOptions]);
+
+  useEffect(() => {
+    if (!isLoading && page > 0 && page >= totalPages) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [isLoading, page, totalPages]);
 
   const resetFilters = () => {
     setStatusFilter(undefined);
@@ -96,7 +113,11 @@ export function CheckinHistory() {
 
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
-      <AppHeader title="Lịch sử chấm công" onBack={goBack} />
+      <AppHeader
+        title="Lịch sử chấm công"
+        subtitle={isLoading ? undefined : `${totalElements} bản ghi`}
+        onBack={goBack}
+      />
 
       <View style={styles.filters}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
@@ -284,8 +305,10 @@ export function CheckinHistory() {
           ListEmptyComponent={
             <FeedbackState
               icon="time-outline"
-              title="Chưa có lịch sử chấm công"
-              description="Các lần vào ca và ra ca của bạn sẽ được hiển thị tại đây."
+              title={hasActiveFilters ? 'Không có bản ghi phù hợp' : 'Chưa có lịch sử chấm công'}
+              description={hasActiveFilters
+                ? 'Thử thay đổi hoặc xóa bộ lọc để xem các lần chấm công khác.'
+                : 'Các lần vào ca và ra ca của bạn sẽ được hiển thị tại đây.'}
             />
           }
           ListFooterComponent={

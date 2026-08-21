@@ -71,6 +71,9 @@ export default function SelectTenantScreen() {
               style={[styles.item, selectedId === item.id && styles.itemSelected]}
               onPress={() => select(item.id)}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.name ?? item.slug ?? item.id}${item.id === activeTenantId ? ', đang sử dụng' : ''}`}
+              accessibilityState={{ selected: selectedId === item.id }}
             >
               <View style={styles.itemHeader}>
                 <Text style={styles.itemText} numberOfLines={2}>
@@ -108,6 +111,9 @@ export default function SelectTenantScreen() {
           onPress={confirm}
           disabled={!selectedId || isConfirming}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={activeTenantId ? 'Chuyển sang công ty đã chọn' : 'Tiếp tục với công ty đã chọn'}
+          accessibilityState={{ disabled: !selectedId || isConfirming, busy: isConfirming }}
         >
           {isConfirming ? (
             <ActivityIndicator color="#ffffff" size="small" />
