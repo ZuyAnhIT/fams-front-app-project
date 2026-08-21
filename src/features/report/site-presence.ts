@@ -28,12 +28,12 @@ async function getSitePresenceReport(tenantId: string): Promise<SitePresenceRepo
   return unwrapApiData<SitePresenceReport>(data);
 }
 
-export function useSitePresenceReport() {
+export function useSitePresenceReport(enabled = true) {
   const tenantId = useAuthStore((state) => state.activeTenantId);
   return useQuery({
     queryKey: ['reports', tenantId, 'site-presence'],
     queryFn: () => getSitePresenceReport(tenantId!),
-    enabled: Boolean(tenantId),
-    refetchInterval: 60_000,
+    enabled: Boolean(tenantId) && enabled,
+    refetchInterval: enabled ? 60_000 : false,
   });
 }

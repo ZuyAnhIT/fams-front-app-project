@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OTPInput } from '@/features/auth/components/OTPInput';
 import { use2FAVerify } from '@/features/auth/hooks/use-2fa';
+import { navigateBackToLogin } from '@/features/auth/navigation';
 import { useAuthTheme } from '@/features/auth/theme';
 import { shadows } from '@/theme/tokens';
 
@@ -49,7 +49,7 @@ export default function TwoFAVerifyScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Back button */}
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={navigateBackToLogin} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={18} color={theme.primary} />
             <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>

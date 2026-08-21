@@ -7,9 +7,14 @@ import { NotificationSettings } from '@/features/notification/components/Notific
 import { palette } from '@/theme/tokens';
 
 export default function NotificationSettingsScreen() {
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/notifications');
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <AppHeader title="Cài đặt thông báo" subtitle="Chọn riêng hộp thư và push" onBack={() => router.back()} />
+      <AppHeader title="Cài đặt thông báo" subtitle="Chọn riêng hộp thư và push" onBack={goBack} />
       <NotificationSettings />
     </SafeAreaView>
   );

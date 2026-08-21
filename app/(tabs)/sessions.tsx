@@ -42,10 +42,14 @@ export default function SessionsScreen() {
     logoutOthers, isLoggingOutOthers,
   } = useAuthSessions();
   const otherCount = sessions.filter((item) => !item.current).length;
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/profile');
+  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-      <AppHeader title="Thiết bị đăng nhập" subtitle={`${sessions.length} phiên hoạt động`} onBack={() => router.back()} />
+      <AppHeader title="Thiết bị đăng nhập" subtitle={`${sessions.length} phiên hoạt động`} onBack={goBack} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}

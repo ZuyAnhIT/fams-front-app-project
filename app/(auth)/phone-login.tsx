@@ -18,6 +18,7 @@ import { AccountLockedBanner } from '@/features/auth/components/AccountLockedBan
 import { OTPInput } from '@/features/auth/components/OTPInput';
 import { useFirebasePhoneAuth } from '@/features/auth/hooks/use-firebase-phone-auth';
 import { useVerifyOTP } from '@/features/auth/hooks/use-phone-otp';
+import { navigateBackToLogin } from '@/features/auth/navigation';
 import { isExpoGo } from '@/features/auth/runtime';
 import { useAuthTheme } from '@/features/auth/theme';
 import { formatCountdown, mapFirebasePhoneError, normalizePhoneForBackend } from '@/features/auth/utils';
@@ -124,7 +125,7 @@ export default function PhoneLoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Back button */}
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={navigateBackToLogin} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={18} color={theme.primary} />
             <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>

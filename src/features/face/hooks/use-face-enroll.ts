@@ -71,7 +71,8 @@ export function useFaceEnroll() {
   );
 
   const handleBack = useCallback(() => {
-    router.back();
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/profile');
   }, [router]);
 
   const goToProfile = useCallback(() => {

@@ -1,6 +1,7 @@
 import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { isAxiosError } from 'axios';
 
 import { AppHeader } from '@/components/ui/app-header';
 import { AppButton } from '@/components/ui/app-button';
@@ -24,8 +25,14 @@ export interface SiteDetailProps {
 
 export function SiteDetail({ siteId }: SiteDetailProps) {
   const router = useRouter();
-  const { detail, isLoading, isError, refetch } = useSiteDetail(siteId);
-  const { supervisors, isLoading: isLoadingSupervisors } = useSiteSupervisors(siteId);
+  const { detail, isLoading, isError, error, refetch } = useSiteDetail(siteId);
+  const {
+    supervisors,
+    isLoading: isLoadingSupervisors,
+    isError: isSupervisorsError,
+    error: supervisorsError,
+    refetch: refetchSupervisors,
+  } = useSiteSupervisors(siteId);
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -45,13 +52,22 @@ export function SiteDetail({ siteId }: SiteDetailProps) {
   }
 
   if (isError || !detail) {
+    const status = isAxiosError(error) ? error.response?.status : undefined;
     return (
       <SafeAreaView edges={['top']} style={styles.container}>
         <AppHeader title="Chi tiết công trình" onBack={goBack} />
         <FeedbackState
-          icon="cloud-offline-outline"
-          title="Không thể tải chi tiết công trình"
-          description="Kiểm tra kết nối mạng rồi thử lại."
+          icon={status === 403 ? 'lock-closed-outline' : status === 404 ? 'business-outline' : 'cloud-offline-outline'}
+          title={status === 403
+            ? 'Bạn chưa được cấp quyền xem công trình'
+            : status === 404
+              ? 'Không tìm thấy công trình'
+              : 'Không thể tải chi tiết công trình'}
+          description={status === 403
+            ? 'Quyền có thể đã thay đổi. Quay lại danh sách hoặc liên hệ quản trị viên.'
+            : status === 404
+              ? 'Công trình có thể đã bị xóa hoặc không còn thuộc công ty đang chọn.'
+              : 'Kiểm tra kết nối mạng rồi thử lại.'}
           actionLabel="Thử lại"
           onAction={refetch}
         />
@@ -143,12 +159,25 @@ export function SiteDetail({ siteId }: SiteDetailProps) {
         <Text style={styles.sectionTitle}>Giám sát viên</Text>
         {isLoadingSupervisors ? (
           <ActivityIndicator size="small" color="#2563EB" />
+        ) : isSupervisorsError ? (
+          <View style={styles.inlineError}>
+            <Text style={styles.muted}>
+              {isAxiosError(supervisorsError) && supervisorsError.response?.status === 403
+                ? 'Bạn không có quyền xem danh sách giám sát viên.'
+                : 'Không thể tải danh sách giám sát viên.'}
+            </Text>
+            <AppButton label="Thử tải lại" variant="ghost" onPress={refetchSupervisors} />
+          </View>
         ) : supervisors.length === 0 ? (
           <Text style={styles.muted}>Chưa có giám sát viên</Text>
         ) : (
-          supervisors.map(({ assignment, name: supervisorName, isLoadingName }) => (
+          supervisors.map(({ assignment, name: supervisorName, isLoadingName, isNameError }) => (
             <Text key={assignment.id} style={styles.value}>
-              {isLoadingName ? 'Đang tải tên...' : (supervisorName ?? `Nhân viên ${assignment.employeeId}`)}
+              {isLoadingName
+                ? 'Đang tải tên...'
+                : isNameError
+                  ? 'Không tải được tên giám sát viên'
+                  : (supervisorName ?? 'Giám sát viên chưa có tên')}
             </Text>
           ))
         )}
@@ -218,6 +247,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     gap: 2,
   },
+  inlineError: { alignItems: 'flex-start', gap: spacing.xs },
   centered: {
     flex: 1,
     justifyContent: 'center',

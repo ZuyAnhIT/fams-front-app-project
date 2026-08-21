@@ -14,7 +14,7 @@ import { notificationKeys } from './useNotifications';
 export interface UseMarkAsReadResult {
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
-  markSelectedAsRead: (ids: string[]) => void;
+  markSelectedAsRead: (ids: string[]) => Promise<void>;
   isMarkingRead: boolean;
   isMarkingAllRead: boolean;
   isMarkingSelectedRead: boolean;
@@ -112,7 +112,9 @@ export function useMarkAsRead(): UseMarkAsReadResult {
   return {
     markAsRead: markReadMutation.mutate,
     markAllAsRead: markAllMutation.mutate,
-    markSelectedAsRead: markSelectedMutation.mutate,
+    markSelectedAsRead: async (ids) => {
+      await markSelectedMutation.mutateAsync(ids);
+    },
     isMarkingRead: markReadMutation.isPending,
     isMarkingAllRead: markAllMutation.isPending,
     isMarkingSelectedRead: markSelectedMutation.isPending,

@@ -10,6 +10,7 @@ export interface SiteSupervisor {
   assignment: Assignment;
   name: string | null;
   isLoadingName: boolean;
+  isNameError: boolean;
 }
 
 export interface UseSiteSupervisorsResult {
@@ -59,6 +60,7 @@ export function useSiteSupervisors(siteId: string): UseSiteSupervisorsResult {
       assignment,
       name: employee ? `${employee.firstName} ${employee.lastName}`.trim() : null,
       isLoadingName: employeeQuery?.isLoading ?? false,
+      isNameError: employeeQuery?.isError ?? false,
     };
   });
 
@@ -68,7 +70,10 @@ export function useSiteSupervisors(siteId: string): UseSiteSupervisorsResult {
     isError: assignmentsQuery.isError,
     error: assignmentsQuery.error,
     refetch: () => {
-      void assignmentsQuery.refetch();
+      void Promise.all([
+        assignmentsQuery.refetch(),
+        ...employeeQueries.map((employeeQuery) => employeeQuery.refetch()),
+      ]);
     },
   };
 }

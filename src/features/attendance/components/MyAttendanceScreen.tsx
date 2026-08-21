@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { isAxiosError } from 'axios';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -243,7 +243,7 @@ export function MyAttendanceScreen() {
   const [siteId, setSiteId] = useState<string | undefined>(undefined);
   const currentPeriod = monthFromDate(new Date());
   const query = useMyMonthlyAttendance({ ...period, siteId });
-  const { options: siteOptions } = useMyAttendanceSiteOptions(period);
+  const { options: siteOptions, isLoading: isLoadingSiteOptions } = useMyAttendanceSiteOptions(period);
   const data = query.data;
   const isCurrentOrFuture =
     period.year > currentPeriod.year ||
@@ -253,6 +253,16 @@ export function MyAttendanceScreen() {
     [data?.dailySummaries],
   );
   const errorCopy = attendanceErrorCopy(query.error);
+
+  useEffect(() => {
+    if (
+      !isLoadingSiteOptions &&
+      siteId &&
+      !siteOptions.some((option) => option.siteId === siteId)
+    ) {
+      setSiteId(undefined);
+    }
+  }, [isLoadingSiteOptions, siteId, siteOptions]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -317,6 +327,7 @@ export function MyAttendanceScreen() {
                 style={[styles.siteChip, siteId === undefined && styles.siteChipActive]}
                 accessibilityRole="button"
                 accessibilityLabel="Tất cả site"
+                accessibilityState={{ selected: siteId === undefined }}
               >
                 <Text style={[styles.siteChipText, siteId === undefined && styles.siteChipTextActive]}>
                   Tất cả
@@ -329,6 +340,7 @@ export function MyAttendanceScreen() {
                   style={[styles.siteChip, siteId === option.siteId && styles.siteChipActive]}
                   accessibilityRole="button"
                   accessibilityLabel={`Lọc theo site ${option.siteName}`}
+                  accessibilityState={{ selected: siteId === option.siteId }}
                 >
                   <Text
                     style={[styles.siteChipText, siteId === option.siteId && styles.siteChipTextActive]}

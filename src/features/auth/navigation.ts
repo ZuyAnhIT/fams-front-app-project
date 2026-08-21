@@ -20,3 +20,12 @@ export function navigateToLogin(): void {
 
   router.replace('/(auth)/login');
 }
+
+/** Back for auth subflows, with a deterministic destination for cold deep links. */
+export function navigateBackToLogin(): void {
+  if (router.canGoBack()) {
+    router.back();
+    return;
+  }
+  navigateToLogin();
+}

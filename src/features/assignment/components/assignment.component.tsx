@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useMemo, useState } from 'react';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -45,13 +46,15 @@ function AssignmentListItem({
 }) {
   const { assignment, employeeName, isLoadingEmployeeName } = row;
   const statusColor = STATUS_COLORS[assignment.status];
-  const shiftName = assignment.shiftId ? shiftNames[assignment.shiftId] ?? assignment.shiftId : '—';
+  const shiftName = assignment.shiftId
+    ? shiftNames[assignment.shiftId] ?? 'Không tải được tên ca'
+    : 'Không gắn ca cụ thể';
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.employeeName} numberOfLines={1}>
-          {isLoadingEmployeeName ? 'Đang tải...' : employeeName ?? assignment.employeeId}
+          {isLoadingEmployeeName ? 'Đang tải...' : employeeName ?? 'Không tải được tên nhân viên'}
         </Text>
         <View style={[styles.badge, { backgroundColor: statusColor.bg }]}>
           <Text style={[styles.badgeText, { color: statusColor.text }]}>
@@ -80,7 +83,13 @@ function AssignmentListItem({
 }
 
 export function AssignmentListScreen() {
-  const { sites, isLoading: isLoadingSites } = useSiteOptions();
+  const {
+    sites,
+    isLoading: isLoadingSites,
+    isError: isSiteOptionsError,
+    isForbidden: isSiteOptionsForbidden,
+    refetch: refetchSites,
+  } = useSiteOptions();
   const [siteId, setSiteId] = useState<string | undefined>(undefined);
   const [status, setStatus] = useState<AssignmentStatus | 'all'>('all');
   const [role, setRole] = useState<AssignmentRole | 'all'>('all');
@@ -88,9 +97,8 @@ export function AssignmentListScreen() {
   const [sortBy, setSortBy] = useState<NonNullable<AssignmentListParams['sortBy']>>('startDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const shiftNames = useSiteShiftNames(siteId);
-
   const activeSiteId = siteId ?? sites[0]?.id;
+  const shiftNames = useSiteShiftNames(activeSiteId);
 
   const params = useMemo<AssignmentListParams>(
     () => ({
@@ -104,10 +112,28 @@ export function AssignmentListScreen() {
     [page, status, role, sortBy, sortDir],
   );
 
-  const { rows, totalPages, isLoading, isRefetching, isError, isForbidden, error, refetch } =
+  const { rows, totalPages, totalElements, isLoading, isRefetching, isError, isForbidden, error, refetch } =
     useAssignmentList(activeSiteId, params);
 
   const activeSite = sites.find((s) => s.id === activeSiteId);
+
+  useEffect(() => {
+    if (!isLoadingSites && siteId && !sites.some((site) => site.id === siteId)) {
+      setSiteId(undefined);
+      setPage(0);
+    }
+  }, [isLoadingSites, siteId, sites]);
+
+  useEffect(() => {
+    if (!isLoading && page > 0 && page >= totalPages) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [isLoading, page, totalPages]);
+
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/profile');
+  };
 
   const handleSiteSelect = useCallback((id: string) => {
     setSiteId(id);
@@ -122,7 +148,7 @@ export function AssignmentListScreen() {
   if (isLoadingSites) {
     return (
       <SafeAreaView edges={['top']} style={styles.container}>
-        <AppHeader title="Phân công" />
+        <AppHeader title="Phân công" onBack={goBack} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#2563EB" />
         </View>
@@ -130,10 +156,38 @@ export function AssignmentListScreen() {
     );
   }
 
+  if (isSiteOptionsForbidden) {
+    return (
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <AppHeader title="Phân công" onBack={goBack} />
+        <FeedbackState
+          icon="lock-closed-outline"
+          title="Bạn chưa được cấp quyền xem phân công"
+          description="Liên hệ quản trị viên nếu bạn cần truy cập thông tin này."
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (isSiteOptionsError) {
+    return (
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <AppHeader title="Phân công" onBack={goBack} />
+        <FeedbackState
+          icon="cloud-offline-outline"
+          title="Không thể tải công trình"
+          description="Danh sách công trình là dữ liệu bắt buộc để xem phân công. Kiểm tra kết nối rồi thử lại."
+          actionLabel="Thử lại"
+          onAction={refetchSites}
+        />
+      </SafeAreaView>
+    );
+  }
+
   if (sites.length === 0) {
     return (
       <SafeAreaView edges={['top']} style={styles.container}>
-        <AppHeader title="Phân công" />
+        <AppHeader title="Phân công" onBack={goBack} />
         <FeedbackState
           icon="business-outline"
           title="Chưa có công trình để xem phân công"
@@ -145,7 +199,11 @@ export function AssignmentListScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
-      <AppHeader title="Phân công" subtitle={activeSite?.name} />
+      <AppHeader
+        title="Phân công"
+        subtitle={activeSite ? `${activeSite.name} · ${totalElements} kết quả` : undefined}
+        onBack={goBack}
+      />
       <View style={styles.toolbar}>
         <ScrollView
           horizontal
@@ -219,12 +277,19 @@ export function AssignmentListScreen() {
               setPage(0);
             }}
             style={styles.sortButton}
+            accessibilityRole="button"
+            accessibilityLabel={`Đổi tiêu chí sắp xếp, hiện tại theo ${sortBy === 'startDate' ? 'ngày bắt đầu' : 'ngày tạo'}`}
           >
             <Text style={styles.sortButtonText}>
               Sắp xếp: {sortBy === 'startDate' ? 'Ngày bắt đầu' : 'Ngày tạo'}
             </Text>
           </Pressable>
-          <Pressable onPress={toggleSort} style={styles.sortButton}>
+          <Pressable
+            onPress={toggleSort}
+            style={styles.sortButton}
+            accessibilityRole="button"
+            accessibilityLabel={`Sắp xếp ${sortDir === 'desc' ? 'mới đến cũ' : 'cũ đến mới'}`}
+          >
             <Text style={styles.sortButtonText}>{sortDir === 'desc' ? '↓' : '↑'}</Text>
           </Pressable>
         </ScrollView>
@@ -326,7 +391,7 @@ const styles = StyleSheet.create({
   filterChip: {
     borderRadius: 20,
     paddingHorizontal: 14,
-    minHeight: 40,
+    minHeight: 44,
     justifyContent: 'center',
     backgroundColor: palette.surfaceMuted,
     marginRight: 8,
@@ -347,7 +412,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     backgroundColor: palette.surfaceBrand,
-    minHeight: 40,
+    minHeight: 44,
     justifyContent: 'center',
     marginRight: 8,
   },
@@ -417,7 +482,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
     borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   pageButtonDisabled: {
     backgroundColor: '#CBD5E1',

@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { useResetPassword } from '@/features/auth/hooks/use-reset-password';
+import { navigateBackToLogin } from '@/features/auth/navigation';
 import { useAuthTheme } from '@/features/auth/theme';
 import { getAuthLinkToken } from '@/features/auth/deep-link';
 import { shadows } from '@/theme/tokens';
@@ -112,7 +113,7 @@ export default function ResetPasswordScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Back */}
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={navigateBackToLogin} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={18} color={theme.primary} />
             <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>

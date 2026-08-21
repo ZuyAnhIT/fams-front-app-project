@@ -79,32 +79,40 @@ export default function HomeScreen() {
       route: '/(tabs)/attendance',
     },
     {
-      label: 'Nơi làm hôm nay',
-      description: 'Ca và công trình được phép chấm công',
-      icon: 'clipboard-outline',
-      route: '/(tabs)/checkin',
-    },
-    {
       label: 'Kiểm tra ngẫu nhiên',
-      description: activeRandomChecks.length > 0
-        ? `${activeRandomChecks.length} yêu cầu cần phản hồi ngay`
-        : 'Xem yêu cầu kiểm tra hiện trường',
+      description: randomCheckQuery.isError
+        ? 'Không thể tải yêu cầu kiểm tra'
+        : randomCheckQuery.isLoading
+          ? 'Đang tải yêu cầu kiểm tra'
+          : activeRandomChecks.length > 0
+            ? `${activeRandomChecks.length} yêu cầu cần phản hồi ngay`
+            : 'Xem yêu cầu kiểm tra hiện trường',
       icon: 'scan-outline',
       route: '/(tabs)/random-check',
       badge: activeRandomChecks.length,
     },
     {
       label: 'Cần giải thích',
-      description: pendingExplanations > 0
-        ? `${pendingExplanations} mục cần theo dõi hoặc đang chờ HR`
-        : 'Không có chấm công hoặc vi phạm cần giải thích',
+      description: dashboardQuery.isError
+        ? 'Không thể tải các mục cần giải thích'
+        : dashboardQuery.isLoading
+          ? 'Đang tải các mục cần giải thích'
+          : pendingExplanations > 0
+            ? `${pendingExplanations} mục cần theo dõi hoặc đang chờ HR`
+            : 'Không có chấm công hoặc vi phạm cần giải thích',
       icon: 'chatbox-ellipses-outline',
       route: '/(tabs)/exceptions',
       badge: pendingExplanations,
     },
     {
       label: 'Thông báo',
-      description: unreadNotifications > 0 ? `${unreadNotifications} thông báo chưa đọc` : 'Không có thông báo mới',
+      description: dashboardQuery.isError
+        ? 'Không thể tải số thông báo chưa đọc'
+        : dashboardQuery.isLoading
+          ? 'Đang tải thông báo'
+          : unreadNotifications > 0
+            ? `${unreadNotifications} thông báo chưa đọc`
+            : 'Không có thông báo mới',
       icon: 'notifications-outline',
       route: '/(tabs)/notifications',
       badge: unreadNotifications,
