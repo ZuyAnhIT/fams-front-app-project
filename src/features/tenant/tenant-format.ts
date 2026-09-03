@@ -17,15 +17,27 @@ export function formatTenantDate(
 ): string {
   const date = toDate(value);
   if (Number.isNaN(date.getTime())) return '—';
-  const parts = {
-    DD: String(date.getDate()).padStart(2, '0'),
-    MM: String(date.getMonth() + 1).padStart(2, '0'),
-    YYYY: String(date.getFullYear()),
-  };
-  return dateFormat
-    .replace(/YYYY/g, parts.YYYY)
-    .replace(/DD/g, parts.DD)
-    .replace(/MM/g, parts.MM);
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = String(date.getFullYear());
+  // Single pass over the format tokens (case-insensitive, longest-first). The old chained
+  // `.replace()` calls could leave a token unreplaced when the configured pattern used a
+  // different case (e.g. "dd/MM/yyyy") — that surfaced as a literal "03/09/YYYY" on the App
+  // home screen (#18, 2026-09-03).
+  return dateFormat.replace(/yyyy|yy|dd|mm/gi, (token) => {
+    switch (token.toLowerCase()) {
+      case 'yyyy':
+        return yyyy;
+      case 'yy':
+        return yyyy.slice(-2);
+      case 'dd':
+        return dd;
+      case 'mm':
+        return mm;
+      default:
+        return token;
+    }
+  });
 }
 
 export function formatTenantTime(
