@@ -1,4 +1,4 @@
-import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { isAxiosError } from 'axios';
@@ -102,15 +102,13 @@ export function SiteDetail({ siteId }: SiteDetailProps) {
         <Text style={styles.sectionTitle}>Vị trí</Text>
         <Text style={styles.value}>{formatCoordinates(latitude, longitude)}</Text>
 
-        {hasCoordinates && Platform.OS !== 'web' ? (
+        {hasCoordinates ? (
           <SiteLocationMap
             name={name}
             latitude={latitude}
             longitude={longitude}
             geofenceBufferMeters={geofence?.bufferMeters}
           />
-        ) : hasCoordinates ? (
-          <Text style={styles.muted}>Sử dụng nút bên dưới để mở vị trí trên bản đồ.</Text>
         ) : (
           <Text style={styles.muted}>Chưa có tọa độ để hiển thị bản đồ</Text>
         )}
