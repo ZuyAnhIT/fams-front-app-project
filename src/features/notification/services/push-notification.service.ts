@@ -20,14 +20,29 @@ async function loadMessaging() {
   return import('@react-native-firebase/messaging');
 }
 
+/**
+ * Android 8+ silently drops any notification whose channel does not exist. The backend tags
+ * every push with `channelId: "fams-default"` (see FcmClient) except random-check pushes, so
+ * both channels must be created before the first push arrives — do it here (called on every
+ * post-auth registration) and again from the background handler (push-background.ts) so a
+ * cold-start push still lands. Safe to call repeatedly; createChannel is idempotent.
+ */
+export async function ensureAndroidNotificationChannels(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync('fams-default', {
+    name: 'Thông báo chung',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 200, 100, 200],
+  });
+  await Notifications.setNotificationChannelAsync('random-checks', {
+    name: 'Kiểm tra ngẫu nhiên',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 150, 250],
+  });
+}
+
 async function hasNotificationPermission(): Promise<boolean> {
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('random-checks', {
-      name: 'Kiểm tra ngẫu nhiên',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 150, 250],
-    });
-  }
+  await ensureAndroidNotificationChannels();
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   const requested = await Notifications.requestPermissionsAsync();

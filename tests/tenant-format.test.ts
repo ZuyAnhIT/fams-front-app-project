@@ -13,6 +13,12 @@ test('formats date-only values without a UTC day shift', () => {
   assert.equal(formatTenantDate('2026-08-07', 'YYYY-MM-DD'), '2026-08-07');
 });
 
+test('#18: mixed-case tokens never leave a literal token in the output', () => {
+  assert.equal(formatTenantDate('2026-09-03', 'dd/MM/yyyy'), '03/09/2026');
+  assert.equal(formatTenantDate('2026-09-03', 'DD/MM/YY'), '03/09/26');
+  assert.ok(!formatTenantDate('2026-09-03', 'DD/MM/YYYY').includes('YYYY'));
+});
+
 test('honours 24-hour and 12-hour tenant time formats', () => {
   const value = new Date(2026, 7, 7, 15, 5, 0);
   assert.match(formatTenantTime(value, 'HH:mm'), /^15:05$/);
