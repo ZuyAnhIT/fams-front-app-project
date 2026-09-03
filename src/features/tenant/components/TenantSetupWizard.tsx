@@ -44,7 +44,6 @@ const step1Schema = z.object({
     .min(2, 'Domain ít nhất 2 ký tự')
     .max(40)
     .regex(/^[a-z0-9-]+$/, 'Chỉ được dùng chữ thường, số và dấu gạch ngang'),
-  logo_url: z.string().url('URL logo không hợp lệ').optional().or(z.literal('')),
   industry: z.enum([
     'manufacturing', 'retail', 'construction', 'logistics',
     'hospitality', 'healthcare', 'education', 'other',
@@ -216,7 +215,6 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
     defaultValues: {
       name: '',
       slug: '',
-      logo_url: '',
       industry: 'manufacturing',
     },
   });
@@ -262,7 +260,6 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
     createTenant({
       name: step1Data.name,
       slug: step1Data.slug,
-      logo_url: step1Data.logo_url || undefined,
       industry: step1Data.industry,
       settings: step2Data,
       plan: selectedPlan,
@@ -324,27 +321,13 @@ export function TenantSetupWizard({ onCancel }: TenantSetupWizardProps) {
         <ErrorText message={err1.slug?.message} />
       </View>
 
-      {/* Logo URL */}
+      {/* Logo: bỏ ô "dán URL" gây khó dùng (#08). Tải ảnh logo từ máy được thực hiện trên
+          FAMS web ở mục "Cấu hình công ty" sau khi tạo công ty. */}
       <View style={styles.field}>
-        <FieldLabel text="Logo URL (tuỳ chọn)" />
-        <Controller
-          control={ctrl1}
-          name="logo_url"
-          render={({ field: { value, onChange, onBlur } }) => (
-            <TextInput
-              style={[styles.input, err1.logo_url && styles.inputError]}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              placeholder="https://example.com/logo.png"
-              placeholderTextColor="#94A3B8"
-              keyboardType="url"
-              autoCapitalize="none"
-              returnKeyType="next"
-            />
-          )}
-        />
-        <ErrorText message={err1.logo_url?.message} />
+        <FieldLabel text="Logo công ty" />
+        <Text style={styles.helpText}>
+          Sau khi tạo công ty, bạn tải ảnh logo từ máy trong mục “Cấu hình công ty” trên FAMS web.
+        </Text>
       </View>
 
       {/* Industry */}
@@ -709,6 +692,11 @@ const styles = StyleSheet.create({
     color: '#64748B',
     lineHeight: 22,
     marginTop: -12,
+  },
+  helpText: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 19,
   },
 
   // ── Fields ──
