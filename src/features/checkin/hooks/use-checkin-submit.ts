@@ -27,7 +27,7 @@ export interface CheckinAttempt {
 }
 
 export interface CheckinVerification {
-  assignmentId?: string;
+  assignmentId: string;
   siteName?: string;
   effectiveCheckinPolicy?: CheckinPolicy;
   employeePhotoBase64?: string;
@@ -37,7 +37,7 @@ export interface CheckinVerification {
 export interface UseCheckinSubmitResult {
   checkIn: (
     siteId: string,
-    verification?: CheckinVerification,
+    verification: CheckinVerification,
   ) => Promise<CheckinAttempt>;
   isLocating: boolean;
   isSubmitting: boolean;
@@ -59,13 +59,14 @@ export function useCheckinSubmit(): UseCheckinSubmitResult {
       latitude: number;
       longitude: number;
       accuracy: number | null;
-      assignmentId?: string;
+      assignmentId: string;
       siteName?: string;
       effectiveCheckinPolicy?: CheckinPolicy;
       employeePhotoBase64?: string;
       livenessChallengeId?: string;
     }) =>
       submitCheckin(tenantId!, {
+        assignmentId: payload.assignmentId,
         siteId: payload.siteId,
         latitude: payload.latitude,
         longitude: payload.longitude,
@@ -86,6 +87,10 @@ export function useCheckinSubmit(): UseCheckinSubmitResult {
         siteName: result.siteName ?? payload.siteName ?? null,
         effectiveCheckinPolicy:
           result.effectiveCheckinPolicy ?? payload.effectiveCheckinPolicy ?? null,
+        checkInAt: result.checkInAt,
+        sessionExpiresAt: result.sessionExpiresAt,
+        shiftEndsAt: result.shiftEndsAt,
+        overtimeAllowed: result.overtimeAllowed,
       };
       await setOpenCheckin(context);
       await Promise.all([
@@ -117,7 +122,7 @@ export function useCheckinSubmit(): UseCheckinSubmitResult {
 
   const checkIn = async (
     siteId: string,
-    verification: CheckinVerification = {},
+    verification: CheckinVerification,
   ): Promise<CheckinAttempt> => {
     if (!tenantId) {
       return { result: null, faceRequirement: null, queuedOffline: false };

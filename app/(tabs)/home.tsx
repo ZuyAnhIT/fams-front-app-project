@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { useProfile } from '@/features/auth/hooks/use-profile';
 import { useAvailableSites } from '@/features/checkin/hooks/use-available-sites';
+import { useOpenCheckin } from '@/features/checkin/hooks/use-open-checkin';
 import { useEmployeeDashboard, useIsCurrentTenantSupervisor } from '@/features/dashboard/hooks/use-dashboard';
 import type { EmployeeTodayShift } from '@/features/dashboard/types/dashboard.type';
 import { useMyPendingRandomChecks } from '@/features/random-check/hooks/use-random-check';
@@ -60,7 +61,23 @@ export default function HomeScreen() {
   // the data. Merge both sources by assignmentId so the employee always sees every shift either
   // endpoint knows about, and only show the error state when BOTH fail.
   const availableSitesQuery = useAvailableSites();
+  const openSessionQuery = useOpenCheckin();
   const dashboard = dashboardQuery.data;
+  // /checkin/open-session is the canonical real-time state. The dashboard can remain cached
+  // briefly after an automatic missing-checkout closure, so only use it as a fallback while
+  // the canonical query is unavailable.
+  const hasOpenCheckin = openSessionQuery.isSuccess
+    ? Boolean(openSessionQuery.data)
+    : Boolean(dashboard?.checkin?.open);
+  const isPastOpenShiftEnd = Boolean(
+    openSessionQuery.data?.shiftEndsAt &&
+      Date.now() >= new Date(openSessionQuery.data.shiftEndsAt).getTime(),
+  );
+  const openSessionLabel = isPastOpenShiftEnd
+    ? openSessionQuery.data?.overtimeAllowed
+      ? 'Đang làm thêm giờ'
+      : 'Chờ check-out'
+    : 'Đang trong ca';
   const todayShifts = useMemo<EmployeeTodayShift[]>(() => {
     const byAssignment = new Map<string, EmployeeTodayShift>();
     for (const site of availableSitesQuery.sites) {
@@ -175,12 +192,14 @@ export default function HomeScreen() {
               isRefetchingProfile ||
               dashboardQuery.isRefetching ||
               availableSitesQuery.isRefetching ||
+              openSessionQuery.isRefetching ||
               randomCheckQuery.isRefetching
             }
             onRefresh={() => {
               refetchProfile();
               dashboardQuery.refetch();
               availableSitesQuery.refetch();
+              openSessionQuery.refetch();
               randomCheckQuery.refetch();
             }}
             tintColor={palette.primary}
@@ -291,13 +310,15 @@ export default function HomeScreen() {
                   </View>
                 ))}
                 <View style={styles.detailLine}>
-                  <Ionicons name={dashboard?.checkin?.open ? 'radio-button-on-outline' : 'checkmark-circle-outline'} size={17} color={dashboard?.checkin?.open ? palette.success : palette.textMuted} />
+                  <Ionicons name={hasOpenCheckin ? 'radio-button-on-outline' : 'checkmark-circle-outline'} size={17} color={hasOpenCheckin ? palette.success : palette.textMuted} />
                   <Text style={styles.detailText}>
-                    {!dashboard?.checkin
-                      ? 'Chưa check-in hôm nay'
-                      : dashboard.checkin.open
-                        ? `Đang trong ca · ${CHECKIN_STATUS_LABELS[dashboard.checkin.status]}`
-                        : `Đã kết thúc · ${CHECKIN_STATUS_LABELS[dashboard.checkin.status]} · ${dashboard.checkin.workMinutes ?? 0} phút`}
+                    {hasOpenCheckin
+                      ? `${openSessionLabel} · ${CHECKIN_STATUS_LABELS[openSessionQuery.data?.status ?? dashboard!.checkin!.status]}`
+                      : !dashboard?.checkin
+                        ? 'Chưa check-in hôm nay'
+                        : dashboard.checkin.checkOutAt === null
+                          ? `Ca đã kết thúc · Thiếu check-out · ${CHECKIN_STATUS_LABELS[dashboard.checkin.status]}`
+                          : `Đã kết thúc · ${CHECKIN_STATUS_LABELS[dashboard.checkin.status]} · ${dashboard.checkin.workMinutes ?? 0} phút`}
                   </Text>
                 </View>
                 {dashboardQuery.isError && (
@@ -314,7 +335,7 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Mở màn hình chấm công"
             >
-              <Text style={styles.shiftActionText}>{dashboard?.checkin?.open ? 'Mở check-out' : 'Mở chấm công'}</Text>
+              <Text style={styles.shiftActionText}>{hasOpenCheckin ? 'Mở check-out' : 'Mở chấm công'}</Text>
               <Ionicons name="arrow-forward" size={18} color={palette.white} />
             </Pressable>
           </View>

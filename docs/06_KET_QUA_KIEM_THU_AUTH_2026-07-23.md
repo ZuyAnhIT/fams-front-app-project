@@ -22,7 +22,7 @@ Không ghi access token, refresh token, OTP thật, Google client ID hay credent
 | Kiểm tra tĩnh | `npm run lint`, `tsc --noEmit` |
 | Dữ liệu | Tài khoản test sinh riêng; OTP/token chỉ đọc trong môi trường dev và không lưu vào repo |
 
-Lưu ý: `.env` thường ngày của frontend đang trỏ tới `http://192.168.1.145:8080/api/v1`, nhưng host đó không online lúc bắt đầu test. Bản web test được chạy với override `EXPO_PUBLIC_API_URL=http://localhost:8080/api/v1`.
+Lưu ý: `.env` thường ngày của frontend đang trỏ tới `http://192.168.1.115:8080/api/v1`, nhưng host đó không online lúc bắt đầu test. Bản web test được chạy với override `EXPO_PUBLIC_API_URL=http://localhost:8080/api/v1`.
 
 ## 3. Sai lệch phát hiện trước khi sửa
 
@@ -133,7 +133,7 @@ Google Cloud Console cần thêm đúng origin chạy frontend vào OAuth Web Cl
 
 ```text
 http://localhost:8081
-http://192.168.1.145:8081
+http://192.168.1.11:8081
 https://<frontend-domain-production>
 ```
 

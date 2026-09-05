@@ -138,7 +138,7 @@ dùng Expo Go.
 | Playwright link token | Đạt 4/4 |
 | Backend compile | Đạt với `maven.resources.skip=true` vì một số resource trong `target` đang do container sở hữu |
 | Backend unit test redirect | Mã test đã thêm; WSL/JDK hiện tại chặn Mockito tự gắn Byte Buddy agent, không phải lỗi compile/logic |
-| `npm run sync:lan` | Đạt, đã đồng bộ IP phát hiện `192.168.1.14` |
+| `npm run sync:lan` | Đạt, đã đồng bộ IP phát hiện `192.168.1.11` |
 
 Playwright đã chứng minh:
 

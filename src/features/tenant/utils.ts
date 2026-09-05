@@ -66,10 +66,6 @@ export const LANGUAGE_LABELS: Record<AppLanguage, string> = {
 
 export const TIMEZONE_LABELS: Record<AppTimezone, string> = {
   'Asia/Ho_Chi_Minh': 'GMT+7 – Hà Nội / TP. HCM',
-  'Asia/Bangkok': 'GMT+7 – Bangkok',
-  'Asia/Singapore': 'GMT+8 – Singapore',
-  'Asia/Tokyo': 'GMT+9 – Tokyo',
-  UTC: 'UTC',
 };
 
 export const PLAN_COLORS: Record<SubscriptionPlan, string> = {
