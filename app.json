@@ -59,7 +59,8 @@
       [
         "expo-notifications",
         {
-          "color": "#2563EB"
+          "color": "#2563EB",
+          "defaultChannel": "fams-default"
         }
       ],
       [

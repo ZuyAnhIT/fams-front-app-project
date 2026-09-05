@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -6,7 +8,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ResponsiveContainer } from '@/components/ui/responsive-container';
 import { useProfile } from '@/features/auth/hooks/use-profile';
+import { useAvailableSites } from '@/features/checkin/hooks/use-available-sites';
+import { useOpenCheckin } from '@/features/checkin/hooks/use-open-checkin';
 import { useEmployeeDashboard, useIsCurrentTenantSupervisor } from '@/features/dashboard/hooks/use-dashboard';
+import type { EmployeeTodayShift } from '@/features/dashboard/types/dashboard.type';
 import { useMyPendingRandomChecks } from '@/features/random-check/hooks/use-random-check';
 import { secondsLeft } from '@/features/random-check/utils/random-check.utils';
 import { useTenantPreferences } from '@/features/tenant/tenant-preferences';
@@ -50,9 +55,58 @@ export default function HomeScreen() {
       item.status === 'sent' &&
       secondsLeft(item, Date.now(), randomCheckQuery.dataUpdatedAt) > 0,
   );
+  // #18: the home "CA LÀM HÔM NAY" widget used to rely solely on /dashboard/employee. When that
+  // one request failed (or resolved "today" in a different timezone), the whole shift list
+  // vanished even though the check-in screen — which reads /checkin/available-sites — still had
+  // the data. Merge both sources by assignmentId so the employee always sees every shift either
+  // endpoint knows about, and only show the error state when BOTH fail.
+  const availableSitesQuery = useAvailableSites();
+  const openSessionQuery = useOpenCheckin();
   const dashboard = dashboardQuery.data;
-  const todayShifts = dashboard?.todayShifts ?? [];
+  // /checkin/open-session is the canonical real-time state. The dashboard can remain cached
+  // briefly after an automatic missing-checkout closure, so only use it as a fallback while
+  // the canonical query is unavailable.
+  const hasOpenCheckin = openSessionQuery.isSuccess
+    ? Boolean(openSessionQuery.data)
+    : Boolean(dashboard?.checkin?.open);
+  const isPastOpenShiftEnd = Boolean(
+    openSessionQuery.data?.shiftEndsAt &&
+      Date.now() >= new Date(openSessionQuery.data.shiftEndsAt).getTime(),
+  );
+  const openSessionLabel = isPastOpenShiftEnd
+    ? openSessionQuery.data?.overtimeAllowed
+      ? 'Đang làm thêm giờ'
+      : 'Chờ check-out'
+    : 'Đang trong ca';
+  const todayShifts = useMemo<EmployeeTodayShift[]>(() => {
+    const byAssignment = new Map<string, EmployeeTodayShift>();
+    for (const site of availableSitesQuery.sites) {
+      byAssignment.set(site.assignmentId, {
+        assignmentId: site.assignmentId,
+        siteId: site.site.id,
+        siteName: site.site.name,
+        role: site.assignmentRole,
+        shift: site.shift
+          ? {
+              shiftId: site.shift.id,
+              name: site.shift.name,
+              startTime: site.shift.startTime,
+              endTime: site.shift.endTime,
+            }
+          : null,
+      });
+    }
+    // Dashboard rows win on conflict — they carry the canonical siteName/role for the day.
+    for (const shift of dashboard?.todayShifts ?? []) {
+      byAssignment.set(shift.assignmentId, shift);
+    }
+    return [...byAssignment.values()];
+  }, [availableSitesQuery.sites, dashboard?.todayShifts]);
   const firstShift = todayShifts[0];
+  const shiftsLoading =
+    dashboardQuery.isLoading && availableSitesQuery.isLoading && todayShifts.length === 0;
+  const shiftsError =
+    dashboardQuery.isError && availableSitesQuery.isError && todayShifts.length === 0;
   const pendingExplanations = dashboard?.alerts.pendingExplanations ?? 0;
   const unreadNotifications = dashboard?.alerts.unreadNotifications ?? 0;
   const displayName = profile?.full_name?.trim() || 'bạn';
@@ -134,10 +188,18 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetchingProfile || dashboardQuery.isRefetching || randomCheckQuery.isRefetching}
+            refreshing={
+              isRefetchingProfile ||
+              dashboardQuery.isRefetching ||
+              availableSitesQuery.isRefetching ||
+              openSessionQuery.isRefetching ||
+              randomCheckQuery.isRefetching
+            }
             onRefresh={() => {
               refetchProfile();
               dashboardQuery.refetch();
+              availableSitesQuery.refetch();
+              openSessionQuery.refetch();
               randomCheckQuery.refetch();
             }}
             tintColor={palette.primary}
@@ -209,9 +271,13 @@ export default function HomeScreen() {
               <View>
                 <Text style={styles.sectionEyebrow}>CA LÀM HÔM NAY</Text>
                 <Text style={styles.shiftTitle}>
-                  {dashboardQuery.isLoading
+                  {shiftsLoading
                     ? 'Đang kiểm tra lịch làm việc'
-                    : firstShift?.shift?.name ?? (todayShifts.length > 0 ? 'Ca làm được phân công' : 'Chưa có ca làm')}
+                    : todayShifts.length === 0
+                      ? 'Chưa có ca làm'
+                      : todayShifts.length === 1
+                        ? firstShift?.shift?.name ?? 'Ca làm được phân công'
+                        : `${todayShifts.length} ca làm hôm nay`}
                 </Text>
               </View>
               <View style={styles.calendarIcon}>
@@ -219,36 +285,44 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {dashboardQuery.isLoading ? (
+            {shiftsLoading ? (
               <ActivityIndicator style={styles.shiftLoader} color={palette.primary} />
-            ) : dashboardQuery.isError ? (
+            ) : shiftsError ? (
               <Text style={styles.mutedText}>Không thể tải lịch làm việc. Kéo xuống để thử lại.</Text>
-            ) : firstShift ? (
+            ) : todayShifts.length > 0 ? (
               <View style={styles.shiftDetails}>
-                <View style={styles.detailLine}>
-                  <Ionicons name="business-outline" size={17} color={palette.textMuted} />
-                  <Text style={styles.detailText} numberOfLines={1}>{firstShift.siteName || 'Công trình chưa có tên'}</Text>
-                </View>
-                {firstShift.shift && (
-                  <View style={styles.detailLine}>
-                    <Ionicons name="time-outline" size={17} color={palette.textMuted} />
-                    <Text style={styles.detailText}>
-                      {firstShift.shift.startTime.slice(0, 5)} – {firstShift.shift.endTime.slice(0, 5)}
-                    </Text>
+                {todayShifts.map((entry) => (
+                  <View key={entry.assignmentId} style={styles.shiftItem}>
+                    <View style={styles.detailLine}>
+                      <Ionicons name="business-outline" size={17} color={palette.textMuted} />
+                      <Text style={styles.detailText} numberOfLines={1}>
+                        {entry.siteName || 'Công trình chưa có tên'}
+                      </Text>
+                    </View>
+                    <View style={styles.detailLine}>
+                      <Ionicons name="time-outline" size={17} color={palette.textMuted} />
+                      <Text style={styles.detailText}>
+                        {entry.shift
+                          ? `${entry.shift.name} · ${entry.shift.startTime.slice(0, 5)} – ${entry.shift.endTime.slice(0, 5)}`
+                          : 'Chưa gán ca cụ thể'}
+                      </Text>
+                    </View>
                   </View>
-                )}
+                ))}
                 <View style={styles.detailLine}>
-                  <Ionicons name={dashboard?.checkin?.open ? 'radio-button-on-outline' : 'checkmark-circle-outline'} size={17} color={dashboard?.checkin?.open ? palette.success : palette.textMuted} />
+                  <Ionicons name={hasOpenCheckin ? 'radio-button-on-outline' : 'checkmark-circle-outline'} size={17} color={hasOpenCheckin ? palette.success : palette.textMuted} />
                   <Text style={styles.detailText}>
-                    {!dashboard?.checkin
-                      ? 'Chưa check-in hôm nay'
-                      : dashboard.checkin.open
-                        ? `Đang trong ca · ${CHECKIN_STATUS_LABELS[dashboard.checkin.status]}`
-                        : `Đã kết thúc · ${CHECKIN_STATUS_LABELS[dashboard.checkin.status]} · ${dashboard.checkin.workMinutes ?? 0} phút`}
+                    {hasOpenCheckin
+                      ? `${openSessionLabel} · ${CHECKIN_STATUS_LABELS[openSessionQuery.data?.status ?? dashboard!.checkin!.status]}`
+                      : !dashboard?.checkin
+                        ? 'Chưa check-in hôm nay'
+                        : dashboard.checkin.checkOutAt === null
+                          ? `Ca đã kết thúc · Thiếu check-out · ${CHECKIN_STATUS_LABELS[dashboard.checkin.status]}`
+                          : `Đã kết thúc · ${CHECKIN_STATUS_LABELS[dashboard.checkin.status]} · ${dashboard.checkin.workMinutes ?? 0} phút`}
                   </Text>
                 </View>
-                {todayShifts.length > 1 && (
-                  <Text style={styles.additionalSites}>+{todayShifts.length - 1} ca/công trình khác hôm nay</Text>
+                {dashboardQuery.isError && (
+                  <Text style={styles.additionalSites}>Danh sách lấy từ màn hình chấm công — kéo xuống để đồng bộ lại.</Text>
                 )}
               </View>
             ) : (
@@ -261,7 +335,7 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Mở màn hình chấm công"
             >
-              <Text style={styles.shiftActionText}>{dashboard?.checkin?.open ? 'Mở check-out' : 'Mở chấm công'}</Text>
+              <Text style={styles.shiftActionText}>{hasOpenCheckin ? 'Mở check-out' : 'Mở chấm công'}</Text>
               <Ionicons name="arrow-forward" size={18} color={palette.white} />
             </Pressable>
           </View>
@@ -394,6 +468,7 @@ const styles = StyleSheet.create({
   },
   shiftLoader: { alignSelf: 'flex-start', marginTop: spacing.xl },
   shiftDetails: { gap: spacing.sm, marginTop: spacing.lg },
+  shiftItem: { gap: 4, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.border },
   detailLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   detailText: { flex: 1, color: palette.textSecondary, fontSize: 14, lineHeight: 20, fontWeight: '500' },
   additionalSites: { color: palette.primary, fontSize: 12, lineHeight: 18, fontWeight: '600' },

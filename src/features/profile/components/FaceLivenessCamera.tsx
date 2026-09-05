@@ -42,13 +42,13 @@ const ACTION_COPY: Record<
   turn_left: {
     title: 'Quay đầu sang trái',
     description:
-      'Chỉ quay đầu sang trái khoảng 20°; không xoay hoặc di chuyển điện thoại khỏi vị trí ban đầu.',
+      'Quay đầu về phía vai TRÁI của chính bạn khoảng 20°; không xoay hoặc di chuyển điện thoại khỏi vị trí ban đầu.',
     icon: 'arrow-back-circle-outline',
   },
   turn_right: {
     title: 'Quay đầu sang phải',
     description:
-      'Chỉ quay đầu sang phải khoảng 20°; không xoay hoặc di chuyển điện thoại khỏi vị trí ban đầu.',
+      'Quay đầu về phía vai PHẢI của chính bạn khoảng 20°; không xoay hoặc di chuyển điện thoại khỏi vị trí ban đầu.',
     icon: 'arrow-forward-circle-outline',
   },
   look_up: {

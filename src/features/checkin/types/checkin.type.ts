@@ -58,6 +58,7 @@ export interface AvailableSite {
 // ─── submit checkin / checkout ─────────────────────────────────────────────────
 
 export interface SubmitCheckinRequest {
+  assignmentId: string;
   siteId: string;
   latitude: number;
   longitude: number;
@@ -92,6 +93,12 @@ export interface CheckinResponse {
   checkInAccuracy: number | null;
   checkInInsideGeofence: boolean;
   checkOutAt: string | null;
+  sessionClosedAt: string | null;
+  sessionCloseReason: 'checkout' | 'missing_checkout' | 'admin_closed' | null;
+  sessionExpiresAt: string | null;
+  shiftEndsAt: string | null;
+  overtimeAllowed: boolean;
+  sessionOpen: boolean;
   checkOutLat: number | null;
   checkOutLon: number | null;
   checkOutAccuracy: number | null;
@@ -163,6 +170,10 @@ export interface OpenCheckinContext {
   siteId: string | null;
   siteName: string | null;
   effectiveCheckinPolicy: CheckinPolicy | null;
+  checkInAt?: string | null;
+  sessionExpiresAt?: string | null;
+  shiftEndsAt?: string | null;
+  overtimeAllowed?: boolean;
 }
 
 // ─── explain ────────────────────────────────────────────────────────────────────

@@ -17,10 +17,15 @@ export function resolveNotificationHref(
       ? { pathname: '/(tabs)/random-check', params: { checkId } }
       : '/(tabs)/random-check';
   }
-  if (normalized.includes('ASSIGNMENT')) return '/(tabs)/checkin';
+  // Assignment created/cancelled → the employee's own assignment list (#19). Falls back there
+  // even with an assignmentId since the detail route currently redirects to the list anyway.
+  if (normalized.includes('ASSIGNMENT')) return '/(tabs)/my-assignments';
   if (normalized.includes('CHECKIN') || normalized.includes('ATTENDANCE')) {
     return '/(tabs)/checkin-history';
   }
-  if (normalized.includes('VIOLATION')) return '/exceptions' as Href;
+  if (normalized.includes('VIOLATION') || normalized.includes('EXPLANATION')) {
+    return '/(tabs)/exceptions';
+  }
+  if (normalized.includes('ROLE')) return '/(tabs)/profile';
   return null;
 }
