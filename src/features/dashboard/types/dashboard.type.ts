@@ -14,6 +14,8 @@ export interface EmployeeDashboard {
     status: 'valid' | 'pending_review' | 'rejected';
     checkInAt: string;
     checkOutAt: string | null;
+    sessionCloseReason: 'checkout' | 'missing_checkout' | 'admin_closed' | null;
+    sessionExpiresAt: string | null;
     workMinutes: number | null;
     open: boolean;
   } | null;

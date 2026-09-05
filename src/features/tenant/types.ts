@@ -16,12 +16,7 @@ export type TenantIndustry =
 
 export type AppLanguage = 'vi' | 'en' | 'ja' | 'ko';
 
-export type AppTimezone =
-  | 'Asia/Ho_Chi_Minh'
-  | 'Asia/Bangkok'
-  | 'Asia/Singapore'
-  | 'Asia/Tokyo'
-  | 'UTC';
+export type AppTimezone = 'Asia/Ho_Chi_Minh';
 
 // ─── Core Entities ────────────────────────────────────────────────────────────
 

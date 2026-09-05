@@ -52,9 +52,7 @@ const step1Schema = z.object({
 
 const step2Schema = z.object({
   language: z.enum(['vi', 'en', 'ja', 'ko'] as const),
-  timezone: z.enum([
-    'Asia/Ho_Chi_Minh', 'Asia/Bangkok', 'Asia/Singapore', 'Asia/Tokyo', 'UTC',
-  ] as const),
+  timezone: z.literal('Asia/Ho_Chi_Minh'),
   brand_color: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, 'Màu phải ở dạng #RRGGBB'),

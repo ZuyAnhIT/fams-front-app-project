@@ -67,6 +67,11 @@ export function FaceCheckinScreen() {
 
   const handlePassed = async (challengeId: string) => {
     setSubmitError(null);
+    if (!siteId || !assignmentId) {
+      const message = 'Thiếu thông tin ca làm việc. Vui lòng quay lại và chọn lại ca.';
+      setSubmitError(message);
+      throw new Error(message);
+    }
     const attempt = await checkIn(siteId, {
       assignmentId,
       siteName,
@@ -101,6 +106,10 @@ export function FaceCheckinScreen() {
 
   const handlePhoto = async (employeePhotoBase64: string) => {
     setSubmitError(null);
+    if (!siteId || !assignmentId) {
+      setSubmitError('Thiếu thông tin ca làm việc. Vui lòng quay lại và chọn lại ca.');
+      return;
+    }
     const attempt = await checkIn(siteId, {
       assignmentId,
       siteName,

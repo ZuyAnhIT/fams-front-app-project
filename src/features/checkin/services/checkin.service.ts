@@ -23,6 +23,11 @@ export async function getAvailableSites(tenantId: string): Promise<AvailableSite
   return unwrapApiData<AvailableSite[]>(data);
 }
 
+export async function getOpenCheckinSession(tenantId: string): Promise<CheckinResponse | null> {
+  const { data } = await apiClient.get(`${checkinBase(tenantId)}/open-session`);
+  return unwrapApiData<CheckinResponse | null>(data);
+}
+
 export async function submitCheckin(
   tenantId: string,
   payload: SubmitCheckinRequest,

@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import { useGps } from '@/features/gps/hooks/use-gps';
 import { getFaceIdErrorCode } from '@/features/face/utils/face-id.utils';
 
-import { getCheckinHistory, submitCheckout } from '../services/checkin.service';
+import { getOpenCheckinSession, submitCheckout } from '../services/checkin.service';
 import { useCheckinStore } from '../store/checkin.store';
 import type { CheckinResponse, OpenCheckinContext } from '../types/checkin.type';
 import { parseCheckinError } from '../utils/available-site';
@@ -42,8 +42,9 @@ function isAlreadyCheckedOut(error: unknown): boolean {
 }
 
 /**
- * US4: nếu state bị mất (app kill), tìm lại check-in gần nhất chưa checkout
- * bằng GET /checkin/history (checkOutAt === null) thay vì để nhân viên bị kẹt.
+ * Reconcile persisted state against the backend's canonical open-session endpoint. The server
+ * distinguishes a real current session from an old missing checkout, so history rows with
+ * checkOutAt=null can no longer strand the employee forever.
  */
 export function useCheckoutSubmit(): UseCheckoutSubmitResult {
   const tenantId = useAuthStore((s) => s.activeTenantId);
@@ -61,20 +62,26 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
   // prevents a stale/missing local key from enabling a second check-in while a
   // server-side shift is still open.
   useEffect(() => {
-    if (!tenantId || isHydratingCheckin || openCheckinId) return;
+    if (!tenantId || isHydratingCheckin) return;
 
     let cancelled = false;
     setIsResolvingOpenCheckin(true);
-    void getCheckinHistory(tenantId, { size: 20, page: 0 })
-      .then(async (history) => {
-        const openRecord = history.content.find((record) => record.checkOutAt === null);
-        if (!cancelled && openRecord) {
+    void getOpenCheckinSession(tenantId)
+      .then(async (openRecord) => {
+        if (cancelled) return;
+        if (openRecord) {
           await setOpenCheckin({
             checkinId: openRecord.id,
             siteId: openRecord.siteId,
             siteName: openRecord.siteName,
             effectiveCheckinPolicy: openRecord.effectiveCheckinPolicy,
+            checkInAt: openRecord.checkInAt,
+            sessionExpiresAt: openRecord.sessionExpiresAt,
+            shiftEndsAt: openRecord.shiftEndsAt,
+            overtimeAllowed: openRecord.overtimeAllowed,
           });
+        } else {
+          await clearOpenCheckinId();
         }
       })
       .catch(() => undefined)
@@ -82,10 +89,34 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
         if (!cancelled) setIsResolvingOpenCheckin(false);
       });
 
+    const reconcileTimer = setInterval(() => {
+      void getOpenCheckinSession(tenantId)
+        .then(async (openRecord) => {
+          if (cancelled) return;
+          if (!openRecord) {
+            await clearOpenCheckinId();
+            await queryClient.invalidateQueries({ queryKey: checkinKeys.all });
+          } else {
+            await setOpenCheckin({
+              checkinId: openRecord.id,
+              siteId: openRecord.siteId,
+              siteName: openRecord.siteName,
+              effectiveCheckinPolicy: openRecord.effectiveCheckinPolicy,
+              checkInAt: openRecord.checkInAt,
+              sessionExpiresAt: openRecord.sessionExpiresAt,
+              shiftEndsAt: openRecord.shiftEndsAt,
+              overtimeAllowed: openRecord.overtimeAllowed,
+            });
+          }
+        })
+        .catch(() => undefined);
+    }, 15_000);
+
     return () => {
       cancelled = true;
+      clearInterval(reconcileTimer);
     };
-  }, [isHydratingCheckin, openCheckinId, setOpenCheckin, tenantId]);
+  }, [clearOpenCheckinId, isHydratingCheckin, queryClient, setOpenCheckin, tenantId]);
 
   const mutation = useMutation({
     mutationFn: (payload: {
@@ -130,9 +161,22 @@ export function useCheckoutSubmit(): UseCheckoutSubmitResult {
     if (!tenantId) return null;
     setIsResolvingOpenCheckin(true);
     try {
-      const history = await getCheckinHistory(tenantId, { size: 20, page: 0 });
-      const openRecord = history.content.find((record) => record.checkOutAt === null);
-      return openRecord?.id ?? null;
+      const openRecord = await getOpenCheckinSession(tenantId);
+      if (!openRecord) {
+        await clearOpenCheckinId();
+        return null;
+      }
+      await setOpenCheckin({
+        checkinId: openRecord.id,
+        siteId: openRecord.siteId,
+        siteName: openRecord.siteName,
+        effectiveCheckinPolicy: openRecord.effectiveCheckinPolicy,
+        checkInAt: openRecord.checkInAt,
+        sessionExpiresAt: openRecord.sessionExpiresAt,
+        shiftEndsAt: openRecord.shiftEndsAt,
+        overtimeAllowed: openRecord.overtimeAllowed,
+      });
+      return openRecord.id;
     } finally {
       setIsResolvingOpenCheckin(false);
     }

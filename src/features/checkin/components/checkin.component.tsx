@@ -41,6 +41,7 @@ import {
   formatOfflineSyncReason,
   getAvailabilityDescription,
   getEffectiveAvailabilityStatus,
+  getEstimatedServerNow,
   parseCheckinError,
 } from '../utils/available-site';
 
@@ -71,7 +72,11 @@ const AVAILABILITY_COLORS: Record<
 };
 
 function currentTimeLabel(now: Date): string {
-  return now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  return now.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Ho_Chi_Minh',
+  });
 }
 
 function currentDateLabel(now: Date): string {
@@ -80,7 +85,28 @@ function currentDateLabel(now: Date): string {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    timeZone: 'Asia/Ho_Chi_Minh',
   });
+}
+
+function formatOpenCheckinLabel(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function formatDeadlineLabel(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 }
 
 /** Primary employee attendance experience: one clear action based on shift state. */
@@ -178,6 +204,11 @@ export function CheckinHome() {
     () => sites.find((item) => item.assignmentId === selectedAssignmentId),
     [selectedAssignmentId, sites],
   );
+  const serverClockSite = selectedSite ?? sites[0];
+  const businessNowMs = serverClockSite
+    ? getEstimatedServerNow(serverClockSite, now.getTime(), dataUpdatedAt) ?? now.getTime()
+    : now.getTime();
+  const businessNow = new Date(businessNowMs);
   const selectedAvailabilityStatus = selectedSite
     ? getEffectiveAvailabilityStatus(
         selectedSite,
@@ -196,7 +227,26 @@ export function CheckinHome() {
   const isFaceReady = faceIdStatus?.status === 'enrolled';
   const isFaceReadinessBlocked =
     selectedRequiresFace && !isCheckingFaceReadiness && !isFaceReady;
-  const hasOpenShift = !!openCheckinId;
+  const sessionExpiresAtMs = openCheckin?.sessionExpiresAt
+    ? new Date(openCheckin.sessionExpiresAt).getTime()
+    : null;
+  const shiftEndsAtMs = openCheckin?.shiftEndsAt
+    ? new Date(openCheckin.shiftEndsAt).getTime()
+    : null;
+  const hasExpiredOpenSession =
+    !!openCheckinId &&
+    sessionExpiresAtMs !== null &&
+    !Number.isNaN(sessionExpiresAtMs) &&
+    businessNowMs >= sessionExpiresAtMs;
+  const hasOpenShift = !!openCheckinId && !hasExpiredOpenSession;
+  const isAfterShiftEnd =
+    hasOpenShift &&
+    shiftEndsAtMs !== null &&
+    !Number.isNaN(shiftEndsAtMs) &&
+    businessNowMs >= shiftEndsAtMs;
+  const isOvertime = isAfterShiftEnd && openCheckin?.overtimeAllowed === true;
+  const isCheckoutGrace = isAfterShiftEnd && !isOvertime;
+  const checkoutDeadlineLabel = formatDeadlineLabel(openCheckin?.sessionExpiresAt);
   const hasPendingOfflineCheckin = offlinePendingCount > 0;
   const openSite = openCheckin?.siteId
     ? sites.find((item) => item.site.id === openCheckin.siteId)
@@ -208,6 +258,7 @@ export function CheckinHome() {
   const checkoutSiteId = openSite?.site.id ?? openCheckin?.siteId ?? '';
   const checkoutSiteName =
     openSite?.site.name ?? openCheckin?.siteName ?? 'Công trình';
+  const openCheckinLabel = formatOpenCheckinLabel(openCheckin?.checkInAt);
   const isCheckingState = isHydrating || isResolvingOpenCheckin;
   const isActionPending = isLocatingIn || isSubmittingIn || isLocatingOut || isSubmittingOut;
   const locationError = errIn ?? errOut;
@@ -373,13 +424,21 @@ export function CheckinHome() {
           <View style={[styles.clockCard, hasOpenShift && styles.clockCardActive]}>
             <View style={styles.clockTopRow}>
               <View>
-                <Text style={styles.clock}>{currentTimeLabel(now)}</Text>
-                <Text style={styles.date}>{currentDateLabel(now)}</Text>
+                <Text style={styles.clock}>{currentTimeLabel(businessNow)}</Text>
+                <Text style={styles.date}>{currentDateLabel(businessNow)}</Text>
               </View>
               <View style={[styles.statusPill, hasOpenShift ? styles.statusPillActive : styles.statusPillIdle]}>
                 <View style={[styles.statusDot, { backgroundColor: hasOpenShift ? palette.success : palette.textMuted }]} />
                 <Text style={[styles.statusText, { color: hasOpenShift ? palette.success : palette.textSecondary }]}>
-                  {hasOpenShift ? 'Đang trong ca' : 'Chưa bắt đầu ca'}
+                  {hasOpenShift
+                    ? isOvertime
+                      ? 'Đang làm thêm giờ'
+                      : isCheckoutGrace
+                        ? 'Chờ check-out'
+                        : 'Đang trong ca'
+                    : hasExpiredOpenSession
+                      ? 'Ca đã kết thúc'
+                      : 'Chưa bắt đầu ca'}
                 </Text>
               </View>
             </View>
@@ -388,7 +447,24 @@ export function CheckinHome() {
               <View style={styles.activeShiftNotice}>
                 <Ionicons name="checkmark-circle" size={20} color={palette.success} />
                 <Text style={styles.activeShiftText}>
-                  Check-in đã được ghi nhận. Khi kết thúc công việc, hãy check-out tại vị trí hiện tại.
+                  {isOvertime
+                    ? `Ca chính đã kết thúc. Bạn đang làm thêm giờ tại ${checkoutSiteName}${
+                        checkoutDeadlineLabel ? ` và cần check-out trước ${checkoutDeadlineLabel}` : ''
+                      }.`
+                    : isCheckoutGrace
+                      ? `Ca đã kết thúc. Hãy check-out tại ${checkoutSiteName}${
+                          checkoutDeadlineLabel ? ` trước ${checkoutDeadlineLabel}` : ''
+                        }; thời gian sau giờ kết thúc không được tính OT.`
+                      : `Đã check-in tại ${checkoutSiteName}${
+                          openCheckinLabel ? ` lúc ${openCheckinLabel}` : ''
+                        }. Khi kết thúc công việc, hãy check-out tại vị trí hiện tại.`}
+                </Text>
+              </View>
+            ) : hasExpiredOpenSession ? (
+              <View style={styles.activeShiftNotice}>
+                <Ionicons name="warning-outline" size={20} color={palette.warning} />
+                <Text style={styles.activeShiftText}>
+                  Ca đã tự đóng do quá hạn check-out. Lịch sử vẫn ghi nhận thiếu check-out để bạn gửi giải trình cho HR.
                 </Text>
               </View>
             ) : isCheckingState ? (
@@ -447,10 +523,10 @@ export function CheckinHome() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderCopy}>
-                  <Text style={styles.sectionTitle}>Chọn nơi làm việc</Text>
-                  <Text style={styles.sectionSubtitle}>Chỉ hiển thị các công trình bạn được phân công hôm nay.</Text>
+                  <Text style={styles.sectionTitle}>Chọn ca làm việc</Text>
+                  <Text style={styles.sectionSubtitle}>Mỗi ca được nhận diện theo phân công, công trình và khung giờ hôm nay.</Text>
                 </View>
-                <Text style={styles.countLabel}>{sites.length} địa điểm</Text>
+                <Text style={styles.countLabel}>{sites.length} ca</Text>
               </View>
 
               {sites.length === 0 ? (
@@ -665,9 +741,12 @@ export function CheckinHome() {
               disabled={
                 isCheckingState ||
                 hasPendingOfflineCheckin ||
-                !!isCheckingFaceReadiness ||
-                !!isFaceReadinessBlocked ||
-                (!hasOpenShift && (!selectedSite || !canCheckinSelectedSite))
+                (!hasOpenShift && (
+                  !!isCheckingFaceReadiness ||
+                  !!isFaceReadinessBlocked ||
+                  !selectedSite ||
+                  !canCheckinSelectedSite
+                ))
               }
               onPress={hasOpenShift ? () => setCheckoutConfirmVisible(true) : handleCheckin}
               accessibilityHint={
