@@ -1,0 +1,62 @@
+# Mobile App Build Guide
+
+## Credentials
+- File: `../expo.creds` (repo root, gitignored)
+  - Line 1: `username:password`
+  - Line 2: `TOKEN=<eas_token>` — use this as `EXPO_TOKEN` env var
+
+## Building (EAS cloud, Android only)
+
+All builds are triggered from `fams-front-app-project/` using `npx eas-cli`.
+
+```bash
+cd fams-front-app-project
+
+EXPO_TOKEN=$(grep '^TOKEN=' ../expo.creds | cut -d= -f2)
+
+# Production APK
+EXPO_TOKEN="$EXPO_TOKEN" npx eas-cli build \
+  --platform android --profile production --non-interactive --no-wait
+
+# Development APK (dev-client)
+EXPO_TOKEN="$EXPO_TOKEN" npx eas-cli build \
+  --platform android --profile development --non-interactive --no-wait
+```
+
+Build link is printed on completion. Track at expo.dev.
+
+## EAS Environment Variables
+
+These must be set on Expo's servers (not just in `.env`) or builds will be missing them.
+`.env` is gitignored and never uploaded.
+
+| Variable | Environment | Notes |
+|---|---|---|
+| `EXPO_ANDROID_GOOGLE_MAPS_API_KEY` | production, development | Required for "Chấm công" map view. Missing = crash on that screen. |
+| `EXPO_PUBLIC_API_URL` | production, development | Backend API base URL |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | production, development | Google OAuth |
+| `EXPO_ANDROID_GOOGLE_SERVICES_FILE` | production, development | Firebase — set as file type |
+
+To set/update a variable:
+```bash
+EXPO_TOKEN="$EXPO_TOKEN" npx eas-cli env:set \
+  --environment production \
+  --name EXPO_ANDROID_GOOGLE_MAPS_API_KEY \
+  --value "$(grep EXPO_ANDROID_GOOGLE_MAPS_API_KEY .env | cut -d= -f2)" \
+  --type string --visibility sensitive --non-interactive
+```
+
+To list current variables:
+```bash
+EXPO_TOKEN="$EXPO_TOKEN" npx eas-cli env:list --environment production
+```
+
+## Known Issues Fixed
+
+- **"Chấm công" crash** (`API key not found` — Google Maps): caused by `EXPO_ANDROID_GOOGLE_MAPS_API_KEY` missing from EAS environment. Fixed by setting it via `env:set` for both production and development environments (done 2026-09-02).
+
+## App Config
+
+- `app.config.ts` reads env vars at build time and injects into `AndroidManifest.xml`
+- `eas.json` defines build profiles: `development`, `preview`, `production`
+- `google-services.json` is gitignored — must be present locally or set as EAS file secret

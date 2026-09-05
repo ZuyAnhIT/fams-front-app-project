@@ -59,8 +59,7 @@
       [
         "expo-notifications",
         {
-          "color": "#2563EB",
-          "defaultChannel": "random-checks"
+          "color": "#2563EB"
         }
       ],
       [
