@@ -61,7 +61,7 @@ export function FaceCheckinScreen() {
     else router.replace('/(tabs)/checkin');
   };
 
-  const isLoading = isLoadingEmployee || (!!employeeId && isLoadingFace);
+  const isLoading = !offline && (isLoadingEmployee || (!!employeeId && isLoadingFace));
   const hasApprovedFace = faceIdStatus?.status === 'enrolled';
   const needsModelUpgrade = requiresFaceIdReEnrollment(faceIdStatus);
 
@@ -166,7 +166,7 @@ export function FaceCheckinScreen() {
     );
   }
 
-  if (employeeId && isFaceStatusError) {
+  if (!offline && employeeId && isFaceStatusError) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <View style={styles.header}>
@@ -198,7 +198,7 @@ export function FaceCheckinScreen() {
     );
   }
 
-  if (!siteId || !employeeId || !hasApprovedFace || needsModelUpgrade) {
+  if (!siteId || (!offline && (!employeeId || !hasApprovedFace || needsModelUpgrade))) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <View style={styles.header}>
@@ -285,7 +285,7 @@ export function FaceCheckinScreen() {
         )}
         {policy === 'gps_face_liveness' && !offline ? (
           <FaceLivenessCamera
-            employeeId={employeeId}
+            employeeId={employeeId!}
             purpose="checkin"
             siteId={siteId}
             onPassed={handlePassed}

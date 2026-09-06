@@ -132,6 +132,7 @@ export function CheckinHome() {
     isForbidden,
     error,
     dataUpdatedAt,
+    isUsingOfflineCache,
     refetch,
   } = useAvailableSites();
   const {
@@ -222,11 +223,12 @@ export function CheckinHome() {
   const selectedRequiresFace =
     selectedSite?.effectiveCheckinPolicy === 'gps_face' ||
     selectedSite?.effectiveCheckinPolicy === 'gps_face_liveness';
+  const isOfflineMode = isConnected === false || isUsingOfflineCache;
   const isCheckingFaceReadiness =
-    selectedRequiresFace && (isLoadingEmployeeId || isLoadingFaceStatus);
+    selectedRequiresFace && !isOfflineMode && (isLoadingEmployeeId || isLoadingFaceStatus);
   const isFaceReady = faceIdStatus?.status === 'enrolled';
   const isFaceReadinessBlocked =
-    selectedRequiresFace && !isCheckingFaceReadiness && !isFaceReady;
+    selectedRequiresFace && !isOfflineMode && !isCheckingFaceReadiness && !isFaceReady;
   const sessionExpiresAtMs = openCheckin?.sessionExpiresAt
     ? new Date(openCheckin.sessionExpiresAt).getTime()
     : null;
@@ -280,7 +282,7 @@ export function CheckinHome() {
           siteName: selectedSite.site.name,
           assignmentId: selectedSite.assignmentId,
           policy: selectedSite.effectiveCheckinPolicy,
-          offline: isConnected === false ? 'true' : 'false',
+          offline: isOfflineMode ? 'true' : 'false',
         },
       } as never);
       return;
@@ -474,6 +476,20 @@ export function CheckinHome() {
               </View>
             ) : null}
           </View>
+
+          {isUsingOfflineCache && (
+            <View style={styles.offlineCard} accessibilityRole="alert">
+              <View style={styles.offlineHeader}>
+                <Ionicons name="cloud-offline-outline" size={22} color={palette.warning} />
+                <View style={styles.offlineCopy}>
+                  <Text style={styles.offlineTitle}>Đang dùng lịch đã lưu trên thiết bị</Text>
+                  <Text style={styles.offlineText}>
+                    Chấm công sẽ được giữ an toàn trên máy và tự đối soát với máy chủ khi có mạng.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           {offlineItems.length > 0 && (
             <View style={styles.offlineCard}>
@@ -689,7 +705,9 @@ export function CheckinHome() {
               />
               <View style={styles.faceReadinessCopy}>
                 <Text style={styles.faceReadinessTitle}>
-                  {isCheckingFaceReadiness
+                  {isOfflineMode
+                    ? 'Xác thực ảnh khi offline'
+                    : isCheckingFaceReadiness
                     ? 'Đang kiểm tra Face ID'
                     : isFaceReady
                       ? 'Face ID đã sẵn sàng'
@@ -700,12 +718,14 @@ export function CheckinHome() {
                           : 'Cần đăng ký Face ID'}
                 </Text>
                 <Text style={styles.faceReadinessText}>
-                  {isFaceReady
+                  {isOfflineMode
+                    ? 'Ứng dụng sẽ lưu ảnh bằng chứng; máy chủ sẽ xác minh hoặc chuyển HR duyệt khi đồng bộ.'
+                    : isFaceReady
                     ? 'Bạn có thể xác thực khuôn mặt khi vào và ra ca.'
                     : 'Ca đã chọn yêu cầu hồ sơ Face ID được phê duyệt trước khi chấm công.'}
                 </Text>
               </View>
-              {!isCheckingFaceReadiness && !isFaceReady && (
+              {!isOfflineMode && !isCheckingFaceReadiness && !isFaceReady && (
                 <Pressable
                   onPress={() =>
                     isFaceStatusError

@@ -5,7 +5,7 @@
 1. `.env` từng chứa khoảng trắng trong URL:
 
    ```text
-   http:// 192.168.1.115:8080/api/v1
+   http:// 192.168.1.125:8080/api/v1
    ```
 
    URL này không hợp lệ và làm Axios báo mất kết nối.
@@ -22,7 +22,7 @@
 - URL hiện tại đã đúng:
 
   ```env
-  EXPO_PUBLIC_API_URL=http://192.168.1.115:8080/api/v1
+  EXPO_PUBLIC_API_URL=http://192.168.1.125:8080/api/v1
   ```
 
 - `src/config/env.ts` trim, kiểm tra protocol, khoảng trắng và bỏ dấu `/` cuối.
@@ -52,7 +52,7 @@
 |---|---|
 | Docker `fams-api` | Healthy |
 | Health qua localhost | HTTP 200 |
-| Health qua `192.168.1.115` | HTTP 200 |
+| Health qua `192.168.1.125` | HTTP 200 |
 | Metro `8082/status` | `packager-status:running` |
 | GET health chạy trực tiếp từ runtime iPhone | HTTP 200 — `FAMS Auth Module is running` |
 | ESLint | PASS |

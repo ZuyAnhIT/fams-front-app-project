@@ -39,17 +39,23 @@ export function useProfile(): UseProfileResult {
     queryFn: () => getMyProfile(currentUser),
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
+    initialData: currentUser ?? undefined,
+    initialDataUpdatedAt: 0,
   });
 
   useEffect(() => {
     if (query.data) setUser(query.data);
   }, [query.data, setUser]);
 
+  const profile = query.data ?? currentUser ?? undefined;
+
   return {
-    profile: query.data,
+    profile,
     isLoading: query.isLoading,
     isRefetching: query.isRefetching,
-    isError: query.isError,
+    // A failed background refresh must not discard the authenticated profile
+    // already held in memory; offline check-in is explicitly supported.
+    isError: query.isError && !profile,
     error: query.error,
     refetch: query.refetch,
   };

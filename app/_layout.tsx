@@ -8,6 +8,8 @@ import { setupAuthInterceptors } from "@/features/auth/api-interceptors";
 import { resolveAuthenticatedSession } from "@/features/auth/session";
 import { useAuthStore } from "@/features/auth/store";
 import { useCheckinStore } from "@/features/checkin/store/checkin.store";
+import { getAvailableSites } from "@/features/checkin/services/checkin.service";
+import { writeAvailableSitesCache } from "@/features/checkin/services/available-sites-cache";
 import {
   formatForegroundPushMessage,
   getRandomCheckIdFromPush,
@@ -47,6 +49,8 @@ function AppInit() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isHydrating = useAuthStore((s) => s.isHydrating);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const activeTenantId = useAuthStore((s) => s.activeTenantId);
+  const userId = useAuthStore((s) => s.user?.id);
   const { showToast } = useToast();
   const openedPushIds = useRef(new Set<string>());
 
@@ -162,6 +166,20 @@ function AppInit() {
       unsubscribeRefresh();
     };
   }, [accessToken, isAuthenticated, isHydrating, showToast]);
+
+  useEffect(() => {
+    if (isHydrating || !isAuthenticated || !userId || !activeTenantId) return;
+
+    // Prime the tenant-scoped schedule as soon as a session is ready. Employees
+    // can then open the check-in tab after losing signal even if they did not
+    // visit that tab earlier in the day. A 403/404 is valid for non-employees
+    // and intentionally remains silent.
+    void getAvailableSites(activeTenantId)
+      .then((sites) =>
+        writeAvailableSitesCache(userId, activeTenantId, sites),
+      )
+      .catch(() => undefined);
+  }, [activeTenantId, isAuthenticated, isHydrating, userId]);
 
   return null;
 }
